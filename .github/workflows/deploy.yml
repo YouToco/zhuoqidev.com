@@ -74,12 +74,13 @@ jobs:
 
       - name: Install ossutil
         run: |
-          curl -o /usr/local/bin/ossutil https://gosspublic.alicdn.com/ossutil/install.sh 2>/dev/null || true
           curl -o ossutil.zip https://gosspublic.alicdn.com/ossutil/v2/2.2.2/ossutil-2.2.2-linux-amd64.zip
           unzip -q ossutil.zip
           chmod +x ossutil-2.2.2-linux-amd64/ossutil
           mv ossutil-2.2.2-linux-amd64/ossutil /usr/local/bin/ossutil
-          ossutil config -e oss-cn-shenzhen.aliyuncs.com -i "${{ secrets.ALIYUN_ACCESS_KEY_ID }}" -k "${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}" --mode AK
+          printf '[Credentials]\nendpoint = oss-cn-shenzhen.aliyuncs.com\naccessKeyID = %s\naccessKeySecret = %s\n' \
+            "${{ secrets.ALIYUN_ACCESS_KEY_ID }}" \
+            "${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}" > ~/.ossutilconfig
 
       - name: Sync to OSS
         run: |
