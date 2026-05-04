@@ -60,6 +60,17 @@ languages:
       isoCode: en
       rtl: false
       dateFormat: "2006-01-02"
+      author:
+        name: "Liu ZhuoQi"
+        image: "avatar.jpg"
+        headline: "AI Agent Developer · Integrating AI into real products"
+        bio: "Personal blog of AI Agent developer Liu ZhuoQi. Sharing practical notes on AI Agent development, tool engineering, and creative programming."
+        links:
+          - github: "https://github.com/YouToco"
+          - x-twitter: "https://x.com/zhuoqidev"
+          - rss: "/index.xml"
+      description: "Personal blog of AI Agent developer Liu ZhuoQi. Sharing practical notes on AI Agent development."
+      keywords: [AI Agent, LLM, LangChain, Cursor, dev blog]
 
 outputs:
   home:
