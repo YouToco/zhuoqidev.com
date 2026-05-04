@@ -5,8 +5,9 @@
     {{ $recentArticles = .Site.Params.homepage.showRecentItems }}
   {{ end }}
 
-  {{/* Collect pages from posts & projects, current language only, exclude undated pages */}}
-  {{ $langPages := where .Site.RegularPages "Language.Lang" "eq" .Language.Lang }}
+  {{/* Language + date filter */}}
+  {{ $lang := .Site.Language.Lang }}
+  {{ $langPages := where .Site.RegularPages ".Language.Lang" "eq" $lang }}
   {{ $langPages = where $langPages "Date.Year" "ge" 2024 }}
 
   {{ if gt (len $langPages) 0 }}
