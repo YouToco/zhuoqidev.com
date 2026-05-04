@@ -109,8 +109,7 @@ params:
   # Homepage
   homepage:
     layout: profile
-    showRecent: true
-    showRecentItems: 5
+    showRecent: false
 
   # Article display
   article:
