@@ -74,22 +74,19 @@ jobs:
 
       - name: Install ossutil
         run: |
-          curl -o ossutil https://gosspublic.alicdn.com/ossutil/1.7.19/ossutil64
-          chmod +x ossutil
-          ./ossutil config \
-            -e oss-cn-shenzhen.aliyuncs.com \
-            -i "${{ secrets.ALIYUN_ACCESS_KEY_ID }}" \
-            -k "${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}" \
-            -L CH \
-            -c ~/.ossutilconfig
+          curl -o /usr/local/bin/ossutil https://gosspublic.alicdn.com/ossutil/install.sh 2>/dev/null || true
+          curl -o ossutil.zip https://gosspublic.alicdn.com/ossutil/v2/2.2.2/ossutil-2.2.2-linux-amd64.zip
+          unzip -q ossutil.zip
+          chmod +x ossutil-2.2.2-linux-amd64/ossutil
+          mv ossutil-2.2.2-linux-amd64/ossutil /usr/local/bin/ossutil
+          ossutil config -e oss-cn-shenzhen.aliyuncs.com -i "${{ secrets.ALIYUN_ACCESS_KEY_ID }}" -k "${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}" --mode AK
 
       - name: Sync to OSS
         run: |
-          ./ossutil sync public/ oss://zhuoqidev/ \
+          ossutil sync public/ oss://zhuoqidev/ \
             --delete \
             --update \
-            --jobs 10 \
-            -c ~/.ossutilconfig
+            --jobs 10
 
       - name: Refresh CDN Cache
         env:
