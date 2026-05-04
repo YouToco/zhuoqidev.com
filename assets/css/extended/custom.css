@@ -1,8 +1,1 @@
-/* ZhuoQi Dev — minimal overrides */
-
-/* TOC sidebar — use available space, no hard max */
-@media (min-width: 1024px) {
-  section > div:has(.toc) {
-    max-width: none !important;
-  }
-}
+/* ZhuoQi Dev — overrides reserved for future use */
