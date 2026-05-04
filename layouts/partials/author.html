@@ -1,20 +1,22 @@
 {{ $disableImageOptimization := .Site.Params.disableImageOptimization | default false }}
-{{ $author := site.Language.Params.author }}
+{{ $isEN := strings.Contains .RelPermalink "/en/" }}
+{{ $author := .Site.Params.Author }}
+{{ with $author }}
 <div class="flex author">
   {{ with $author.image }}
-    {{ $authorImage := "" }}
+    {{ $img := "" }}
     {{ if or (strings.HasPrefix . "http:") (strings.HasPrefix . "https:") }}
-      {{ $authorImage = resources.GetRemote . }}
+      {{ $img = resources.GetRemote . }}
     {{ else }}
-      {{ $authorImage = resources.Get . }}
+      {{ $img = resources.Get . }}
     {{ end }}
-    {{ if $authorImage }}
-      {{ $final := $authorImage }}
-      {{ $squareImage := $authorImage }}
-      {{ if not (or $disableImageOptimization (eq $authorImage.MediaType.SubType "svg")) }}
-        {{ $final = $authorImage.Fill "192x192" }}
-        {{ $shortSide := int (math.Min $authorImage.Width $authorImage.Height) }}
-        {{ $squareImage = $authorImage.Crop (printf "%dx%d" $shortSide $shortSide ) }}
+    {{ if $img }}
+      {{ $final := $img }}
+      {{ $squareImage := $img }}
+      {{ if not (or $disableImageOptimization (eq $img.MediaType.SubType "svg")) }}
+        {{ $final = $img.Fill "192x192" }}
+        {{ $shortSide := int (math.Min $img.Width $img.Height) }}
+        {{ $squareImage = $img.Crop (printf "%dx%d" $shortSide $shortSide ) }}
       {{ end }}
       <img class="!mt-0 !mb-0 h-24 w-24 rounded-full me-4" width="96" height="96"
         alt="{{ $author.name | default "Author" }}" src="{{ $final.RelPermalink }}"
@@ -28,9 +30,14 @@
       </div>
       <div class="font-semibold leading-6 text-neutral-800 dark:text-neutral-300">{{ . }}</div>
     {{ end }}
-    {{ with $author.bio | markdownify }}
-      <div class="text-sm text-neutral-700 dark:text-neutral-400">{{ . }}</div>
+    {{ if $isEN }}
+      <div class="text-sm text-neutral-700 dark:text-neutral-400">Personal blog of AI Agent developer Liu ZhuoQi. Sharing practical notes on AI Agent development, tool engineering, and creative programming.</div>
+    {{ else }}
+      {{ with $author.bio | markdownify }}
+        <div class="text-sm text-neutral-700 dark:text-neutral-400">{{ . }}</div>
+      {{ end }}
     {{ end }}
     <div class="text-2xl sm:text-lg">{{ partialCached "author-links.html" . }}</div>
   </div>
 </div>
+{{ end }}
