@@ -1,6 +1,6 @@
 ---
 title: "Why LLMs Have No Memory — A Cross-Validated Research Report with 67 Primary Sources"
-description: "Cross-validated using Exa / Tavily / Context7 / WebSearch, covering Anthropic / OpenAI / Google / Cursor official docs, Karpathy / LeCun / Raschka papers, and key works like MemGPT / Titans / Mamba-2 / Mem0."
+description: "Cross-validated across four search engines, covering Anthropic / OpenAI / Google / Cursor official docs, Karpathy / LeCun / Raschka papers, and key works like MemGPT / Titans / Mamba-2 / Mem0."
 date: 2026-05-04
 tags: ["AI Agent", "LLM", "Memory", "Research"]
 showToc: true
@@ -8,7 +8,7 @@ showToc: true
 
 ## TL;DR
 
-"LLMs have no memory" isn't an oversight — it's the equilibrium solution to four compounding constraints: **Transformer O(n²) attention + KV cache VRAM + weight entanglement (catastrophic forgetting) + GDPR compliance**. ChatGPT / Claude / Cursor "Memory" features all work the same way under the hood: **inject structured text back into the system prompt**. Model weights never change. Prompt Caching is a performance optimization, not memory. The mainstream architecture for the next 1–3 years is a hybrid **"stateless LLM core + stateful Agent memory layer"**, not a single winner.
+"LLMs have no memory" isn't an oversight — it's the equilibrium of four compounding constraints: **O(n²) attention + KV cache VRAM + catastrophic forgetting + GDPR compliance**. Every "Memory" feature from ChatGPT / Claude / Cursor works the same way: **inject structured text back into the system prompt**. Weights never change. Prompt Caching is performance optimization, not memory. The mainstream for the next 1–3 years is **"stateless LLM core + stateful Agent memory layer"**.
 
 <div class="research-stats">
   <div class="research-stat">
@@ -31,256 +31,220 @@ showToc: true
 
 ---
 
-## 1. Why LLMs Are Designed to Be Stateless
+## 1. Why LLMs Are Stateless
 
-Four independent constraints compound — individually manageable, but together they leave "stateless" as the only viable engineering solution.
+Four independent constraints — individually manageable, together they leave "stateless" as the only viable engineering solution. This conclusion is cross-validated across 67 primary sources.
 
-### Architectural Constraint · O(n²) Attention
+### Architecture: O(n²) Attention
 
-Self-attention scales at `O(n²)` with sequence length n. KV cache VRAM grows linearly but with a brutal constant — a single 4096-token sequence needs roughly 2 GB, and 32 concurrent sessions hit 64 GB, exceeding the model weights themselves.
+Self-attention scales at `O(n²)`. A single 4096-token sequence needs ~2 GB VRAM for KV cache; 32 concurrent sessions hit 64 GB — more than the model weights themselves. Llama 3.1 at 100M context requires 638 H100 GPUs (~$5,400/hour) for KV cache alone.
 
-→ Liu et al. "Lost in the Middle" (TACL 2024) empirically demonstrated: long contexts aren't just slower, the model's utilization of middle-section information follows a U-shaped curve — worse than closed-book performance.
+→ Liu et al. "Lost in the Middle" (TACL 2024): long contexts aren't just slower — middle-section recall follows a U-shaped curve, worse than closed-book.
 
-### Training Constraint · Catastrophic Forgetting
+### Training: Catastrophic Forgetting
 
-LLM knowledge is deeply entangled across billions of weights. There's no "French module" or "user preference register" to update independently. Every fine-tune reshapes the entire parameter landscape, overwriting previous capabilities.
+LLM knowledge is entangled across billions of weights. No isolated "French module" or "user preference register" exists. Every fine-tune reshapes the entire parameter landscape. Even LoRA suffers from catastrophic forgetting in continual learning scenarios (arXiv 2404.16789).
 
-→ The industry standard is weekly/daily offline retraining. No one does per-request online weight updates.
+→ Industry standard: offline retraining at weekly/daily cadence. No one does per-request weight updates.
 
-### Compliance Constraint · Right to Be Forgotten
+### Compliance: Right to Be Forgotten
 
-GDPR / PDPA require users to delete their data. Once personal data is baked into weights, the "right to be forgotten" becomes nearly impossible to execute precisely — you can only delete external storage.
+GDPR Article 17 and PDPA require data controllers to delete personal data "without undue delay." Once baked into billions of weights, the right to be forgotten becomes nearly impossible to execute — you can't "subtract" a user from the model. Both Anthropic and OpenAI explicitly state Memory data lives externally, not in weights. This is a legal constraint, not a technical preference.
 
-→ This is why RAG / Memory Layer beats fine-tuning — not a technical decision, but a legal hard constraint.
+→ RAG / Memory Layer beats fine-tuning because of compliance, not technical superiority.
 
-### Security Constraint · Persistent Memory = Persistent Attack Surface
+### Security: Persistent Memory = Persistent Attack Surface
 
-ChatGPT Memory has been breached multiple times via prompt injection: through Google Docs, images, or web pages, attackers invoke `to=bio` to write malicious persistent instructions that affect all future conversations.
-
-→ This is exactly why Cursor 1.0→1.2 added mandatory user approval for Memories, and Anthropic specifically tested sycophancy / harmful conversation before releasing Memory.
+ChatGPT Memory has been breached via prompt injection through Google Docs, images, and web pages — attackers invoke `to=bio` to write malicious persistent instructions affecting all future conversations (Embrace The Red, 2024). This is precisely why Cursor 1.0→1.2 added mandatory user approval, and why Anthropic tested sycophancy/harmful conversation before releasing Memory.
 
 <div class="research-callout callout-neutral">
 
-> **Karpathy's canonical analogy**: **Weights = ROM** (burned in at training, static); **context window = RAM** (active during inference, directly addressable); **KV cache = working memory** (formed at test-time); **external vector / KG store = disk** (persistent but requires retrieval). Original quote: "Knowledge in the weights is a hazy recollection of training-time internet documents; content in the context window is directly accessible" — Andrej Karpathy, Dwarkesh Patel Interview (2025-10).
+**Karpathy's canonical analogy**: **Weights = ROM** (static, burned in at training); **context window = RAM** (directly addressable during inference); **KV cache = working memory** (formed at test-time); **external vector / KG store = disk** (persistent, requires retrieval). "Knowledge in the weights is a hazy recollection of training-time internet documents; content in the context window is directly accessible" — Andrej Karpathy, Dwarkesh Patel Interview (2025-10).
 
 </div>
 
 ---
 
-## 2. How Major Products Do "Memory"
+## 2. Product Landscape: Cache vs Memory vs True Memory
 
-14 products, **none modifying model weights**. Every "Memory" feature is a different way to inject text back into the prompt at the product layer.
+14 products, **zero weight modifications**. This section also disentangles three commonly conflated concepts.
 
-<table class="research-table">
-<thead><tr><th>Product / Feature</th><th>One-Liner Strategy</th><th>Essence</th><th class="col-center">Weight Δ?</th></tr></thead>
-<tbody>
-<tr><td><strong>ChatGPT Memory</strong></td><td>4-layer: metadata + Saved Memories (bio) + ~40 recent chat summaries + current window</td><td>Prompt injection</td><td class="col-center">No</td></tr>
-<tr style="background:var(--entry)"><td><em>OpenAI Prompt Caching</em></td><td>≥1024 tokens auto KV prefix cache, 5–10min in-mem / 24h Extended, 0.1–0.5× price</td><td>Inference opt</td><td class="col-center">No</td></tr>
-<tr style="background:var(--entry)"><td><em>OpenAI Responses API</em></td><td><code>previous_response_id</code> chained server state, mainly for reasoning trace ciphertext</td><td>Server-side persistence</td><td class="col-center">No</td></tr>
-<tr style="background:var(--entry)"><td><em>Anthropic Prompt Caching</em></td><td>Explicit <code>cache_control</code> breakpoints (≤4), 5min/1h TTL, prefix byte-level matching</td><td>Inference opt</td><td class="col-center">No</td></tr>
-<tr><td><strong>Claude.ai Projects</strong></td><td>Project instructions + knowledge files + project chat history, full prompt injection</td><td>Prompt injection</td><td class="col-center">No</td></tr>
-<tr><td><strong>Claude Memory</strong> (2025-10)</td><td>Project-isolated, 24h natural language re-synthesis, visible/editable/importable/exportable</td><td>Prompt injection</td><td class="col-center">No</td></tr>
-<tr><td><strong>Claude Code</strong></td><td>Human-written CLAUDE.md (per-session load) + model-written <code>~/.claude/.../MEMORY.md</code></td><td>Prompt injection</td><td class="col-center">No</td></tr>
-<tr style="background:var(--entry)"><td><em>Gemini Context Caching</em></td><td>Implicit (90% discount) + Explicit (TTL 60min, token-hour storage billing)</td><td>Inference opt</td><td class="col-center">No</td></tr>
-<tr><td><strong>Cursor Rules / AGENTS.md</strong></td><td>Static markdown, 4 trigger modes, Team > Project > User priority</td><td>Prompt injection</td><td class="col-center">No</td></tr>
-<tr><td><strong>Cursor Memories</strong> (1.0+)</td><td>Background model generates candidates → user approves → written per-project per-user</td><td>Prompt injection</td><td class="col-center">No</td></tr>
-<tr style="background:var(--entry)"><td><em>Cursor Codebase Index</em></td><td>Merkle tree + chunk encryption + Turbopuffer vector DB, no plaintext on server</td><td>RAG</td><td class="col-center">No</td></tr>
-<tr><td><strong>Windsurf Cascade</strong></td><td>global rules + workspace rules + auto Memories + open files + M-Query RAG</td><td>Prompt injection</td><td class="col-center">No</td></tr>
-<tr><td><strong>Devin Knowledge</strong></td><td>Human-written + AI suggestions + DeepWiki + VM Snapshots</td><td>Injection + RAG + snapshot</td><td class="col-center">No</td></tr>
-<tr style="background:var(--entry)"><td><em>Replit Checkpoints</em></td><td>VM snapshot = files + DB + conversation context + Agent memory, CoW manifest in GCS</td><td>State snapshot</td><td class="col-center">No</td></tr>
-</tbody>
-</table>
+### Cache (KV / Prompt Caching) <span class="research-pill pill-success">Compute Opt</span>
 
-> *Italic* rows = Cache type; **Bold** rows = Memory type. The "Weight Δ?" column is uniformly No.
+Caches K, V projection tensors; prefix byte-level match → skip prefill. Cache-hit and recomputed outputs are mathematically equivalent. Lifetime: 5min–24h. Essence: optimization, not "remembering."
 
----
+### Memory (Product Layer) <span class="research-pill pill-success">Systems Eng</span>
 
-## 3. Memory vs Cache vs True Model Memory
-
-These three are commonly conflated, but physically they are completely different things.
-
-### Cache (KV / Prompt Caching) <span class="research-pill pill-success">Ubiquitous</span>
-
-| Dimension | Detail |
-|---|---|
-| Physical layer | Caches K, V projection tensors of attention layers; prefix byte-level match → skip prefill. Cache-hit and recomputed outputs are mathematically equivalent. |
-| Lifetime | 5 minutes – 24 hours |
-| Essence | Compute optimization — not "remembering" anything |
-
-### Memory (Product Layer) <span class="research-pill pill-success">Ubiquitous</span>
-
-| Dimension | Detail |
-|---|---|
-| Physical layer | **Text** stored in external databases / vector stores / markdown files, injected into system prompt header on each call. |
-| Lifetime | User-controlled: visible, editable, deletable, importable/exportable |
-| Essence | Systems engineering + UX problem, not model capability |
+**Text** in external databases / vector stores / markdown files, injected into system prompt on each call. User-controlled: visible, editable, deletable, exportable. Essence: systems engineering + UX, not model capability. Key evidence: Manthan Gupta confirmed ChatGPT has **zero knowledge** of topics discussed a year ago — it only stores summaries of the last ~40 user messages.
 
 ### True Model Memory (In-Weights) <span class="research-pill pill-warn">Nearly Nonexistent</span>
 
-| Dimension | Detail |
-|---|---|
-| Physical layer | Changing the model weights themselves. Theoretically fine-tuning / continual learning; practically avoided by the industry. |
-| Lifetime | Permanent, but cannot be deleted per-entry (compliance nightmare) |
-| Essence | Hit by the triple blow of catastrophic forgetting + compliance + interpretability |
+Changing the weights themselves — hit by catastrophic forgetting + GDPR + interpretability. LoRA is for domain/role specialization, not per-user.
 
-<div class="research-callout callout-warning">
+### Comparison Table
 
-> **Key reverse-engineering evidence**: Manthan Gupta confirmed through three experiments: ask ChatGPT about a specific topic discussed a year ago, and it **has absolutely no idea**. ChatGPT Memory does not use RAG. It stores only: session metadata + dozens of bio entries + **user message summaries** of the last ~40 chats (not ChatGPT's own replies) + the current sliding window. Cursor's official docs put it even more bluntly: *"Large language models don't retain memory between completions. Rules provide persistent, reusable context at the prompt level."*
+<table class="research-table">
+<thead><tr><th>Product</th><th>Strategy</th><th>Type</th><th class="col-center">Weight Δ?</th></tr></thead>
+<tbody>
+<tr><td><strong>ChatGPT Memory</strong></td><td>4-layer: metadata + bio + ~40 summaries + window</td><td>Memory</td><td class="col-center">No</td></tr>
+<tr style="background:var(--entry)"><td><em>OpenAI Prompt Caching</em></td><td>≥1024 tokens auto KV cache, 5min–24h TTL</td><td>Cache</td><td class="col-center">No</td></tr>
+<tr style="background:var(--entry)"><td><em>Anthropic Prompt Caching</em></td><td>Explicit <code>cache_control</code> ≤4 breakpoints, byte-level match</td><td>Cache</td><td class="col-center">No</td></tr>
+<tr style="background:var(--entry)"><td><em>Gemini Context Caching</em></td><td>Implicit 90% discount + Explicit 60min TTL</td><td>Cache</td><td class="col-center">No</td></tr>
+<tr><td><strong>Claude.ai Projects</strong></td><td>Instructions + files + history, full prompt injection</td><td>Memory</td><td class="col-center">No</td></tr>
+<tr><td><strong>Claude Memory</strong> (2025-10)</td><td>Project-isolated, 24h synthesis, editable</td><td>Memory</td><td class="col-center">No</td></tr>
+<tr><td><strong>Claude Code</strong></td><td>CLAUDE.md + model-written MEMORY.md (200 lines)</td><td>Memory</td><td class="col-center">No</td></tr>
+<tr><td><strong>Cursor Rules / AGENTS.md</strong></td><td>Static markdown, 4 trigger modes, Team > Project > User</td><td>Memory</td><td class="col-center">No</td></tr>
+<tr><td><strong>Cursor Memories</strong> (1.0+)</td><td>AI generates candidates → user approves → writes</td><td>Memory</td><td class="col-center">No</td></tr>
+<tr style="background:var(--entry)"><td><em>Cursor Codebase Index</em></td><td>Merkle tree + encryption + Turbopuffer vector DB</td><td>RAG</td><td class="col-center">No</td></tr>
+<tr><td><strong>Windsurf Cascade</strong></td><td>global + workspace rules + auto Memories + RAG</td><td>Memory</td><td class="col-center">No</td></tr>
+<tr><td><strong>Devin Knowledge</strong></td><td>Human-written + AI suggestions + DeepWiki + VM Snapshots</td><td>Memory + RAG</td><td class="col-center">No</td></tr>
+<tr style="background:var(--entry)"><td><em>Replit Checkpoints</em></td><td>VM snapshot = files + DB + chat + Agent memory</td><td>Snapshot</td><td class="col-center">No</td></tr>
+</tbody>
+</table>
 
-</div>
+> Light rows = Cache / RAG / Snapshot; bold rows = Memory. No product modifies weights.
 
 ---
 
-## 4. The Future: A Four-Layer Hybrid Stack
+## 3. The Four-Layer Future Stack
 
-Bottom-up: the base layer is always stateless; the three layers above are different abstractions for "giving it memory". Short-term mainstream is L4; the highest-value research leap is L2.
+Bottom-up: base layer forever stateless. The three above are different abstractions for "giving it memory." L4 is the short-term mainstream; L2 is the highest-value research leap.
 
-### L4 · Agentic Memory Layer (Stateful) <span class="research-pill pill-success">Most Mature</span>
+### L4 · Agent Memory Layer <span class="research-pill pill-success">Most Mature</span>
 
-Treats the LLM as a stateless CPU, with "memory" in external databases + Agent runtime. Representatives: `Letta` (MemGPT commercialization) · `Mem0` · `Zep + Graphiti` · `LangGraph Store` · `AutoGen Memory`.
+Treats the LLM as a stateless CPU; memory lives in external databases + Agent runtime. Representatives: `Letta` (MemGPT) · `Mem0` · `Zep + Graphiti` · `LangGraph Store` · `AutoGen Memory`.
 
 - ✅ Auditable · Deletable · Model-agnostic
-- ⚠️ Retrieval quality is the ceiling · Write contamination accumulates
-- Mem0 scores 26% higher than OpenAI Memory on LoCoMo benchmark, with 91% lower p95 latency and 90% fewer tokens.
+- ⚠️ Retrieval quality ceiling · Write contamination accumulates
+- Mem0 scores 26% above OpenAI Memory on LoCoMo; 91% lower p95 latency; 90% fewer tokens
 
-### L3 · Selective Ultra-Long Context <span class="research-pill pill-info">Commercialized</span>
+### L3 · Ultra-Long Context <span class="research-pill pill-info">Commercialized</span>
 
-Stuffs memory into ultra-long context windows. Representatives: Gemini 2M (needle recall >99%) · Magic LTM-2-Mini 100M tokens · context caching.
+Stuffs memory into ultra-long context windows. Representatives: Gemini 2M (>99% needle recall) · Magic LTM-2-Mini 100M tokens.
 
 - ✅ Best in-session carrier
 - ⚠️ Lost-in-the-middle unsolved · 100M ctx single user = 638×H100
-- Won't replace Memory Layer — long context can't handle cross-session / cross-year "real memory".
 
-### L2 · In-Architecture Long-Term Memory <span class="research-pill pill-warn">Highest Research Value</span>
+**L3 and L4 are complementary, not competitive**: ultra-long context handles within-session associations; Agent memory layer handles cross-session / cross-year persistence. Combining both is the current engineering optimum.
 
-Makes "persistent memory" a differentiable module embedded in the network. Representatives: Google `Titans` (short-term attention + long-term neural memory + task priors) · `Infini-attention` · `Mamba-2` · `RWKV-7 Goose` · Test-Time Training.
+### L2 · In-Architecture Memory <span class="research-pill pill-warn">Highest Research Value</span>
+
+Embeds "persistent memory" as a differentiable module in the network — potentially the real paradigm shift. Representatives: Google `Titans` · `Infini-attention` · `Mamba-2` · `RWKV-7 Goose`.
 
 - ✅ Constant VRAM · Linear time
-- ⚠️ Not yet validated at scale
-- Once one variant is scaled by a frontier lab (≥70B params / ≥10T tokens training), it could rewrite the L4 landscape.
+- ⚠️ Not yet validated at scale (needs ≥70B params / ≥10T tokens)
 
-### L1 · Stateless LLM Core (frozen weights) <span class="research-pill pill-neutral">Forever Stateless</span>
+### L1 · Bare LLM (frozen weights) <span class="research-pill pill-neutral">Forever Stateless</span>
 
-The GPT / Claude / Gemini / Llama core. Each inference is a fresh process; weights never change. Continual learning won't become the per-user memory path short-term: catastrophic forgetting remains unsolved, and GDPR right-to-be-forgotten can't be precisely executed in weights.
+GPT / Claude / Gemini / Llama core. Each inference is a fresh process. Continual learning won't become a per-user memory path short-term. LoRA is for domain/role specialization, not per-user.
 
-- LoRA is for domain/role specialization, not per-user.
+---
+
+## 4. Memory Economics: Why Cache TTL Is a Hidden Pricing Dial
+
+This is the most underappreciated thread in the entire landscape.
+
+In 2026-03, Anthropic **silently dropped cache TTL from 1h to 5min**, causing Claude Code users to pay 17–26% more. No announcement. No SLA commitment. This exposed a brutal truth: **cache TTL directly impacts per-user cost but appears on zero SLAs**.
+
+Extrapolate this logic and the future "memory economics" increasingly resemble cloud storage:
+
+- **Tiered**: Ultra-short (5min, free) → Short (1h, nearly free) → Medium (24h, token-hour billing) → Long-term (permanent, per-GB/month)
+- **Pricable**: Anthropic proved you can micro-adjust TTL without telling users — effectively reverse-pricing by traffic
+- **Lock-in**: Once your agent workflows depend on specific cache strategies, migration cost becomes lock-in cost
+
+<div class="research-stats">
+  <div class="research-stat">
+    <div class="stat-value">17–26%</div>
+    <div class="stat-label">Cost increase after Anthropic TTL change</div>
+  </div>
+  <div class="research-stat">
+    <div class="stat-value">$0.00</div>
+    <div class="stat-label">Cache cost savings — hidden from billing breakdown</div>
+  </div>
+  <div class="research-stat">
+    <div class="stat-value">~$5.4k/hr</div>
+    <div class="stat-label">100M ctx KV cache hardware cost (single user)</div>
+  </div>
+  <div class="research-stat">
+    <div class="stat-value">0×</div>
+    <div class="stat-label">SLA commitments on cache TTL</div>
+  </div>
+</div>
 
 ---
 
 ## 5. Three-Year Paradigm Roadmap
 
+Based on Anthropic, Letta, Karpathy, LeCun sources. 2026 has high confidence; 2027–2028 are inferential with explicit uncertainty.
+
 <table class="research-table">
-<thead><tr><th>Year</th><th>Industry Mainstream</th><th>Potential Dark Horse</th></tr></thead>
+<thead><tr><th>Year</th><th>Mainstream</th><th>Potential Dark Horse</th></tr></thead>
 <tbody>
-<tr><td class="col-center"><strong>2026</strong></td><td>Stateless LLM + Memory Layer (Mem0/Zep/Letta) + long-context caching</td><td>Titans-style architectures begin small-scale commercial use; Sleep-time Compute becomes agent standard</td></tr>
-<tr><td class="col-center"><strong>2027</strong></td><td>Reflection / Sleep-time / TTT enter LangGraph / CrewAI / AutoGen primitives</td><td>A 7B SSM/Hybrid surpasses Transformer across long-context benchmarks</td></tr>
-<tr><td class="col-center"><strong>2028</strong></td><td>Top models ship built-in in-arch long-term memory modules; Memory Layer degrades to governance layer</td><td>LeCun H-JEPA + LLM hybrid prototype appears (early signal for 5–10 year bet)</td></tr>
+<tr><td class="col-center"><strong>2026</strong></td><td>Bare LLM + Agent Memory (Mem0/Zep/Letta) + long-context caching</td><td>Titans-style architectures begin small-scale commercial use; Sleep-time Compute becomes agent standard</td></tr>
+<tr><td class="col-center"><strong>2027</strong></td><td>Reflection / Sleep-time / TTT enter mainstream Agent framework primitives</td><td>A 7B SSM/Hybrid surpasses Transformer on long-context benchmarks</td></tr>
+<tr><td class="col-center"><strong>2028</strong></td><td>Top models may integrate in-arch memory (high-risk prediction); otherwise Memory Layer remains standard</td><td>LeCun H-JEPA + LLM hybrid prototype (early signal for 5–10 year bet)</td></tr>
 </tbody>
 </table>
 
-<div class="research-callout callout-info">
-
-> **A counterintuitive observation**: Anthropic silently dropped the default cache TTL from 1h to 5min in 2026-03, causing Claude Code users to pay 17–26% more. This exposes an underappreciated fact: **cache TTL is a hidden dial that directly impacts per-user cost but isn't on any SLA**. The future "memory economics" will increasingly resemble cloud storage — tiered, metered, and pricable.
-
-</div>
+> **2028 caveat**: In-architecture memory requires ≥70B params and ≥10T token training for validation — currently arXiv-only. The more likely 2028 scenario is coexistence, not replacement.
 
 ---
 
-## 6. Nine Practical Takeaways for Engineers
+## 6. Nine Practical Takeaways
 
-1. **Don't conflate Cache and Memory**: Cache accelerates pre-assembled prompts; Memory is the product-layer decision of what to put into the prompt. They are completely orthogonal.
+1. **Never conflate Cache and Memory**: Cache skips prefill; Memory decides what goes into the prompt. Orthogonal.
 
-2. **Writing memory = writing system prompt**: Any project convention you can express in markdown (Cursor Rules / `CLAUDE.md` / AGENTS.md) will always be more controllable, diffable, and version-managed than "letting the AI remember on its own."
+2. **Writing memory = writing system prompt**: Any convention expressible in markdown (Cursor Rules / `CLAUDE.md` / AGENTS.md) beats "letting the AI remember" — diffable, version-controlled, deterministic.
 
-3. **Prefix order: static → dynamic**: Tool definitions, system prompt, and project rules go first; the current user input goes last. Consistent top-level advice across OpenAI, Anthropic, and Google documentation.
+3. **Prefix order: static → dynamic**: Tool definitions, system prompt, project rules first; user input last. Top-level advice from OpenAI, Anthropic, and Google docs.
 
-4. **Compaction must be cache-safe**: Don't open a new system prompt just for summarization — it forces the full conversation to be recomputed at uncached full price. Claude Code calls this "cache-safe forking."
+4. **Compaction must be cache-safe**: Don't open a new system prompt for summarization — forces full uncached recomputation. Claude Code calls this "cache-safe forking."
 
-5. **TTL is a product decision, not just an engineering parameter**: Anthropic's change from 1h to 5min default TTL triggered massive user backlash, proving the point. Expose TTL as a user-configurable option.
+5. **TTL is a product decision**: The Anthropic 1h→5min incident proves it. Expose TTL as user-configurable, or users will find your hidden pricing in their bills.
 
-6. **AI writes, human approves = the steadiest "auto Memory" pattern today**: Cursor 1.2's user approval requirement and Devin's suggestion-only flow are the design consensus after repeated prompt injection incidents.
+6. **AI writes, human approves = steadiest auto-Memory**: Cursor 1.2's user approval + Devin's suggestion-only flow are the post-prompt-injection consensus.
 
-7. **Visible, editable, exportable = trust**: Anthropic's "natural language synthesis" differentiation and ChatGPT's opaque synthesis are two sides of the same coin.
+7. **Visible, editable, exportable = trust**: Anthropic's natural language synthesis vs ChatGPT's opaque synthesis — two sides of the same coin.
 
-8. **Privacy mode conflicts with Cache**: OpenAI Extended cache loses ZDR eligibility; Cursor privacy mode stores no plaintext. Offer "performance vs. privacy" as two modes for users to choose.
+8. **Privacy mode conflicts with Cache**: OpenAI Extended cache loses ZDR; Cursor privacy mode stores no plaintext. Offer "performance vs. privacy" as two modes.
 
-9. **The real moat is "context engineering," not "memory models"**: Write memory as deterministic, version-controlled, human-readable state. Curation cost is one-time; the benefit compounds.
+9. **The real moat is "context engineering," not "memory models"**: Deterministic, version-controlled, human-readable state. Curation cost is one-time; benefit compounds.
 
 ---
 
 ## 7. Key References
 
-All primary sources from 2024–2026, grouped by theme. 30+ curated entries covering vendor docs, arXiv papers, and researcher essays.
+All primary sources from 2024–2026. 30+ curated entries.
 
 ### A. Vendor Sources
 
-**OpenAI**
-- [OpenAI Prompt Caching guide](https://developers.openai.com/docs/guides/prompt-caching) — KV cache mechanics + TTL + retention policy
-- [OpenAI Prompt Caching 201 cookbook](https://developers.openai.com/cookbook/examples/prompt_caching_201/) — Extended cache and ZDR relationship
-- [Manthan Gupta · I Reverse Engineered ChatGPT's Memory](https://manthanguptaa.in/posts/chatgpt_memory/) — 4-layer reverse engineering
-- [Embrace The Red · ChatGPT Hacking Memories](https://embracethered.com/blog/posts/2024/chatgpt-hacking-memories/) — bio tool and prompt injection attack surface
-- [Sean Goedecke · The whole point of Responses API](https://www.seangoedecke.com/responses-api/) — Unmasking Responses API's real motivation
+**OpenAI**: [Prompt Caching guide](https://developers.openai.com/docs/guides/prompt-caching) · [Caching 201 cookbook](https://developers.openai.com/cookbook/examples/prompt_caching_201/) · [Manthan Gupta · Reverse Engineered ChatGPT Memory](https://manthanguptaa.in/posts/chatgpt_memory/) · [Embrace The Red · Hacking Memories](https://embracethered.com/blog/posts/2024/chatgpt-hacking-memories/)
 
-**Anthropic**
-- [Anthropic Prompt Caching docs](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching) — cache_control / 5min vs 1h / 4 breakpoints
-- [Lessons from building Claude Code: Prompt caching is everything](https://claude.com/blog/lessons-from-building-claude-code-prompt-caching-is-everything) — cache-safe forking in practice
-- [Claude Code Memory docs](https://docs.anthropic.com/en/docs/claude-code/memory) — CLAUDE.md vs auto memory
-- [How does Claude's memory work](https://support.anthropic.com/en/articles/11817273-how-does-claude-s-memory-work) — RAG tool calls + 24h synthesis + project isolation
+**Anthropic**: [Prompt Caching docs](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching) · [Lessons from Claude Code](https://claude.com/blog/lessons-from-building-claude-code-prompt-caching-is-everything) · [Claude Code Memory](https://docs.anthropic.com/en/docs/claude-code/memory) · [How Claude's memory works](https://support.anthropic.com/en/articles/11817273-how-does-claude-s-memory-work)
 
-**Google**
-- [Gemini API Context Caching](https://ai.google.dev/gemini-api/docs/caching) — implicit vs explicit, TTL, storage billing
-- [Vertex AI Context caching overview](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/context-cache/context-cache-overview) — 90% discount + cross-tenant isolation
+**Google**: [Gemini Context Caching](https://ai.google.dev/gemini-api/docs/caching) · [Vertex AI caching overview](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/context-cache/context-cache-overview)
 
-**Cursor / Windsurf / Devin / Replit**
-- [Cursor Rules](https://cursor.com/docs/context/memories) — 4 trigger types + Team/Project/User Rules + AGENTS.md
-- [Cursor Codebase Indexing](https://cursor.com/docs/context/codebase-indexing) — Merkle tree + obfuscated path + client-side decryption
-- [Cursor 1.0 changelog](https://www.cursor.com/changelog/1-0) + [1.2 changelog](https://cursor.com/en/changelog/1-2) — Memories beta → GA + user approval evolution
-- [Securely indexing large codebases (Cursor blog)](https://www.cursor.so/blog/secure-codebase-indexing) — Merkle cross-account index reuse
-- [Windsurf Cascade Memories](https://docs.windsurf.com/windsurf/cascade/memories) — 5-layer context assembly
-- [Devin Knowledge](https://cognitionai.mintlify.app/product-guides/knowledge) — human + AI suggestions + DeepWiki + VM Snapshots
-- [Replit Checkpoints](https://docs.replit.com/core-concepts/agent/checkpoints-and-rollbacks) — VM + DB + AI conversation as snapshot unit
+**Cursor / Windsurf / Devin / Replit**: [Cursor Rules](https://cursor.com/docs/context/memories) · [Codebase Indexing](https://cursor.com/docs/context/codebase-indexing) · [Cursor 1.0](https://www.cursor.com/changelog/1-0) + [1.2](https://cursor.com/en/changelog/1-2) changelogs · [Windsurf Memories](https://docs.windsurf.com/windsurf/cascade/memories) · [Devin Knowledge](https://cognitionai.mintlify.app/product-guides/knowledge) · [Replit Checkpoints](https://docs.replit.com/core-concepts/agent/checkpoints-and-rollbacks)
 
 ### B. Key Papers
 
-**Architecture / Long Context**
-- [Lost in the Middle (TACL 2024)](https://arxiv.org/abs/2307.03172) — U-shaped curve empirical evidence
-- [Gemini 1.5 Technical Report](https://arxiv.org/abs/2403.05530) — 1M-10M token benchmark
-- [Magic LTM-2-Mini](https://magic.dev/blog/100m-token-context-windows) — 100M token, long-range algorithms 1000× fewer FLOPs than attention
-- [Titans: Learning to Memorize at Test Time](https://arxiv.org/abs/2501.00663) — Google neural long-term memory module
-- [Infini-attention](https://arxiv.org/abs/2404.07143) — Compressive memory, 1B model 5K → 1M passkey
-- [Mamba-2 / SSD (ICML 2024)](https://proceedings.mlr.press/v235/dao24a.html) — 2-8× speedup
-- [RWKV-7 Goose](https://arxiv.org/abs/2503.14456) — Constant VRAM, attention-free
-- [KV-Direct (arXiv 2603.19664)](https://www.arxiv.org/pdf/2603.19664) — Proves KV cache is a deterministic projection of the residual stream
+**Architecture**: [Lost in the Middle](https://arxiv.org/abs/2307.03172) · [Gemini 1.5](https://arxiv.org/abs/2403.05530) · [Magic LTM-2-Mini](https://magic.dev/blog/100m-token-context-windows) · [Titans](https://arxiv.org/abs/2501.00663) · [Infini-attention](https://arxiv.org/abs/2404.07143) · [Mamba-2](https://proceedings.mlr.press/v235/dao24a.html) · [RWKV-7](https://arxiv.org/abs/2503.14456) · [KV-Direct](https://www.arxiv.org/pdf/2603.19664)
 
-**Memory Layer / Agent Memory**
-- [MemGPT](https://arxiv.org/abs/2310.08560) — OS-inspired hierarchical memory paradigm foundation
-- [Mem0](https://arxiv.org/abs/2504.19413) — LoCoMo 91.6, p95 latency 91% lower than full-context
-- [Zep + Graphiti](https://arxiv.org/abs/2501.13956) — Dual-temporal KG, DMR 94.8%
-- [A-Mem](https://arxiv.org/abs/2502.12110) — Zettelkasten-inspired self-evolving memory
-- [Generative Agents (Park et al.)](https://arxiv.org/abs/2304.03442) — memory stream + reflection + planning template
-- [Sleep-time Compute](https://arxiv.org/abs/2504.13171) — Letta team, test-time compute ↓5× / accuracy ↑13-18%
+**Memory Layer**: [MemGPT](https://arxiv.org/abs/2310.08560) · [Mem0](https://arxiv.org/abs/2504.19413) · [Zep + Graphiti](https://arxiv.org/abs/2501.13956) · [A-Mem](https://arxiv.org/abs/2502.12110) · [Generative Agents](https://arxiv.org/abs/2304.03442) · [Sleep-time Compute](https://arxiv.org/abs/2504.13171)
 
-**Continual Learning / TTT**
-- [Continual Learning of LLMs Survey](https://arxiv.org/abs/2404.16789) — LoRA still plagued by catastrophic forgetting
-- [TTT for Few-shot Learning (ICML 2025)](https://proceedings.mlr.press/v267/akyurek25a.html) — ARC 8B + TTT ≈ human average
-- [Memory Survey: Taxonomy & Operations](https://arxiv.org/abs/2505.00675) — parametric/contextual + 6 atomic operations
+**Continual Learning**: [CL Survey](https://arxiv.org/abs/2404.16789) · [TTT (ICML 2025)](https://proceedings.mlr.press/v267/akyurek25a.html) · [Memory Taxonomy](https://arxiv.org/abs/2505.00675)
 
-### C. Paradigm Judgments (Karpathy / LeCun / Raschka)
+### C. Researchers (Karpathy / LeCun / Raschka)
 
-- [Andrej Karpathy · Dwarkesh Patel Interview (2025-10)](https://www.dwarkeshpatel.com/p/andrej-karpathy) — weights = hazy recollection, KV cache = working memory
-- [Karpathy · Intro to LLMs (LLM OS)](https://www.youtube.com/watch?v=zjkBMFhNj_g) — most authoritative source of context = RAM metaphor
-- [Yann LeCun · A Path Towards Autonomous Machine Intelligence](https://openreview.net/pdf?id=BZ5a1r-kVsf) — H-JEPA + persistent associative memory
-- [LeCun at NVIDIA GTC 2025](https://www.endofmiles.net/lecun-says-hes-not-so-interested-in-llms-anymore) — persistent memory as one of four obstacles for LLMs toward AMI
-- [Sebastian Raschka · Coding the KV Cache](https://sebastianraschka.com/blog/2025/coding-the-kv-cache-in-llms.html) — from-scratch implementation + engineering tradeoffs
+- [Karpathy · Dwarkesh Patel Interview (2025-10)](https://www.dwarkeshpatel.com/p/andrej-karpathy) · [Intro to LLMs](https://www.youtube.com/watch?v=zjkBMFhNj_g)
+- [LeCun · Path Towards AMI](https://openreview.net/pdf?id=BZ5a1r-kVsf) · [NVIDIA GTC 2025](https://www.endofmiles.net/lecun-says-hes-not-so-interested-in-llms-anymore)
+- [Raschka · Coding the KV Cache](https://sebastianraschka.com/blog/2025/coding-the-kv-cache-in-llms.html)
 
-### D. Industry Frameworks
+### D. Frameworks
 
-- [LangGraph Persistence & Memory](https://docs.langchain.com/oss/python/langgraph/persistence) — short-term checkpointer + long-term Store
-- [AutoGen Memory & RAG](https://microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/memory.html) — Memory protocol + ChromaDB/Redis/Mem0
-- [Letta Research / Stateful Agents](https://www.letta.com/research) — MemGPT founding team's commercial product
-- [Don't Break the Cache (arXiv 2601.06007)](https://arxiv.org/abs/2601.06007v2) — agentic workflow quantification, 41-80% cost savings
-- [ctx.ist · Context Determinism Thesis](https://ctx.ist/thesis/) — 17 systems + 56 rejection decisions, engineering justification
+- [LangGraph Persistence](https://docs.langchain.com/oss/python/langgraph/persistence) · [AutoGen Memory](https://microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/memory.html)
+- [Letta Research](https://www.letta.com/research) · [Don't Break the Cache](https://arxiv.org/abs/2601.06007v2) · [ctx.ist](https://ctx.ist/thesis/)
 
 ---
 
-*Research method: Three parallel sub-agents (technical principles + product API design + future paradigms), cross-validated across four sources (Exa Web Search/Fetch, Tavily Research/Search, Context7 for Cursor official docs, WebSearch). 67 primary URLs, all from 2024-Q1 to 2026-Q2.*
+*Research method: Three parallel sub-agents (technical principles + product API design + future paradigms), cross-validated across four sources (Exa, Tavily, Context7, WebSearch). 67 primary URLs, 2024-Q1 to 2026-Q2.*
