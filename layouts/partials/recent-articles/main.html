@@ -5,27 +5,27 @@
     {{ $recentArticles = .Site.Params.homepage.showRecentItems }}
   {{ end }}
 
-  {{/* Filter: current language + posts/projects sections only */}}
-  {{ $pages := where .Site.RegularPages "Section" "in" (slice "posts" "projects") }}
-  {{ $pages = where $pages "Language.Lang" "eq" .Language.Lang }}
+  {{/* Collect pages from posts & projects, current language only, exclude undated pages */}}
+  {{ $langPages := where .Site.RegularPages "Language.Lang" "eq" .Language.Lang }}
+  {{ $langPages = where $langPages "Date.Year" "ge" 2024 }}
 
-  {{ if gt (len $pages) 0 }}
+  {{ if gt (len $langPages) 0 }}
   <h2 class="mt-8 text-2xl font-extrabold mb-10">{{ i18n "shortcode.recent_articles" | emojify }}</h2>
 
   {{ if and .Site.Params.homepage.cardView (not .Site.Params.homepage.cardViewScreenWidth) | default false }}
     <section class="w-full grid gap-4 sm:grid-cols-2 md:grid-cols-3">
-      {{ range first $recentArticles $pages }}
+      {{ range first $recentArticles $langPages }}
         {{ partial "article-link/card.html" . }}
       {{ end }}
     </section>
   {{ else if and .Site.Params.homepage.cardView .Site.Params.homepage.cardViewScreenWidth | default false }}
     <section class="w-full grid gap-4 sm:grid-cols-2 md:grid-cols-3">
-      {{ range first $recentArticles $pages }}
+      {{ range first $recentArticles $langPages }}
         {{ partial "article-link/card.html" . }}
       {{ end }}
     </section>
   {{ else }}
-    {{ range first $recentArticles $pages }}
+    {{ range first $recentArticles $langPages }}
       {{ partial "article-link/simple.html" . }}
     {{ end }}
   {{ end }}
