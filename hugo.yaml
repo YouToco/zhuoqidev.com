@@ -90,7 +90,8 @@ outputs:
     - JSON
 
 params:
-  mainSections: ["posts", "projects"]
+  # Blowfish 内置动画背景 SVG（与 blowfish.page 同款）
+  defaultBackgroundImage: "img/background.svg"
 
   author:
     name: "Liu ZhuoQi"
@@ -116,12 +117,7 @@ params:
 
   # Homepage — Blowfish 默认 profile 布局
   homepage:
-    layout: profile
-    showRecent: true
-    showRecentItems: 5
-    showMoreLink: true
-    showMoreLinkDest: "/posts/"
-    cardView: true
+    layout: background
 
   # Article display
   article:
