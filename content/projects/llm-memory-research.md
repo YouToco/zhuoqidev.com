@@ -10,9 +10,24 @@ showToc: true
 
 所谓「大模型没有记忆」不是疏忽，而是 **Transformer O(n²) 注意力 + KV cache 显存 + 权重纠缠（灾难性遗忘）+ GDPR 合规** 四重约束的均衡解。ChatGPT / Claude / Cursor 的 "Memory" 本质都是**把结构化文本塞回 system prompt**，模型权重永远不动。Prompt Caching 只是性能优化，不是记忆。未来 1–3 年的主流是 **「无状态 LLM 内核 + 有状态 Agent 记忆层」** 混合架构，而非单一胜出者。
 
-| 注意力计算复杂度 | Llama 3.1 100M ctx 单用户成本 | Cache read 价格 | 主流 cache TTL |
-|---|---|---|---|
-| O(n²) | 638×H100 GPU | 0.1× | 5min–24h |
+<div class="research-stats">
+  <div class="research-stat">
+    <div class="stat-value">O(n²)</div>
+    <div class="stat-label">注意力计算复杂度</div>
+  </div>
+  <div class="research-stat">
+    <div class="stat-value">638×H100</div>
+    <div class="stat-label">Llama 3.1 100M ctx 单用户 KV cache 成本</div>
+  </div>
+  <div class="research-stat">
+    <div class="stat-value">0.1×</div>
+    <div class="stat-label">Cache read 价格 (Anthropic / OpenAI)</div>
+  </div>
+  <div class="research-stat">
+    <div class="stat-value">5min–24h</div>
+    <div class="stat-label">主流 prompt cache TTL</div>
+  </div>
+</div>
 
 ---
 
@@ -44,7 +59,11 @@ ChatGPT Memory 已被多次 prompt injection 攻破：通过 Google Doc / 图片
 
 → 这正是 Cursor 1.0→1.2 给 Memories 强制加 user approval 的原因，Anthropic 也专门测试 sycophancy / harmful conversation 后才发布 Memory。
 
+<div class="research-callout callout-neutral">
+
 > **Karpathy 的权威类比**：**权重 = ROM**（训练时烧入，静态）；**context window = RAM**（推理时活跃，可直接寻址）；**KV cache = working memory**（test-time 形成的工作记忆）；**外部 vector / KG store = disk**（持久但要 retrieve）。原话："权重里的知识是对训练时互联网文档的 hazy recollection；而 context window 里的内容是 directly accessible 的" — Andrej Karpathy, Dwarkesh Patel 专访 (2025-10)。
+
+</div>
 
 ---
 
@@ -52,24 +71,27 @@ ChatGPT Memory 已被多次 prompt injection 攻破：通过 Google Doc / 图片
 
 14 个主流产品，**没有任何一个真的修改了模型权重**。所谓 "Memory" 全部是产品层把文本塞回 prompt 的不同实现方式。
 
-| 产品 / 能力 | 策略一句话总结 | 本质 | 权重变化? |
-|---|---|---|---|
-| **ChatGPT Memory** | 4 层结构: 元数据 + Saved Memories (bio) + 最近 ~40 条对话摘要 + 当前滑窗 | 拼回 system prompt | No |
-| *OpenAI Prompt Caching* | ≥1024 token 自动 KV 前缀缓存, 5–10min in-mem / 24h Extended, 0.1–0.5x 价 | 推理算力优化 | No |
-| *OpenAI Responses API* | `previous_response_id` 链式服务端状态, 主要为保留 reasoning trace 密文 | 服务端持久化对话 | No |
-| *Anthropic Prompt Caching* | 显式 `cache_control` 断点 (≤4 个), 5min/1h TTL, 前缀逐 byte 匹配 | 推理算力优化 | No |
-| **Claude.ai Projects** | 项目说明 + 知识库文件 + 项目内对话历史, 全量塞 prompt 不做向量检索 | 拼回 system prompt | No |
-| **Claude Memory** (2025-10) | 项目隔离, 24h 自然语言再合成, 可视/可编辑/可导入导出 | 拼回 system prompt | No |
-| **Claude Code** | 人写 CLAUDE.md (每会话加载) + 模型自写 `~/.claude/.../MEMORY.md` (前 200 行) | 拼回 system prompt | No |
-| *Gemini Context Caching* | Implicit (默认开 90% 折扣) + Explicit (TTL 60min, 按 token-小时收存储费) | 推理算力优化 | No |
-| **Cursor Rules / AGENTS.md** | 静态 markdown, 4 种触发模式, Team > Project > User 优先级 | 拼回 system prompt | No |
-| **Cursor Memories** (1.0+) | 后台模型生成候选 → 用户审批 → 写入 per-project per-user | 拼回 system prompt | No |
-| *Cursor Codebase Index* | Merkle 树 + chunk 加密 + Turbopuffer 向量库, 服务端不留原文 | RAG (向量检索) | No |
-| **Windsurf Cascade** | global rules + workspace rules + 自动 Memories + open files + M-Query RAG | 拼回 system prompt | No |
-| **Devin Knowledge** | 人写 + AI 建议 + DeepWiki (每几小时重建仓库 wiki) + VM Snapshots | 拼回 + RAG + 状态快照 | No |
-| *Replit Checkpoints* | VM 快照 = 文件 + DB + 对话上下文 + Agent memory, CoW manifest 存 GCS | 状态快照 | No |
+<table class="research-table">
+<thead><tr><th>产品 / 能力</th><th>策略一句话总结</th><th>本质</th><th class="col-center">权重变化?</th></tr></thead>
+<tbody>
+<tr><td><strong>ChatGPT Memory</strong></td><td>4 层结构: 元数据 + Saved Memories (bio) + 最近 ~40 条对话摘要 + 当前滑窗</td><td>拼回 system prompt</td><td class="col-center">No</td></tr>
+<tr style="background:var(--entry)"><td><em>OpenAI Prompt Caching</em></td><td>≥1024 token 自动 KV 前缀缓存, 5–10min in-mem / 24h Extended, 0.1–0.5x 价</td><td>推理算力优化</td><td class="col-center">No</td></tr>
+<tr style="background:var(--entry)"><td><em>OpenAI Responses API</em></td><td><code>previous_response_id</code> 链式服务端状态, 主要为保留 reasoning trace 密文</td><td>服务端持久化对话</td><td class="col-center">No</td></tr>
+<tr style="background:var(--entry)"><td><em>Anthropic Prompt Caching</em></td><td>显式 <code>cache_control</code> 断点 (≤4 个), 5min/1h TTL, 前缀逐 byte 匹配</td><td>推理算力优化</td><td class="col-center">No</td></tr>
+<tr><td><strong>Claude.ai Projects</strong></td><td>项目说明 + 知识库文件 + 项目内对话历史, 全量塞 prompt 不做向量检索</td><td>拼回 system prompt</td><td class="col-center">No</td></tr>
+<tr><td><strong>Claude Memory</strong> (2025-10)</td><td>项目隔离, 24h 自然语言再合成, 可视/可编辑/可导入导出</td><td>拼回 system prompt</td><td class="col-center">No</td></tr>
+<tr><td><strong>Claude Code</strong></td><td>人写 CLAUDE.md (每会话加载) + 模型自写 <code>~/.claude/.../MEMORY.md</code> (前 200 行)</td><td>拼回 system prompt</td><td class="col-center">No</td></tr>
+<tr style="background:var(--entry)"><td><em>Gemini Context Caching</em></td><td>Implicit (默认开 90% 折扣) + Explicit (TTL 60min, 按 token-小时收存储费)</td><td>推理算力优化</td><td class="col-center">No</td></tr>
+<tr><td><strong>Cursor Rules / AGENTS.md</strong></td><td>静态 markdown, 4 种触发模式, Team > Project > User 优先级</td><td>拼回 system prompt</td><td class="col-center">No</td></tr>
+<tr><td><strong>Cursor Memories</strong> (1.0+)</td><td>后台模型生成候选 → 用户审批 → 写入 per-project per-user</td><td>拼回 system prompt</td><td class="col-center">No</td></tr>
+<tr style="background:var(--entry)"><td><em>Cursor Codebase Index</em></td><td>Merkle 树 + chunk 加密 + Turbopuffer 向量库, 服务端不留原文</td><td>RAG (向量检索)</td><td class="col-center">No</td></tr>
+<tr><td><strong>Windsurf Cascade</strong></td><td>global rules + workspace rules + 自动 Memories + open files + M-Query RAG</td><td>拼回 system prompt</td><td class="col-center">No</td></tr>
+<tr><td><strong>Devin Knowledge</strong></td><td>人写 + AI 建议 + DeepWiki (每几小时重建仓库 wiki) + VM Snapshots</td><td>拼回 + RAG + 状态快照</td><td class="col-center">No</td></tr>
+<tr style="background:var(--entry)"><td><em>Replit Checkpoints</em></td><td>VM 快照 = 文件 + DB + 对话上下文 + Agent memory, CoW manifest 存 GCS</td><td>状态快照</td><td class="col-center">No</td></tr>
+</tbody>
+</table>
 
-> 斜体行 = Cache 类（性能优化）；粗体行 = Memory 类（产品层文本注入）。所有产品的"权重变化"一栏都是 No。
+> 浅色行 = Cache 类（性能优化）；粗体行 = Memory 类（产品层文本注入）。所有产品的"权重变化"一栏都是 No。
 
 ---
 
@@ -101,7 +123,11 @@ ChatGPT Memory 已被多次 prompt injection 攻破：通过 Google Doc / 图片
 | 生命周期 | 永久，但不可逐条删除（合规噩梦） |
 | 本质 | 受灾难性遗忘 + 合规 + 可解释性三重打击 |
 
+<div class="research-callout callout-warning">
+
 > **关键反向工程证据**：Manthan Gupta 三次实验证实：问 ChatGPT 一年前讨论过的具体话题，它**根本不知道**。ChatGPT Memory 没有用 RAG，存的只有：会话元数据 + 几十条 bio 条目 + 最近 ~40 个聊天的**用户消息摘要**（不存 ChatGPT 自己的回复）+ 当前滑窗。Cursor 官方文档第一句更直白：*"Large language models don't retain memory between completions. Rules provide persistent, reusable context at the prompt level."*
+
+</div>
 
 ---
 
@@ -109,7 +135,7 @@ ChatGPT Memory 已被多次 prompt injection 攻破：通过 Google Doc / 图片
 
 自下而上：底层永远无状态，上面三层是"给它装记忆"的不同抽象。短期主流是 L4，最值得押注的研究跃迁在 L2。
 
-### L4 · Agentic Memory Layer (Stateful) `商业最成熟`
+### L4 · Agentic Memory Layer (Stateful) <span class="research-pill pill-success">商业最成熟</span>
 
 把 LLM 视为无状态 CPU，"记忆"放在外部数据库 + Agent runtime。代表：`Letta` (MemGPT 商业化) · `Mem0` · `Zep + Graphiti` · `LangGraph Store` · `AutoGen Memory`。
 
@@ -117,7 +143,7 @@ ChatGPT Memory 已被多次 prompt injection 攻破：通过 Google Doc / 图片
 - ⚠️ retrieval 质量决定上限 · 写入污染累积
 - Mem0 在 LoCoMo benchmark 上比 OpenAI Memory 高 26%、p95 延迟降 91%、token 降 90%。
 
-### L3 · Selective Ultra-Long Context `已商业化`
+### L3 · Selective Ultra-Long Context <span class="research-pill pill-info">已商业化</span>
 
 把记忆塞进超长 context window。代表：Gemini 2M (needle 召回 >99%) · Magic LTM-2-Mini 100M tokens · context caching。
 
@@ -125,7 +151,7 @@ ChatGPT Memory 已被多次 prompt injection 攻破：通过 Google Doc / 图片
 - ⚠️ Lost-in-the-middle 仍未解 · 100M ctx 单用户 638×H100
 - 不会替代 Memory Layer——长上下文管不了跨会话/跨年的"真记忆"。
 
-### L2 · In-Architecture Long-Term Memory `研究价值最高`
+### L2 · In-Architecture Long-Term Memory <span class="research-pill pill-warn">研究价值最高</span>
 
 把"持久记忆"做成可微模块嵌入网络。代表：Google `Titans` (短期 attention + 长期 neural memory + 任务先验) · `Infini-attention` · `Mamba-2` · `RWKV-7 Goose` · Test-Time Training。
 
@@ -133,7 +159,7 @@ ChatGPT Memory 已被多次 prompt injection 攻破：通过 Google Doc / 图片
 - ⚠️ 尚未规模化验证
 - 一旦某个变种被前沿厂商规模化（≥70B 参数 / ≥10T token 训练），可能改写 L4 格局。
 
-### L1 · Stateless LLM Core (frozen weights) `永远无状态`
+### L1 · Stateless LLM Core (frozen weights) <span class="research-pill pill-neutral">永远无状态</span>
 
 GPT / Claude / Gemini / Llama 内核。每次推理是新进程，权重不变。Continual learning 短期内不会成为 per-user 记忆主路：catastrophic forgetting 仍未根除，GDPR 被遗忘权在权重里无法精确执行。
 
@@ -143,13 +169,20 @@ GPT / Claude / Gemini / Llama 内核。每次推理是新进程，权重不变�
 
 ## 5. 3 年范式演进地图
 
-| 年份 | 工业主流配置 | 可能的黑马事件 |
-|---|---|---|
-| **2026** | Stateless LLM + Memory Layer (Mem0/Zep/Letta) + 长上下文 caching | Titans 系架构开始小规模商用；Sleep-time Compute 成 agent 标配 |
-| **2027** | Reflection / Sleep-time / TTT 进入 LangGraph / CrewAI / AutoGen 框架原语 | 某 SSM/Hybrid 7B 在 long-context benchmark 全面超 Transformer |
-| **2028** | 顶级模型自带 in-arch long-term memory module；Memory Layer 退化为治理层 | LeCun H-JEPA + LLM 混合体出现端到端原型 (5–10 年押注的早期信号) |
+<table class="research-table">
+<thead><tr><th>年份</th><th>工业主流配置</th><th>可能的黑马事件</th></tr></thead>
+<tbody>
+<tr><td class="col-center"><strong>2026</strong></td><td>Stateless LLM + Memory Layer (Mem0/Zep/Letta) + 长上下文 caching</td><td>Titans 系架构开始小规模商用；Sleep-time Compute 成 agent 标配</td></tr>
+<tr><td class="col-center"><strong>2027</strong></td><td>Reflection / Sleep-time / TTT 进入 LangGraph / CrewAI / AutoGen 框架原语</td><td>某 SSM/Hybrid 7B 在 long-context benchmark 全面超 Transformer</td></tr>
+<tr><td class="col-center"><strong>2028</strong></td><td>顶级模型自带 in-arch long-term memory module；Memory Layer 退化为治理层</td><td>LeCun H-JEPA + LLM 混合体出现端到端原型 (5–10 年押注的早期信号)</td></tr>
+</tbody>
+</table>
+
+<div class="research-callout callout-info">
 
 > **反直觉的观察**：Anthropic 在 2026-03 把默认 cache TTL 从 1h 静默降到 5min，导致 Claude Code 用户实测多花 17–26%。这暴露了一个被低估的事实：**cache TTL 是直接影响用户单价、但不在 SLA 上的隐藏开关**。未来的"记忆经济学"会越来越像云存储——分层、计时、可定价。
+
+</div>
 
 ---
 
