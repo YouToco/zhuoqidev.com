@@ -1,13 +1,5 @@
-/* ZhuoQi Dev — Minimal custom overrides on top of Blowfish defaults */
-
-/* Profile image — ensure portrait crops nicely in circle (Blowfish uses square crop by default) */
-.author-avatar img,
-.home-profile img[alt] {
-  object-fit: cover;
-  object-position: top;
-}
-
-/* ── Research article visual elements ── */
+/* ZhuoQi Dev — custom article visual elements (non-theme CSS) */
+/* These only style inline HTML in post content, no theme override */
 
 .research-stats {
   display: grid;
@@ -16,8 +8,8 @@
   margin: 1.5rem 0;
 }
 .research-stat {
-  background: var(--card-background, rgba(0,0,0,0.03));
-  border: 1px solid var(--card-border, rgba(0,0,0,0.08));
+  background: rgba(0,0,0,0.03);
+  border: 1px solid rgba(0,0,0,0.08);
   border-radius: 8px;
   padding: 1rem;
   text-align: center;
@@ -65,7 +57,7 @@
 .research-callout p { margin: 0; }
 .callout-info    { background: #eef6fc; border-color: #2196f3; color: #1a3a5c; }
 .callout-warning { background: #fef9e7; border-color: #f39c12; color: #5c3a1a; }
-.callout-neutral { background: rgba(0,0,0,0.02);  border-color: rgba(0,0,0,0.1); }
+.callout-neutral { background: rgba(0,0,0,0.02); border-color: rgba(0,0,0,0.1); }
 .dark .callout-info    { background: #0d1b2a; border-color: #2196f3; color: #a0c4e8; }
 .dark .callout-warning { background: #2a1e0d; border-color: #f39c12; color: #e8c8a0; }
 .dark .callout-neutral { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.08); }
