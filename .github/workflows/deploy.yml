@@ -86,8 +86,7 @@ jobs:
         run: |
           ossutil sync public/ oss://zhuoqidev/ \
             --delete \
-            --update \
-            --jobs 10
+            --update
 
       - name: Refresh CDN Cache
         env:
