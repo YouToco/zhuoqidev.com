@@ -1,9 +1,9 @@
-<nav class="flex items-center gap-x-5 h-12" data-is-en="{{ strings.Contains .RelPermalink "/en/" }}">
+<nav class="flex items-center gap-x-5 h-12">
   {{ if .Site.Menus.main }}
     {{ $isEN := strings.Contains .RelPermalink "/en/" }}
     {{ range .Site.Menus.main }}
-      {{ $isENItem := gt .Weight 100 }}
-      {{ if or (and (not $isEN) (not $isENItem)) (and $isEN $isENItem) }}
+      {{ $itemIsEN := gt .Weight 100 }}
+      {{ if or (and (not $isEN) (not $itemIsEN)) (and $isEN $itemIsEN) }}
         {{ template "DesktopMenu" . }}
       {{ end }}
     {{ end }}
