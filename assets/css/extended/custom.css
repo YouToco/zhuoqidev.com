@@ -1,9 +1,8 @@
 /* ZhuoQi Dev — minimal overrides */
 
-/* TOC sidebar — adaptive width based on viewport */
+/* TOC sidebar — use available space, no hard max */
 @media (min-width: 1024px) {
   section > div:has(.toc) {
-    max-width: min(22vw, 320px) !important;
-    width: min(22vw, 320px);
+    max-width: none !important;
   }
 }
