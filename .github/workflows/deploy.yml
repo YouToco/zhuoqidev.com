@@ -78,7 +78,7 @@ jobs:
           unzip -q ossutil.zip
           chmod +x ossutil-2.2.2-linux-amd64/ossutil
           mv ossutil-2.2.2-linux-amd64/ossutil /usr/local/bin/ossutil
-          printf '[Credentials]\nendpoint = oss-cn-shenzhen.aliyuncs.com\naccessKeyID = %s\naccessKeySecret = %s\n' \
+          printf '[Credentials]\nendpoint = oss-cn-shenzhen.aliyuncs.com\naccessKeyID = %s\naccessKeySecret = %s\nregion = cn-shenzhen\n' \
             "${{ secrets.ALIYUN_ACCESS_KEY_ID }}" \
             "${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}" > ~/.ossutilconfig
 
