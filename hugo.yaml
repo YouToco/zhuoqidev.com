@@ -90,6 +90,8 @@ outputs:
     - JSON
 
 params:
+  mainSections: ["posts", "projects"]
+
   author:
     name: "Liu ZhuoQi"
     image: "avatar.jpg"

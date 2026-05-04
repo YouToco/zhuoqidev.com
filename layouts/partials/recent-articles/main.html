@@ -5,9 +5,9 @@
     {{ $recentArticles = .Site.Params.homepage.showRecentItems }}
   {{ end }}
 
-  {{/* Filter by current language — only change from original Blowfish */}}
-  {{ $mainSections := .Site.Params.mainSections | default (slice "posts") }}
-  {{ $pages := where .RegularPages "Type" "in" $mainSections }}
+  {{/* Filter: current language + posts/projects sections only */}}
+  {{ $pages := where .Site.RegularPages "Section" "in" (slice "posts" "projects") }}
+  {{ $pages = where $pages "Language.Lang" "eq" .Language.Lang }}
 
   {{ if gt (len $pages) 0 }}
   <h2 class="mt-8 text-2xl font-extrabold mb-10">{{ i18n "shortcode.recent_articles" | emojify }}</h2>
