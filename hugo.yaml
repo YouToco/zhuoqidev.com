@@ -1,7 +1,7 @@
 baseURL: "https://zhuoqidev.com/"
 title: "ZhuoQi Dev"
+theme: blowfish
 paginate: 10
-theme: PaperMod
 copyright: "© 2026 Liu ZhuoQi"
 
 enableRobotsTXT: true
@@ -18,25 +18,15 @@ defaultContentLanguageInSubdir: false
 
 languages:
   zh:
-    languageName: "中文"
     label: "中文"
+    locale: zh-CN
     weight: 1
     title: "卓琪的开发笔记"
     params:
-      profileMode:
-        enabled: true
-        title: "刘卓琪"
-        subtitle: "AI Agent 开发者 · 把 AI 能力落到实际产品里"
-        imageUrl: "/images/avatar.jpg"
-        imageAltText: "Liu ZhuoQi"
-        buttons:
-          - name: "文章"
-            url: "/posts"
-          - name: "作品"
-            url: "/projects"
-      homeInfoParams:
-        Title: "你好，我是卓琪"
-        Content: "AI Agent 开发者，做智能系统、数据可视化和自动化工作流。如果你有 AI Agent 集成开发的需求，欢迎联系我。"
+      displayName: "中文"
+      isoCode: zh-CN
+      rtl: false
+      dateFormat: "2006-01-02"
     menu:
       main:
         - identifier: posts
@@ -61,25 +51,15 @@ languages:
           weight: 50
 
   en:
-    languageName: "English"
     label: "English"
+    locale: en
     weight: 2
     title: "ZhuoQi Dev"
     params:
-      profileMode:
-        enabled: true
-        title: "Liu ZhuoQi"
-        subtitle: "AI Agent Developer · Integrating AI into real products"
-        imageUrl: "/images/avatar.jpg"
-        imageAltText: "Liu ZhuoQi"
-        buttons:
-          - name: "Posts"
-            url: "/en/posts"
-          - name: "Projects"
-            url: "/en/projects"
-      homeInfoParams:
-        Title: "Hi, I'm ZhuoQi"
-        Content: "AI Agent developer building intelligent systems, data visualization, and automated workflows. If you need an AI Agent integration developer, reach out."
+      displayName: "EN"
+      isoCode: en
+      rtl: false
+      dateFormat: "2006-01-02"
     menu:
       main:
         - identifier: posts
@@ -110,50 +90,72 @@ outputs:
     - JSON
 
 params:
-  env: production
-  author: "Liu ZhuoQi"
+  author:
+    name: "Liu ZhuoQi"
+    image: "avatar.jpg"
+    headline: "AI Agent 开发者 · 把 AI 能力落到实际产品里"
+    bio: "AI Agent 开发者刘卓琪的个人博客，分享 AI Agent 开发、工具工程和创意编程。"
+    links:
+      - github: "https://github.com/YouToco"
+      - x-twitter: "https://x.com/zhuoqidev"
+      - rss: "/index.xml"
+
   description: "AI Agent 开发者刘卓琪的个人博客，分享 AI Agent 开发、工具工程和创意编程。"
   keywords: [AI Agent, LangChain, Cursor, 个人博客, 开发笔记]
 
   defaultTheme: auto
   disableThemeToggle: false
-  ShowShareButtons: true
-  ShowReadingTime: true
-  displayFullLangName: true
-  ShowPostNavLinks: true
-  ShowBreadCrumbs: true
-  ShowCodeCopyButtons: true
-  ShowRssButtonInSectionTermList: true
-  ShowToc: true
-  comments: false
 
-  profileMode:
-    enabled: true
+  # Homepage
+  homepage:
+    layout: profile
+    showRecent: true
+    showRecentItems: 5
 
-  socialIcons:
-    - name: github
-      url: "https://github.com/YouToco"
-    - name: x
-      url: "https://x.com/zhuoqidev"
-    - name: rss
-      url: "/index.xml"
+  # Article display
+  article:
+    showDate: true
+    showDateUpdated: true
+    showReadingTime: true
+    showWordCount: true
+    showTableOfContents: true
+    showTaxonomies: true
+    showAuthors: true
+    showZenMode: false
+    showRelatedContent: true
+    relatedContentLimit: 3
+    showCopyButton: true
+    showBreadcrumbs: true
+    showPagination: true
+    sharingLinks:
+      - x-twitter
+      - linkedin
+      - reddit
+      - facebook
+      - whatsapp
+      - telegram
+      - hackernews
 
-  cover:
-    hidden: false
-    hiddenInList: false
-    hiddenInSingle: false
-
+  # Edit link
   editPost:
     URL: "https://github.com/YouToco/zhuoqidev.com/blob/main/content"
     Text: "编辑此页"
     appendFilePath: true
 
-  # Analytics — fill in after setup
-  # umamiWebsiteId: "your-umami-website-id"
-  # umamiScriptSrc: "https://cloud.umami.is/script.js"
-  # baiduAnalyticsId: "your-baidu-hm-id"
-  # cloudflareAnalyticsToken: "your-cf-token"
+  # Header layout
+  header:
+    layout: fixed
 
+  # Enable search
+  enableSearch: true
+
+  # Footer
+  footer:
+    showCopyright: true
+    showThemeAttribution: true
+    showAppearanceSwitcher: false
+
+  # Fuse.js search
   fuseOpts:
     isCaseSensitive: false
     shouldSort: true
