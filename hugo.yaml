@@ -114,10 +114,14 @@ params:
   # Blowfish 默认功能
   enableSearch: true
   enableCodeCopy: true
+  enableA11y: true
+  enableImageOptimization: true
+  fingerprintAlgorithm: "sha512"
 
-  # Homepage — Blowfish 默认 profile 布局
+  # Homepage — Blowfish 动画背景布局
   homepage:
     layout: background
+    layoutBackgroundBlur: true
 
   # Article display
   article:
@@ -130,9 +134,10 @@ params:
     showAuthors: true
     showRelatedContent: true
     relatedContentLimit: 3
-    showCopyButton: true
     showBreadcrumbs: true
     showPagination: true
+    showHeadingAnchors: true
+    showZenMode: false
     sharingLinks:
       - x-twitter
       - linkedin
@@ -141,6 +146,14 @@ params:
       - whatsapp
       - telegram
       - hackernews
+
+  # Section list pages
+  list:
+    showBreadcrumbs: true
+    showSummary: true
+    showCards: true
+    groupByYear: true
+    cardView: true
 
   # Edit link
   editPost:
