@@ -1,0 +1,34 @@
+{{/*
+  Usage: {{< codepen id="abcXYZ" height="400" tab="result" >}}
+
+  Params:
+    id       - CodePen pen ID (required)
+    user     - CodePen username (default: zhuoqidev)
+    height   - iframe height in px (default: 400)
+    tab      - default tab: result | css | html | js (default: result)
+    theme    - 0=light, dark (default: 0)
+*/}}
+
+{{ $id     := .Get "id" }}
+{{ $user   := .Get "user"   | default "zhuoqidev" }}
+{{ $height := .Get "height" | default "400" }}
+{{ $tab    := .Get "tab"    | default "result" }}
+{{ $theme  := .Get "theme"  | default "0" }}
+
+{{ if not $id }}
+  <p style="color:red">⚠️ codepen shortcode: missing <code>id</code> parameter</p>
+{{ else }}
+<div class="codepen-embed" style="margin: 1.5rem 0;">
+  <iframe
+    height="{{ $height }}"
+    style="width:100%; border:none; border-radius:6px;"
+    scrolling="no"
+    title="CodePen demo"
+    src="https://codepen.io/{{ $user }}/embed/{{ $id }}?default-tab={{ $tab }}&theme-id={{ $theme }}"
+    loading="lazy"
+    allowtransparency="true"
+    allowfullscreen="true">
+    See the Pen on <a href="https://codepen.io/{{ $user }}/pen/{{ $id }}">CodePen</a>.
+  </iframe>
+</div>
+{{ end }}

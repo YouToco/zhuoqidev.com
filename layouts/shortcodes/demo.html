@@ -1,0 +1,53 @@
+{{/*
+  Inline CSS/HTML demo — renders a live preview directly in the page.
+  Uses a script tag to write content into a sandboxed iframe, avoiding
+  srcdoc double-escaping issues in Hugo.
+
+  Usage:
+    {{< demo height="300" >}}
+    <style>
+      .box { width:80px; height:80px; background:#c44020; animation: spin 2s linear infinite; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+    <div class="box"></div>
+    {{< /demo >}}
+
+  Params:
+    height   - preview height in px (default: 280)
+    caption  - optional caption text below the demo
+*/}}
+
+{{ $height  := .Get "height"  | default "280" }}
+{{ $caption := .Get "caption" | default "" }}
+{{ $id      := printf "demo-%s-%d" .Page.File.UniqueID .Ordinal }}
+
+<div class="inline-demo" style="margin: 1.5rem 0;">
+  <iframe
+    id="{{ $id }}"
+    style="width:100%; height:{{ $height }}px; border:1px solid #dedad4; border-radius:6px; background:#faf8f5;"
+    scrolling="no"
+    sandbox="allow-scripts">
+  </iframe>
+  {{ if $caption }}
+  <p style="font-size:0.8rem; color:#777; text-align:center; margin-top:0.5rem;">{{ $caption }}</p>
+  {{ end }}
+</div>
+{{/* Store inner HTML in a hidden template element to avoid JS string escaping */}}
+<template id="{{ $id }}-src">{{ .Inner }}</template>
+<script>
+(function() {
+  var src = document.getElementById("{{ $id }}-src").innerHTML;
+  var iframe = document.getElementById("{{ $id }}");
+  var doc = iframe.contentDocument || iframe.contentWindow.document;
+  doc.open();
+  doc.write(
+    '<!DOCTYPE html><html><head><meta charset="utf-8">' +
+    '<style>*{box-sizing:border-box}body{margin:0;display:flex;align-items:center;' +
+    'justify-content:center;min-height:{{ $height }}px;background:#faf8f5;' +
+    'font-family:system-ui,sans-serif}</style></head><body>' +
+    src +
+    '</body></html>'
+  );
+  doc.close();
+})();
+</script>

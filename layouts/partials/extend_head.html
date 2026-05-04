@@ -1,0 +1,28 @@
+{{/* Analytics — inject in <head> */}}
+
+{{- if and (eq hugo.Environment "production") .Site.Params.umamiWebsiteId }}
+<script defer
+  src="{{ .Site.Params.umamiScriptSrc | default "https://cloud.umami.is/script.js" }}"
+  data-website-id="{{ .Site.Params.umamiWebsiteId }}">
+</script>
+{{- end }}
+
+{{- if and (eq hugo.Environment "production") .Site.Params.baiduAnalyticsId }}
+<script>
+  var _hmt = _hmt || [];
+  (function() {
+    var hm = document.createElement("script");
+    hm.src = "https://hm.baidu.com/hm.js?{{ .Site.Params.baiduAnalyticsId }}";
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(hm, s);
+  })();
+</script>
+{{- end }}
+
+{{/* Cloudflare Web Analytics */}}
+{{- if and (eq hugo.Environment "production") .Site.Params.cloudflareAnalyticsToken }}
+<script defer
+  src="https://static.cloudflareinsights.com/beacon.min.js"
+  data-cf-beacon='{"token": "{{ .Site.Params.cloudflareAnalyticsToken }}"}'>
+</script>
+{{- end }}

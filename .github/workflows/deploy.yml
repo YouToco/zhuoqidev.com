@@ -1,0 +1,114 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Cancel in-progress runs on new pushes
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Hugo Site
+    runs-on: ubuntu-latest
+    outputs:
+      artifact-name: hugo-public
+    steps:
+      - name: Checkout (with submodules for PaperMod)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: "0.161.1"
+          extended: true
+
+      - name: Build
+        run: hugo --minify
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hugo-public
+          path: public/
+          retention-days: 1
+
+  deploy-cloudflare:
+    name: Deploy to Cloudflare Pages
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: hugo-public
+          path: public/
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy public/ --project-name=zhuoqidev --commit-dirty=true
+
+  deploy-aliyun-oss:
+    name: Deploy to Alibaba Cloud OSS
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: hugo-public
+          path: public/
+
+      - name: Install ossutil
+        run: |
+          curl -o ossutil https://gosspublic.alicdn.com/ossutil/1.7.19/ossutil64
+          chmod +x ossutil
+          ./ossutil config \
+            -e oss-cn-hangzhou.aliyuncs.com \
+            -i "${{ secrets.ALIYUN_ACCESS_KEY_ID }}" \
+            -k "${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}" \
+            -L CH \
+            -c ~/.ossutilconfig
+
+      - name: Sync to OSS
+        run: |
+          ./ossutil sync public/ oss://zhuoqidev/ \
+            --delete \
+            --update \
+            --jobs 10 \
+            -c ~/.ossutilconfig
+
+      - name: Refresh CDN Cache
+        env:
+          ALIYUN_ACCESS_KEY_ID: ${{ secrets.ALIYUN_ACCESS_KEY_ID }}
+          ALIYUN_ACCESS_KEY_SECRET: ${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}
+        run: |
+          pip install aliyun-python-sdk-cdn --quiet
+          python3 - <<'EOF'
+          import os
+          from aliyunsdkcore.client import AcsClient
+          from aliyunsdkcdn.request.v20180510.RefreshObjectCachesRequest import RefreshObjectCachesRequest
+
+          client = AcsClient(
+            os.environ["ALIYUN_ACCESS_KEY_ID"],
+            os.environ["ALIYUN_ACCESS_KEY_SECRET"],
+            "cn-hangzhou"
+          )
+          req = RefreshObjectCachesRequest()
+          req.set_ObjectPath("https://zhuoqidev.com/")
+          req.set_ObjectType("Directory")
+          response = client.do_action_with_exception(req)
+          print(response)
+          EOF

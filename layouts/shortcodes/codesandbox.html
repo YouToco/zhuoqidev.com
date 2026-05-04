@@ -1,0 +1,29 @@
+{{/*
+  Usage: {{< codesandbox id="react-demo-abc123" >}}
+
+  Params:
+    id       - CodeSandbox sandbox ID (required)
+    height   - iframe height in px (default: 450)
+    view     - preview | editor | split (default: preview)
+    theme    - dark | light (default: dark)
+*/}}
+
+{{ $id     := .Get "id" }}
+{{ $height := .Get "height" | default "450" }}
+{{ $view   := .Get "view"   | default "preview" }}
+{{ $theme  := .Get "theme"  | default "dark" }}
+
+{{ if not $id }}
+  <p style="color:red">⚠️ codesandbox shortcode: missing <code>id</code> parameter</p>
+{{ else }}
+<div class="codesandbox-embed" style="margin: 1.5rem 0;">
+  <iframe
+    src="https://codesandbox.io/embed/{{ $id }}?fontsize=14&hidenavigation=1&theme={{ $theme }}&view={{ $view }}"
+    style="width:100%; height:{{ $height }}px; border:none; border-radius:6px; overflow:hidden;"
+    title="CodeSandbox demo"
+    allow="accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; vr; xr-spatial-tracking"
+    sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
+    loading="lazy">
+  </iframe>
+</div>
+{{ end }}
