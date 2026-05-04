@@ -103,18 +103,23 @@ params:
   description: "AI Agent 开发者刘卓琪的个人博客，分享 AI Agent 开发、工具工程和创意编程。"
   keywords: [AI Agent, LangChain, Cursor, 个人博客, 开发笔记]
 
-  defaultTheme: auto
-  disableThemeToggle: false
+  # Blowfish 默认外观
+  colorScheme: "blowfish"
+  defaultAppearance: "light"
+  autoSwitchAppearance: true
 
-  # Homepage
+  # Blowfish 默认功能
+  enableSearch: true
+  enableCodeCopy: true
+
+  # Homepage — Blowfish 默认 profile 布局
   homepage:
     layout: profile
     showRecent: true
-    showRecentItems: 3
-    cardView: true
-    cardViewScreenWidth: false
+    showRecentItems: 5
     showMoreLink: true
     showMoreLinkDest: "/posts/"
+    cardView: true
 
   # Article display
   article:
@@ -125,7 +130,6 @@ params:
     showTableOfContents: true
     showTaxonomies: true
     showAuthors: true
-    showZenMode: false
     showRelatedContent: true
     relatedContentLimit: 3
     showCopyButton: true
@@ -146,20 +150,17 @@ params:
     Text: "编辑此页"
     appendFilePath: true
 
-  # Header layout
+  # Blowfish 默认 Header — 毛玻璃固定导航
   header:
-    layout: fixed
+    layout: fixed-fill-blur
 
-  # Enable search
-  enableSearch: true
-
-  # Footer
+  # Blowfish 默认 Footer
   footer:
     showCopyright: true
-    showThemeAttribution: true
-    showAppearanceSwitcher: false
+    showThemeAttribution: false
+    showAppearanceSwitcher: true
+    showScrollToTop: true
 
-  # Fuse.js search
   fuseOpts:
     isCaseSensitive: false
     shouldSort: true
