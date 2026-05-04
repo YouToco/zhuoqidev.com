@@ -77,7 +77,7 @@ jobs:
           curl -o ossutil https://gosspublic.alicdn.com/ossutil/1.7.19/ossutil64
           chmod +x ossutil
           ./ossutil config \
-            -e oss-cn-hangzhou.aliyuncs.com \
+            -e oss-cn-shenzhen.aliyuncs.com \
             -i "${{ secrets.ALIYUN_ACCESS_KEY_ID }}" \
             -k "${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}" \
             -L CH \
