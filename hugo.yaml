@@ -107,7 +107,7 @@ params:
     showDateUpdated: true
     showReadingTime: true
     showWordCount: true
-    showTableOfContents: true
+    showTableOfContents: false
     showTaxonomies: true
     showAuthors: true
     showRelatedContent: true
