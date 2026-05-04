@@ -90,7 +90,9 @@ ChatGPT Memory 已被多次 prompt injection 攻破：通过 Google Doc / 图片
 
 自下而上：底层永远无状态，上面三层是"给它装记忆"的不同抽象。L4（Agent 记忆层）是短期主流，L2（架构内记忆）是最值得押注的研究跃迁。
 
-### L4 · Agent 记忆层 {{< badge >}}商业最成熟{{< /badge >}}
+### L4 · Agent 记忆层
+
+{{< badge >}}商业最成熟{{< /badge >}}
 
 把 LLM 视为无状态 CPU，"记忆"放在外部数据库 + Agent runtime，每次推理把检索结果拼回 prompt。代表：`Letta` (MemGPT) · `Mem0` · `Zep + Graphiti` · `LangGraph Store` · `AutoGen Memory`。
 
@@ -98,7 +100,9 @@ ChatGPT Memory 已被多次 prompt injection 攻破：通过 Google Doc / 图片
 - ⚠️ retrieval 质量决定上限 · 写入污染累积
 - Mem0 在 LoCoMo benchmark 上比 OpenAI Memory 高 26%、p95 延迟降 91%、token 降 90%
 
-### L3 · 超长上下文 {{< badge >}}已商业化{{< /badge >}}
+### L3 · 超长上下文
+
+{{< badge >}}已商业化{{< /badge >}}
 
 把记忆塞进超长 context window。代表：Gemini 2M (needle 召回 >99%) · Magic LTM-2-Mini 100M tokens。
 
@@ -107,14 +111,18 @@ ChatGPT Memory 已被多次 prompt injection 攻破：通过 Google Doc / 图片
 
 **L3 和 L4 是互补不是替代**：超长上下文处理会话内的即时关联，Agent 记忆层处理跨会话/跨年的持久记忆。将两者组合是当前工程上的最优解。
 
-### L2 · 架构内记忆 {{< badge >}}研究价值最高{{< /badge >}}
+### L2 · 架构内记忆
+
+{{< badge >}}研究价值最高{{< /badge >}}
 
 把"持久记忆"做成可微模块嵌入网络——这可能是真正改写格局的方向。代表：Google `Titans` (短期 attention + 长期 neural memory) · `Infini-attention` · `Mamba-2` · `RWKV-7 Goose`。
 
 - ✅ 常数显存 · 线性时间
 - ⚠️ 尚未规模化验证（需 ≥70B / ≥10T token 训练才能证明可行性）
 
-### L1 · 裸 LLM（frozen weights） {{< badge >}}永远无状态{{< /badge >}}
+### L1 · 裸 LLM（frozen weights）
+
+{{< badge >}}永远无状态{{< /badge >}}
 
 GPT / Claude / Gemini / Llama 内核。每次推理是新进程，权重不变。Continual learning 短期内不会成为 per-user 记忆主路。LoRA 用于领域/角色特化，不是 per-user。
 

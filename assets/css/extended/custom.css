@@ -1,8 +1,9 @@
 /* ZhuoQi Dev — minimal overrides */
 
-/* TOC sidebar width — default lg:max-w-2xs (256px) is too narrow */
+/* TOC sidebar — adaptive width based on viewport */
 @media (min-width: 1024px) {
   section > div:has(.toc) {
-    max-width: 300px !important;
+    max-width: min(22vw, 320px) !important;
+    width: min(22vw, 320px);
   }
 }

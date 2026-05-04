@@ -90,7 +90,9 @@ ChatGPT Memory has been breached via prompt injection through Google Docs, image
 
 Bottom-up: base layer forever stateless. The three above are different abstractions for "giving it memory." L4 is the short-term mainstream; L2 is the highest-value research leap.
 
-### L4 · Agent Memory Layer {{< badge >}}Most Mature{{< /badge >}}
+### L4 · Agent Memory Layer
+
+{{< badge >}}Most Mature{{< /badge >}}
 
 Treats the LLM as a stateless CPU; memory lives in external databases + Agent runtime. Representatives: `Letta` (MemGPT) · `Mem0` · `Zep + Graphiti` · `LangGraph Store` · `AutoGen Memory`.
 
@@ -98,7 +100,9 @@ Treats the LLM as a stateless CPU; memory lives in external databases + Agent ru
 - ⚠️ Retrieval quality ceiling · Write contamination accumulates
 - Mem0 scores 26% above OpenAI Memory on LoCoMo; 91% lower p95 latency; 90% fewer tokens
 
-### L3 · Ultra-Long Context {{< badge >}}Commercialized{{< /badge >}}
+### L3 · Ultra-Long Context
+
+{{< badge >}}Commercialized{{< /badge >}}
 
 Stuffs memory into ultra-long context windows. Representatives: Gemini 2M (>99% needle recall) · Magic LTM-2-Mini 100M tokens.
 
@@ -107,14 +111,18 @@ Stuffs memory into ultra-long context windows. Representatives: Gemini 2M (>99% 
 
 **L3 and L4 are complementary, not competitive**: ultra-long context handles within-session associations; Agent memory layer handles cross-session / cross-year persistence. Combining both is the current engineering optimum.
 
-### L2 · In-Architecture Memory {{< badge >}}Highest Research Value{{< /badge >}}
+### L2 · In-Architecture Memory
+
+{{< badge >}}Highest Research Value{{< /badge >}}
 
 Embeds "persistent memory" as a differentiable module in the network — potentially the real paradigm shift. Representatives: Google `Titans` · `Infini-attention` · `Mamba-2` · `RWKV-7 Goose`.
 
 - ✅ Constant VRAM · Linear time
 - ⚠️ Not yet validated at scale (needs ≥70B params / ≥10T tokens)
 
-### L1 · Bare LLM (frozen weights) {{< badge >}}Forever Stateless{{< /badge >}}
+### L1 · Bare LLM (frozen weights)
+
+{{< badge >}}Forever Stateless{{< /badge >}}
 
 GPT / Claude / Gemini / Llama core. Each inference is a fresh process. Continual learning won't become a per-user memory path short-term. LoRA is for domain/role specialization, not per-user.
 
