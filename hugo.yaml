@@ -27,28 +27,6 @@ languages:
       isoCode: zh-CN
       rtl: false
       dateFormat: "2006-01-02"
-    menu:
-      main:
-        - identifier: posts
-          name: "文章"
-          url: /posts/
-          weight: 10
-        - identifier: projects
-          name: "作品"
-          url: /projects/
-          weight: 20
-        - identifier: tags
-          name: "标签"
-          url: /tags/
-          weight: 30
-        - identifier: about
-          name: "关于"
-          url: /about/
-          weight: 40
-        - identifier: search
-          name: "搜索"
-          url: /search/
-          weight: 50
 
   en:
     label: "English"
@@ -71,6 +49,39 @@ languages:
           - rss: "/index.xml"
       description: "Personal blog of AI Agent developer Liu ZhuoQi. Sharing practical notes on AI Agent development."
       keywords: [AI Agent, LLM, LangChain, Cursor, dev blog]
+
+menu:
+  main:
+    - name: "文章"
+      url: /posts/
+      weight: 10
+    - name: "作品"
+      url: /projects/
+      weight: 20
+    - name: "标签"
+      url: /tags/
+      weight: 30
+    - name: "关于"
+      url: /about/
+      weight: 40
+    - name: "搜索"
+      url: /search/
+      weight: 50
+    - name: "Posts"
+      url: /en/posts/
+      weight: 110
+    - name: "Projects"
+      url: /en/projects/
+      weight: 120
+    - name: "Tags"
+      url: /en/tags/
+      weight: 130
+    - name: "About"
+      url: /en/about/
+      weight: 140
+    - name: "Search"
+      url: /en/search/
+      weight: 150
 
 outputs:
   home:
