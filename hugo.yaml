@@ -109,7 +109,12 @@ params:
   # Homepage
   homepage:
     layout: profile
-    showRecent: false
+    showRecent: true
+    showRecentItems: 3
+    cardView: true
+    cardViewScreenWidth: false
+    showMoreLink: true
+    showMoreLinkDest: "/posts/"
 
   # Article display
   article:

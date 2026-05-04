@@ -5,21 +5,74 @@
   --accent-hover: #a33319;
 }
 
+/* Warm subtle background */
+body {
+  background: linear-gradient(135deg, #fefaf6 0%, #faf6f0 30%, #f8f3eb 60%, #faf6f0 100%);
+  background-attachment: fixed;
+}
+.dark body {
+  background: linear-gradient(135deg, #1a1715 0%, #1c1a18 30%, #1e1b19 60%, #1c1a18 100%);
+  background-attachment: fixed;
+}
+
+/* Profile section enhancement */
+.home-profile article {
+  min-height: 50vh;
+  padding: 2rem 0;
+}
+.home-profile .author-links a {
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+.home-profile .author-links a:hover {
+  transform: translateY(-2px);
+  color: var(--accent) !important;
+}
+
+/* Profile image - subtle ring */
+.home-profile img[alt*="Liu"],
+.author-avatar img {
+  object-fit: cover;
+  object-position: top;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(196, 64, 32, 0.15);
+  transition: box-shadow 0.3s ease;
+}
+.home-profile img[alt*="Liu"]:hover,
+.author-avatar img:hover {
+  box-shadow: 0 0 0 6px rgba(196, 64, 32, 0.25);
+}
+
 /* Brand accent link color */
 a:hover {
   color: var(--accent);
 }
 
-/* Profile image */
-.author-avatar img {
-  object-fit: cover;
-  object-position: top;
-  border-radius: 50%;
-}
-
-/* Social icons hover */
+/* Social icons */
 .social-links a:hover svg {
   color: var(--accent);
+}
+
+/* Card view for recent posts */
+.card-view article {
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card-view article:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+}
+.dark .card-view article:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* Blowfish alert shortcode accent */
+.alert-github {
+  border-left-color: var(--accent) !important;
+  background: rgba(196, 64, 32, 0.05) !important;
+}
+.dark .alert-github {
+  background: rgba(196, 64, 32, 0.1) !important;
 }
 
 /* ── Research article visual elements ── */
