@@ -10,24 +10,9 @@ showToc: true
 
 所谓「大模型没有记忆」不是疏忽，而是 **Transformer O(n²) 注意力 + KV cache 显存 + 权重纠缠（灾难性遗忘）+ GDPR 合规** 四重约束的均衡解。ChatGPT / Claude / Cursor 的 "Memory" 本质都是**把结构化文本塞回 system prompt**，模型权重永远不动。Prompt Caching 只是性能优化，不是记忆。未来 1–3 年的主流是 **「无状态 LLM 内核 + 有状态 Agent 记忆层」** 混合架构。
 
-<div class="research-stats">
-  <div class="research-stat">
-    <div class="stat-value">O(n²)</div>
-    <div class="stat-label">注意力计算复杂度</div>
-  </div>
-  <div class="research-stat">
-    <div class="stat-value">638×H100</div>
-    <div class="stat-label">Llama 3.1 100M ctx 单用户 KV cache 成本</div>
-  </div>
-  <div class="research-stat">
-    <div class="stat-value">0.1×</div>
-    <div class="stat-label">Cache read 价格 (Anthropic / OpenAI)</div>
-  </div>
-  <div class="research-stat">
-    <div class="stat-value">5min–24h</div>
-    <div class="stat-label">主流 prompt cache TTL</div>
-  </div>
-</div>
+| 计算复杂度 | 100M ctx 成本 | Cache 价格 | 主流 TTL |
+|---|---|---|---|
+| **O(n²)** | **638×H100** | **0.1×** | **5min–24h** |
 
 ---
 
@@ -57,52 +42,47 @@ GDPR 第 17 条和 PDPA 要求数据控制者"不得无故拖延"地删除个人
 
 ChatGPT Memory 已被多次 prompt injection 攻破：通过 Google Doc / 图片 / 网页让模型调用 `to=bio` 写入恶意持久指令，从此影响所有未来对话（Embrace The Red 博客, 2024）。这正是 Cursor 1.0→1.2 给 Memories 强制加 user approval 的原因，也是 Anthropic 专门测试 sycophancy / harmful conversation 后才发布 Memory 的原因。
 
-<div class="research-callout callout-neutral">
+{{< alert icon="circle-question" >}}
 
 **Karpathy 的权威类比**：**权重 = ROM**（训练时烧入，静态）；**context window = RAM**（推理时活跃，可直接寻址）；**KV cache = working memory**（test-time 形成的工作记忆）；**外部 vector / KG store = disk**（持久但要 retrieve）。原话："权重里的知识是对训练时互联网文档的 hazy recollection；而 context window 里的内容是 directly accessible 的" — Andrej Karpathy, Dwarkesh Patel 专访 (2025-10)。
 
-</div>
+{{< /alert >}}
 
 ---
 
 ## 2. 主流产品的"记忆"策略对比（含 Cache vs Memory 辨析）
 
-14 个主流产品，**没有任何一个真的修改了模型权重**。所谓 "Memory" 全部是产品层把文本塞回 prompt。在这一节我们同时辨析三个常被混为一谈的概念：**Cache（算力优化）、Memory（产品层拼 prompt）、真模型记忆（权重内）**。
+14 个主流产品，**没有任何一个真的修改了模型权重**。在这节我们同时辨析三个常被混为一谈的概念：
 
-### Cache（KV / Prompt Caching）<span class="research-pill pill-success">算力优化</span>
-
-缓存的是 attention 层的 K、V 投影张量——前缀逐 byte 匹配命中后跳过 prefill。cache 命中和重算的输出数学上完全等价。生命周期 5 分钟到 24 小时。本质是优化，不是"记住"任何东西。
-
-### Memory（产品层）<span class="research-pill pill-success">系统工程</span>
-
-**文本**存储在外部数据库 / 向量库 / markdown 文件里，每次调用拼到 system prompt 头部。用户可控：可见、可编辑、可删除、可导入导出。本质是系统工程 + UX 问题，不是模型能力。关键反向工程证据：Manthan Gupta 三次实验证实 ChatGPT 对自己一年前聊过的话题**根本不知道**——它只存了最近 ~40 个聊天的用户消息摘要。
-
-### 真模型记忆（权重内）<span class="research-pill pill-warn">几乎不存在</span>
-
-改变模型权重本身——受灾难性遗忘、GDPR 被遗忘权、可解释性三重打击，业界普遍回避。LoRA 用于领域/角色特化，不是 per-user。
+- **Cache**（KV / Prompt Caching）：缓存 attention 层的 K、V 投影张量，前缀逐 byte 匹配命中后跳过 prefill。生命周期 5min–24h。本质是算力优化，不是"记住"任何东西。
+- **Memory**（产品层）：文本存储在外部数据库 / 向量库 / markdown 文件里，每次调用拼到 system prompt 头部。用户可控。
+- **真模型记忆**（权重内）：改变模型权重本身。受灾难性遗忘、GDPR 被遗忘权、可解释性三重打击，业界普遍回避。
 
 ### 14 产品对比
 
-<table class="research-table">
-<thead><tr><th>产品</th><th>策略</th><th>本质</th><th class="col-center">权重变?</th></tr></thead>
-<tbody>
-<tr><td><strong>ChatGPT Memory</strong></td><td>4 层: 元数据 + bio + ~40 条摘要 + 滑窗</td><td>Memory</td><td class="col-center">No</td></tr>
-<tr style="background:var(--entry)"><td><em>OpenAI Prompt Caching</em></td><td>≥1024 token 自动 KV 缓存, 5min–24h TTL</td><td>Cache</td><td class="col-center">No</td></tr>
-<tr style="background:var(--entry)"><td><em>Anthropic Prompt Caching</em></td><td>显式 <code>cache_control</code> ≤4 断点, 逐 byte 匹配</td><td>Cache</td><td class="col-center">No</td></tr>
-<tr style="background:var(--entry)"><td><em>Gemini Context Caching</em></td><td>Implicit 90% 折扣 + Explicit 60min TTL</td><td>Cache</td><td class="col-center">No</td></tr>
-<tr><td><strong>Claude.ai Projects</strong></td><td>项目说明 + 文件 + 历史, 全量塞 prompt</td><td>Memory</td><td class="col-center">No</td></tr>
-<tr><td><strong>Claude Memory</strong> (2025-10)</td><td>项目隔离, 24h 合成, 可视可编辑可导出</td><td>Memory</td><td class="col-center">No</td></tr>
-<tr><td><strong>Claude Code</strong></td><td>CLAUDE.md + 模型自写 MEMORY.md (200 行)</td><td>Memory</td><td class="col-center">No</td></tr>
-<tr><td><strong>Cursor Rules / AGENTS.md</strong></td><td>静态 markdown, 4 触发模式, Team > Project > User</td><td>Memory</td><td class="col-center">No</td></tr>
-<tr><td><strong>Cursor Memories</strong> (1.0+)</td><td>AI 生成候选 → 用户审批 → 写入</td><td>Memory</td><td class="col-center">No</td></tr>
-<tr style="background:var(--entry)"><td><em>Cursor Codebase Index</em></td><td>Merkle 树 + 加密 + Turbopuffer 向量库</td><td>RAG</td><td class="col-center">No</td></tr>
-<tr><td><strong>Windsurf Cascade</strong></td><td>global + workspace rules + 自动 Memories + RAG</td><td>Memory</td><td class="col-center">No</td></tr>
-<tr><td><strong>Devin Knowledge</strong></td><td>人写 + AI 建议 + DeepWiki + VM Snapshots</td><td>Memory + RAG</td><td class="col-center">No</td></tr>
-<tr style="background:var(--entry)"><td><em>Replit Checkpoints</em></td><td>VM 快照 = 文件 + DB + 对话 + Agent memory</td><td>Snapshot</td><td class="col-center">No</td></tr>
-</tbody>
-</table>
+| 产品 | 策略 | 本质 | 权重变? |
+|---|---|---|---|
+| **ChatGPT Memory** | 4 层: 元数据 + bio + ~40 条摘要 + 滑窗 | Memory | No |
+| _OpenAI Prompt Caching_ | ≥1024 token 自动 KV 缓存, 5min–24h TTL | Cache | No |
+| _Anthropic Prompt Caching_ | 显式 `cache_control` ≤4 断点, 逐 byte 匹配 | Cache | No |
+| _Gemini Context Caching_ | Implicit 90% 折扣 + Explicit 60min TTL | Cache | No |
+| **Claude.ai Projects** | 项目说明 + 文件 + 历史, 全量塞 prompt | Memory | No |
+| **Claude Memory** (2025-10) | 项目隔离, 24h 合成, 可视可编辑可导出 | Memory | No |
+| **Claude Code** | CLAUDE.md + 模型自写 MEMORY.md (200 行) | Memory | No |
+| **Cursor Rules / AGENTS.md** | 静态 markdown, 4 触发模式, Team > Project > User | Memory | No |
+| **Cursor Memories** (1.0+) | AI 生成候选 → 用户审批 → 写入 | Memory | No |
+| _Cursor Codebase Index_ | Merkle 树 + 加密 + Turbopuffer 向量库 | RAG | No |
+| **Windsurf Cascade** | global + workspace rules + 自动 Memories + RAG | Memory | No |
+| **Devin Knowledge** | 人写 + AI 建议 + DeepWiki + VM Snapshots | Memory+RAG | No |
+| _Replit Checkpoints_ | VM 快照 = 文件 + DB + 对话 + Agent memory | Snapshot | No |
 
-> 浅色行 = Cache / RAG / Snapshot 类（非 Memory）；粗体行 = Memory 类。没有一个产品改权重。
+> 斜体行 = Cache/RAG/Snapshot 类；粗体行 = Memory 类。没有一个产品改权重。
+
+{{< alert icon="bomb" >}}
+
+**关键反向工程证据**：Manthan Gupta 三次实验证实：问 ChatGPT 一年前讨论过的具体话题，它**根本不知道**。ChatGPT Memory 没有用 RAG，存的只有：会话元数据 + 几十条 bio 条目 + 最近 ~40 个聊天的**用户消息摘要**（不存 ChatGPT 自己的回复）+ 当前滑窗。Cursor 官方文档第一句更直白：*"Large language models don't retain memory between completions. Rules provide persistent, reusable context at the prompt level."*
+
+{{< /alert >}}
 
 ---
 
@@ -110,7 +90,7 @@ ChatGPT Memory 已被多次 prompt injection 攻破：通过 Google Doc / 图片
 
 自下而上：底层永远无状态，上面三层是"给它装记忆"的不同抽象。L4（Agent 记忆层）是短期主流，L2（架构内记忆）是最值得押注的研究跃迁。
 
-### L4 · Agent 记忆层 <span class="research-pill pill-success">商业最成熟</span>
+### L4 · Agent 记忆层 {{< badge >}}商业最成熟{{< /badge >}}
 
 把 LLM 视为无状态 CPU，"记忆"放在外部数据库 + Agent runtime，每次推理把检索结果拼回 prompt。代表：`Letta` (MemGPT) · `Mem0` · `Zep + Graphiti` · `LangGraph Store` · `AutoGen Memory`。
 
@@ -118,7 +98,7 @@ ChatGPT Memory 已被多次 prompt injection 攻破：通过 Google Doc / 图片
 - ⚠️ retrieval 质量决定上限 · 写入污染累积
 - Mem0 在 LoCoMo benchmark 上比 OpenAI Memory 高 26%、p95 延迟降 91%、token 降 90%
 
-### L3 · 超长上下文 <span class="research-pill pill-info">已商业化</span>
+### L3 · 超长上下文 {{< badge >}}已商业化{{< /badge >}}
 
 把记忆塞进超长 context window。代表：Gemini 2M (needle 召回 >99%) · Magic LTM-2-Mini 100M tokens。
 
@@ -127,14 +107,14 @@ ChatGPT Memory 已被多次 prompt injection 攻破：通过 Google Doc / 图片
 
 **L3 和 L4 是互补不是替代**：超长上下文处理会话内的即时关联，Agent 记忆层处理跨会话/跨年的持久记忆。将两者组合是当前工程上的最优解。
 
-### L2 · 架构内记忆 <span class="research-pill pill-warn">研究价值最高</span>
+### L2 · 架构内记忆 {{< badge >}}研究价值最高{{< /badge >}}
 
 把"持久记忆"做成可微模块嵌入网络——这可能是真正改写格局的方向。代表：Google `Titans` (短期 attention + 长期 neural memory) · `Infini-attention` · `Mamba-2` · `RWKV-7 Goose`。
 
 - ✅ 常数显存 · 线性时间
 - ⚠️ 尚未规模化验证（需 ≥70B / ≥10T token 训练才能证明可行性）
 
-### L1 · 裸 LLM（frozen weights）<span class="research-pill pill-neutral">永远无状态</span>
+### L1 · 裸 LLM（frozen weights） {{< badge >}}永远无状态{{< /badge >}}
 
 GPT / Claude / Gemini / Llama 内核。每次推理是新进程，权重不变。Continual learning 短期内不会成为 per-user 记忆主路。LoRA 用于领域/角色特化，不是 per-user。
 
@@ -146,30 +126,14 @@ GPT / Claude / Gemini / Llama 内核。每次推理是新进程，权重不变�
 
 Anthropic 在 2026-03 把默认 cache TTL 从 1h **静默降到 5min**，导致 Claude Code 用户实测多花 17–26%。没有任何公告，没有 SLA 承诺。这条改变暴露了一个残酷的事实：**cache TTL 是直接影响用户单价、但不在任何 SLA 上的隐藏开关**。
 
-如果把这个逻辑推演下去：未来的"记忆经济学"会越来越像云存储——
+| 指标 | 数值 |
+|---|---|
+| Anthropic TTL 调整后成本上浮 | **17–26%** |
+| Cache 费用占比透明度 | **0%（完全隐藏）** |
+| 100M ctx 硬件成本（单用户） | **~¥40k/小时** |
+| SLA 中 cache TTL 承诺 | **0 条** |
 
-- **分层**：超短期（TTL 5min，免费）→ 短期（1h，几乎免费）→ 中期（24h，按 token-小时收费）→ 长期（永久存储，按 GB/月收费）
-- **可定价**：Anthropic 已经证明了他们可以微调 TTL 而不通知用户，本质上是在按流量反向定价
-- **可锁定**：一旦你的 agent 工作流依赖特定 cache 策略，迁移成本就变成了 lock-in 成本
-
-<div class="research-stats">
-  <div class="research-stat">
-    <div class="stat-value">17–26%</div>
-    <div class="stat-label">Anthropic TTL 调整后用户成本上浮</div>
-  </div>
-  <div class="research-stat">
-    <div class="stat-value">$0.00</div>
-    <div class="stat-label">Cache 价格 vs 全价重算占比被完全隐藏</div>
-  </div>
-  <div class="research-stat">
-    <div class="stat-value">¥40k/hr</div>
-    <div class="stat-label">100M ctx 单用户仅 KV cache 硬件成本</div>
-  </div>
-  <div class="research-stat">
-    <div class="stat-value">0×</div>
-    <div class="stat-label">SLA 条款中对 cache TTL 的承诺</div>
-  </div>
-</div>
+如果推演下去：未来的"记忆经济学"会越来越像云存储——**分层**（5min/1h/24h/永久）、**可定价**（微调 TTL 就是反向定价）、**可锁定**（agent 工作流依赖特定 cache 策略后迁移成本极高）。
 
 ---
 
@@ -177,16 +141,17 @@ Anthropic 在 2026-03 把默认 cache TTL 从 1h **静默降到 5min**，导致 
 
 基于 Anthropic、Letta、Karpathy、LeCun 等来源的判断。2026 年主流配置有较高确信，2027–2028 为推断，含不确定性。
 
-<table class="research-table">
-<thead><tr><th>年份</th><th>工业主流配置</th><th>可能的黑马事件</th></tr></thead>
-<tbody>
-<tr><td class="col-center"><strong>2026</strong></td><td>裸 LLM + Agent 记忆层 (Mem0/Zep/Letta) + 长上下文 caching</td><td>Titans 系架构开始小规模商用；Sleep-time Compute 成 agent 标配</td></tr>
-<tr><td class="col-center"><strong>2027</strong></td><td>Reflection / Sleep-time / TTT 进入主流 Agent 框架原语</td><td>某 SSM/Hybrid 7B 在 long-context benchmark 全面超 Transformer</td></tr>
-<tr><td class="col-center"><strong>2028</strong></td><td>顶级模型可能集成 in-arch memory module（高风险预测）；否则 Memory Layer 仍是标配</td><td>LeCun H-JEPA + LLM 混合原型出现（5–10 年的早期信号）</td></tr>
-</tbody>
-</table>
+| 年份 | 工业主流配置 | 可能的黑马事件 |
+|---|---|---|
+| **2026** | 裸 LLM + Agent 记忆层 (Mem0/Zep/Letta) + 长上下文 caching | Titans 系架构开始小规模商用；Sleep-time Compute 成 agent 标配 |
+| **2027** | Reflection / Sleep-time / TTT 进入主流 Agent 框架原语 | 某 SSM/Hybrid 7B 在 long-context benchmark 全面超 Transformer |
+| **2028** | 顶级模型可能集成 in-arch memory module（高风险预测）；否则 Memory Layer 仍是标配 | LeCun H-JEPA + LLM 混合原型出现（5–10 年的早期信号） |
 
-> **2028 预测需谨慎**：Titans 等架构内记忆方案需要 ≥70B 参数、≥10T token 训练才能规模化验证，目前仅在 arXiv。2028 年更可能的场景是 Agent 记忆层和架构内记忆共存，而非后者取代前者。
+{{< alert icon="circle-info" >}}
+
+**2028 预测需谨慎**：Titans 等架构内记忆方案需要 ≥70B 参数、≥10T token 训练才能规模化验证，目前仅在 arXiv。2028 年更可能的场景是 Agent 记忆层和架构内记忆共存，而非后者取代前者。
+
+{{< /alert >}}
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: "Why LLMs Have No Memory — A Cross-Validated Research Report with 67 Primary Sources"
-description: "Cross-validated across four search engines, covering Anthropic / OpenAI / Google / Cursor official docs, Karpathy / LeCun / Raschka papers, and key works like MemGPT / Titans / Mamba-2 / Mem0."
+description: "Cross-validated using Exa / Tavily / Context7 / WebSearch, covering Anthropic / OpenAI / Google / Cursor official docs, Karpathy / LeCun / Raschka papers, and key works like MemGPT / Titans / Mamba-2 / Mem0."
 date: 2026-05-04
 tags: ["AI Agent", "LLM", "Memory", "Research"]
 showToc: true
@@ -10,24 +10,9 @@ showToc: true
 
 "LLMs have no memory" isn't an oversight — it's the equilibrium of four compounding constraints: **O(n²) attention + KV cache VRAM + catastrophic forgetting + GDPR compliance**. Every "Memory" feature from ChatGPT / Claude / Cursor works the same way: **inject structured text back into the system prompt**. Weights never change. Prompt Caching is performance optimization, not memory. The mainstream for the next 1–3 years is **"stateless LLM core + stateful Agent memory layer"**.
 
-<div class="research-stats">
-  <div class="research-stat">
-    <div class="stat-value">O(n²)</div>
-    <div class="stat-label">Attention complexity</div>
-  </div>
-  <div class="research-stat">
-    <div class="stat-value">638×H100</div>
-    <div class="stat-label">Llama 3.1 100M ctx single-user KV cache cost</div>
-  </div>
-  <div class="research-stat">
-    <div class="stat-value">0.1×</div>
-    <div class="stat-label">Cache read price (Anthropic / OpenAI)</div>
-  </div>
-  <div class="research-stat">
-    <div class="stat-value">5min–24h</div>
-    <div class="stat-label">Common prompt cache TTL</div>
-  </div>
-</div>
+| Complexity | 100M ctx Cost | Cache Price | Common TTL |
+|---|---|---|---|
+| **O(n²)** | **638×H100** | **0.1×** | **5min–24h** |
 
 ---
 
@@ -57,52 +42,47 @@ GDPR Article 17 and PDPA require data controllers to delete personal data "witho
 
 ChatGPT Memory has been breached via prompt injection through Google Docs, images, and web pages — attackers invoke `to=bio` to write malicious persistent instructions affecting all future conversations (Embrace The Red, 2024). This is precisely why Cursor 1.0→1.2 added mandatory user approval, and why Anthropic tested sycophancy/harmful conversation before releasing Memory.
 
-<div class="research-callout callout-neutral">
+{{< alert icon="circle-question" >}}
 
 **Karpathy's canonical analogy**: **Weights = ROM** (static, burned in at training); **context window = RAM** (directly addressable during inference); **KV cache = working memory** (formed at test-time); **external vector / KG store = disk** (persistent, requires retrieval). "Knowledge in the weights is a hazy recollection of training-time internet documents; content in the context window is directly accessible" — Andrej Karpathy, Dwarkesh Patel Interview (2025-10).
 
-</div>
+{{< /alert >}}
 
 ---
 
 ## 2. Product Landscape: Cache vs Memory vs True Memory
 
-14 products, **zero weight modifications**. This section also disentangles three commonly conflated concepts.
+14 products, **zero weight modifications**. This section also disentangles three commonly conflated concepts:
 
-### Cache (KV / Prompt Caching) <span class="research-pill pill-success">Compute Opt</span>
-
-Caches K, V projection tensors; prefix byte-level match → skip prefill. Cache-hit and recomputed outputs are mathematically equivalent. Lifetime: 5min–24h. Essence: optimization, not "remembering."
-
-### Memory (Product Layer) <span class="research-pill pill-success">Systems Eng</span>
-
-**Text** in external databases / vector stores / markdown files, injected into system prompt on each call. User-controlled: visible, editable, deletable, exportable. Essence: systems engineering + UX, not model capability. Key evidence: Manthan Gupta confirmed ChatGPT has **zero knowledge** of topics discussed a year ago — it only stores summaries of the last ~40 user messages.
-
-### True Model Memory (In-Weights) <span class="research-pill pill-warn">Nearly Nonexistent</span>
-
-Changing the weights themselves — hit by catastrophic forgetting + GDPR + interpretability. LoRA is for domain/role specialization, not per-user.
+- **Cache** (KV/Prompt Caching): Caches K,V projection tensors; prefix byte-level match → skip prefill. 5min–24h lifetime. Compute optimization, not "remembering."
+- **Memory** (Product Layer): Text in external databases/vector stores/markdown, injected into system prompt on each call. User-controlled.
+- **True Model Memory** (In-Weights): Changing weights themselves. Hit by catastrophic forgetting + GDPR + interpretability.
 
 ### Comparison Table
 
-<table class="research-table">
-<thead><tr><th>Product</th><th>Strategy</th><th>Type</th><th class="col-center">Weight Δ?</th></tr></thead>
-<tbody>
-<tr><td><strong>ChatGPT Memory</strong></td><td>4-layer: metadata + bio + ~40 summaries + window</td><td>Memory</td><td class="col-center">No</td></tr>
-<tr style="background:var(--entry)"><td><em>OpenAI Prompt Caching</em></td><td>≥1024 tokens auto KV cache, 5min–24h TTL</td><td>Cache</td><td class="col-center">No</td></tr>
-<tr style="background:var(--entry)"><td><em>Anthropic Prompt Caching</em></td><td>Explicit <code>cache_control</code> ≤4 breakpoints, byte-level match</td><td>Cache</td><td class="col-center">No</td></tr>
-<tr style="background:var(--entry)"><td><em>Gemini Context Caching</em></td><td>Implicit 90% discount + Explicit 60min TTL</td><td>Cache</td><td class="col-center">No</td></tr>
-<tr><td><strong>Claude.ai Projects</strong></td><td>Instructions + files + history, full prompt injection</td><td>Memory</td><td class="col-center">No</td></tr>
-<tr><td><strong>Claude Memory</strong> (2025-10)</td><td>Project-isolated, 24h synthesis, editable</td><td>Memory</td><td class="col-center">No</td></tr>
-<tr><td><strong>Claude Code</strong></td><td>CLAUDE.md + model-written MEMORY.md (200 lines)</td><td>Memory</td><td class="col-center">No</td></tr>
-<tr><td><strong>Cursor Rules / AGENTS.md</strong></td><td>Static markdown, 4 trigger modes, Team > Project > User</td><td>Memory</td><td class="col-center">No</td></tr>
-<tr><td><strong>Cursor Memories</strong> (1.0+)</td><td>AI generates candidates → user approves → writes</td><td>Memory</td><td class="col-center">No</td></tr>
-<tr style="background:var(--entry)"><td><em>Cursor Codebase Index</em></td><td>Merkle tree + encryption + Turbopuffer vector DB</td><td>RAG</td><td class="col-center">No</td></tr>
-<tr><td><strong>Windsurf Cascade</strong></td><td>global + workspace rules + auto Memories + RAG</td><td>Memory</td><td class="col-center">No</td></tr>
-<tr><td><strong>Devin Knowledge</strong></td><td>Human-written + AI suggestions + DeepWiki + VM Snapshots</td><td>Memory + RAG</td><td class="col-center">No</td></tr>
-<tr style="background:var(--entry)"><td><em>Replit Checkpoints</em></td><td>VM snapshot = files + DB + chat + Agent memory</td><td>Snapshot</td><td class="col-center">No</td></tr>
-</tbody>
-</table>
+| Product | Strategy | Type | Weight Δ? |
+|---|---|---|---|
+| **ChatGPT Memory** | 4-layer: metadata + bio + ~40 summaries + window | Memory | No |
+| _OpenAI Prompt Caching_ | ≥1024 tokens auto KV cache, 5min–24h TTL | Cache | No |
+| _Anthropic Prompt Caching_ | Explicit `cache_control` ≤4 breakpoints, byte-level match | Cache | No |
+| _Gemini Context Caching_ | Implicit 90% discount + Explicit 60min TTL | Cache | No |
+| **Claude.ai Projects** | Instructions + files + history, full prompt injection | Memory | No |
+| **Claude Memory** (2025-10) | Project-isolated, 24h synthesis, editable | Memory | No |
+| **Claude Code** | CLAUDE.md + model-written MEMORY.md (200 lines) | Memory | No |
+| **Cursor Rules / AGENTS.md** | Static markdown, 4 trigger modes, Team > Project > User | Memory | No |
+| **Cursor Memories** (1.0+) | AI generates candidates → user approves → writes | Memory | No |
+| _Cursor Codebase Index_ | Merkle tree + encryption + Turbopuffer vector DB | RAG | No |
+| **Windsurf Cascade** | global + workspace rules + auto Memories + RAG | Memory | No |
+| **Devin Knowledge** | Human-written + AI suggestions + DeepWiki + VM Snapshots | Memory+RAG | No |
+| _Replit Checkpoints_ | VM snapshot = files + DB + chat + Agent memory | Snapshot | No |
 
-> Light rows = Cache / RAG / Snapshot; bold rows = Memory. No product modifies weights.
+> *Italic* = Cache/RAG/Snapshot; **Bold** = Memory. No product modifies weights.
+
+{{< alert icon="bomb" >}}
+
+**Key reverse-engineering evidence**: Manthan Gupta confirmed through three experiments: ask ChatGPT about a specific topic discussed a year ago, and it **has absolutely no idea**. ChatGPT Memory does not use RAG. It stores only: session metadata + dozens of bio entries + **user message summaries** of the last ~40 chats (not ChatGPT's own replies) + the current sliding window. Cursor's official docs put it even more bluntly: *"Large language models don't retain memory between completions. Rules provide persistent, reusable context at the prompt level."*
+
+{{< /alert >}}
 
 ---
 
@@ -110,7 +90,7 @@ Changing the weights themselves — hit by catastrophic forgetting + GDPR + inte
 
 Bottom-up: base layer forever stateless. The three above are different abstractions for "giving it memory." L4 is the short-term mainstream; L2 is the highest-value research leap.
 
-### L4 · Agent Memory Layer <span class="research-pill pill-success">Most Mature</span>
+### L4 · Agent Memory Layer {{< badge >}}Most Mature{{< /badge >}}
 
 Treats the LLM as a stateless CPU; memory lives in external databases + Agent runtime. Representatives: `Letta` (MemGPT) · `Mem0` · `Zep + Graphiti` · `LangGraph Store` · `AutoGen Memory`.
 
@@ -118,7 +98,7 @@ Treats the LLM as a stateless CPU; memory lives in external databases + Agent ru
 - ⚠️ Retrieval quality ceiling · Write contamination accumulates
 - Mem0 scores 26% above OpenAI Memory on LoCoMo; 91% lower p95 latency; 90% fewer tokens
 
-### L3 · Ultra-Long Context <span class="research-pill pill-info">Commercialized</span>
+### L3 · Ultra-Long Context {{< badge >}}Commercialized{{< /badge >}}
 
 Stuffs memory into ultra-long context windows. Representatives: Gemini 2M (>99% needle recall) · Magic LTM-2-Mini 100M tokens.
 
@@ -127,14 +107,14 @@ Stuffs memory into ultra-long context windows. Representatives: Gemini 2M (>99% 
 
 **L3 and L4 are complementary, not competitive**: ultra-long context handles within-session associations; Agent memory layer handles cross-session / cross-year persistence. Combining both is the current engineering optimum.
 
-### L2 · In-Architecture Memory <span class="research-pill pill-warn">Highest Research Value</span>
+### L2 · In-Architecture Memory {{< badge >}}Highest Research Value{{< /badge >}}
 
 Embeds "persistent memory" as a differentiable module in the network — potentially the real paradigm shift. Representatives: Google `Titans` · `Infini-attention` · `Mamba-2` · `RWKV-7 Goose`.
 
 - ✅ Constant VRAM · Linear time
 - ⚠️ Not yet validated at scale (needs ≥70B params / ≥10T tokens)
 
-### L1 · Bare LLM (frozen weights) <span class="research-pill pill-neutral">Forever Stateless</span>
+### L1 · Bare LLM (frozen weights) {{< badge >}}Forever Stateless{{< /badge >}}
 
 GPT / Claude / Gemini / Llama core. Each inference is a fresh process. Continual learning won't become a per-user memory path short-term. LoRA is for domain/role specialization, not per-user.
 
@@ -146,30 +126,14 @@ This is the most underappreciated thread in the entire landscape.
 
 In 2026-03, Anthropic **silently dropped cache TTL from 1h to 5min**, causing Claude Code users to pay 17–26% more. No announcement. No SLA commitment. This exposed a brutal truth: **cache TTL directly impacts per-user cost but appears on zero SLAs**.
 
-Extrapolate this logic and the future "memory economics" increasingly resemble cloud storage:
+| Metric | Value |
+|---|---|
+| Cost increase after Anthropic TTL change | **17–26%** |
+| Cache cost transparency | **0% (fully hidden)** |
+| 100M ctx hardware cost (single user) | **~$5.4k/hr** |
+| SLA commitments on cache TTL | **0** |
 
-- **Tiered**: Ultra-short (5min, free) → Short (1h, nearly free) → Medium (24h, token-hour billing) → Long-term (permanent, per-GB/month)
-- **Pricable**: Anthropic proved you can micro-adjust TTL without telling users — effectively reverse-pricing by traffic
-- **Lock-in**: Once your agent workflows depend on specific cache strategies, migration cost becomes lock-in cost
-
-<div class="research-stats">
-  <div class="research-stat">
-    <div class="stat-value">17–26%</div>
-    <div class="stat-label">Cost increase after Anthropic TTL change</div>
-  </div>
-  <div class="research-stat">
-    <div class="stat-value">$0.00</div>
-    <div class="stat-label">Cache cost savings — hidden from billing breakdown</div>
-  </div>
-  <div class="research-stat">
-    <div class="stat-value">~$5.4k/hr</div>
-    <div class="stat-label">100M ctx KV cache hardware cost (single user)</div>
-  </div>
-  <div class="research-stat">
-    <div class="stat-value">0×</div>
-    <div class="stat-label">SLA commitments on cache TTL</div>
-  </div>
-</div>
+Extrapolate this logic and the future "memory economics" increasingly resemble cloud storage — **tiered** (5min/1h/24h/permanent), **pricable** (micro-adjusting TTL is reverse-pricing by traffic), and **lock-in** (migration cost once agent workflows depend on specific cache strategies).
 
 ---
 
@@ -177,16 +141,17 @@ Extrapolate this logic and the future "memory economics" increasingly resemble c
 
 Based on Anthropic, Letta, Karpathy, LeCun sources. 2026 has high confidence; 2027–2028 are inferential with explicit uncertainty.
 
-<table class="research-table">
-<thead><tr><th>Year</th><th>Mainstream</th><th>Potential Dark Horse</th></tr></thead>
-<tbody>
-<tr><td class="col-center"><strong>2026</strong></td><td>Bare LLM + Agent Memory (Mem0/Zep/Letta) + long-context caching</td><td>Titans-style architectures begin small-scale commercial use; Sleep-time Compute becomes agent standard</td></tr>
-<tr><td class="col-center"><strong>2027</strong></td><td>Reflection / Sleep-time / TTT enter mainstream Agent framework primitives</td><td>A 7B SSM/Hybrid surpasses Transformer on long-context benchmarks</td></tr>
-<tr><td class="col-center"><strong>2028</strong></td><td>Top models may integrate in-arch memory (high-risk prediction); otherwise Memory Layer remains standard</td><td>LeCun H-JEPA + LLM hybrid prototype (early signal for 5–10 year bet)</td></tr>
-</tbody>
-</table>
+| Year | Mainstream | Potential Dark Horse |
+|---|---|---|
+| **2026** | Bare LLM + Agent Memory (Mem0/Zep/Letta) + long-context caching | Titans-style architectures begin small-scale commercial use; Sleep-time Compute becomes agent standard |
+| **2027** | Reflection / Sleep-time / TTT enter mainstream Agent framework primitives | A 7B SSM/Hybrid surpasses Transformer on long-context benchmarks |
+| **2028** | Top models may integrate in-arch memory (high-risk prediction); otherwise Memory Layer remains standard | LeCun H-JEPA + LLM hybrid prototype (early signal for 5–10 year bet) |
 
-> **2028 caveat**: In-architecture memory requires ≥70B params and ≥10T token training for validation — currently arXiv-only. The more likely 2028 scenario is coexistence, not replacement.
+{{< alert icon="circle-info" >}}
+
+**2028 caveat**: In-architecture memory requires ≥70B params and ≥10T token training for validation — currently arXiv-only. The more likely 2028 scenario is coexistence, not replacement.
+
+{{< /alert >}}
 
 ---
 
@@ -214,7 +179,7 @@ Based on Anthropic, Letta, Karpathy, LeCun sources. 2026 has high confidence; 20
 
 ## 7. Key References
 
-All primary sources from 2024–2026. 30+ curated entries.
+All primary sources from 2024–2026. 30+ curated entries covering vendor docs, arXiv papers, and researcher essays.
 
 ### A. Vendor Sources
 
