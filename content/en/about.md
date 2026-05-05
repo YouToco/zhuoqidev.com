@@ -1,5 +1,6 @@
 ---
 title: "About"
+date: 2026-05-04
 layout: "about"
 url: "/en/about/"
 summary: "AI Agent developer Liu ZhuoQi's personal introduction"

@@ -1,5 +1,6 @@
 ---
 title: "关于我"
+date: 2026-05-04
 layout: "about"
 url: "/about/"
 summary: "AI Agent 开发者刘卓琪的个人介绍"
