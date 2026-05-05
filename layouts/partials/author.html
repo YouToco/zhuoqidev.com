@@ -26,7 +26,7 @@
   <div class="place-self-center">
     {{ with $author.name | markdownify }}
       <div class="text-[0.6rem] uppercase leading-3 text-neutral-500 dark:text-neutral-400">
-        {{ i18n "author.byline_title" | markdownify }}
+        {{ if $isEN }}Author{{ else }}{{ i18n "author.byline_title" | markdownify }}{{ end }}
       </div>
       <div class="font-semibold leading-6 text-neutral-800 dark:text-neutral-300">{{ . }}</div>
     {{ end }}

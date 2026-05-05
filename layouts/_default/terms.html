@@ -27,41 +27,46 @@
     </section>
   {{ end }}
 
-  {{/* Build terms: if .Data.Terms is empty (non-default language), collect manually */}}
-  {{ $terms := .Data.Terms }}
-  {{ if not $terms }}
-    {{ $taxonomy := .Data.Plural }}
+  {{ if .Data.Terms }}
+
+  <section class="flex flex-wrap max-w-prose -mx-2 overflow-hidden">
+    {{ range .Data.Terms }}
+      {{ partial "term-link/text.html" . }}
+    {{ end }}
+  </section>
+
+  {{ else }}
+
     {{ $currentLang := .Language.Lang }}
-    {{ range where site.RegularPages "Language.Lang" $currentLang }}
-      {{ range $key, $values := .Params }}
-        {{ $taxPage := site.GetPage (printf "/%s/%s" $taxonomy ($key | urlize)) }}
-        {{ if eq $key $taxonomy }}
-          {{ range $values }}
-            {{ $slug := . | lower | urlize }}
-            {{ $existing := index $terms $slug }}
-            {{ if not $existing }}
-              {{ $termPage := site.GetPage (printf "/%s/%s" $taxonomy $slug) }}
-              {{ $terms = merge $terms (dict $slug (dict "Page" $termPage "Count" 1 "Term" . "WeightedPages" (dict "Count" 1))) }}
+    {{ $termsMap := dict }}
+    {{ $langPrefix := cond (eq $currentLang "zh") "/posts/" "/en/" }}
+
+    {{ range hugo.Sites }}
+      {{ if ne .Language.Lang $currentLang }}
+        {{ if index .Taxonomies "tags" }}
+          {{ range $term, $wp := index .Taxonomies "tags" }}
+            {{ $langCount := 0 }}
+            {{ range $wp }}
+              {{ if in .Page.RelPermalink $langPrefix }}
+                {{ $langCount = add $langCount 1 }}
+              {{ end }}
+            {{ end }}
+            {{ if gt $langCount 0 }}
+              {{ $slug := $term | lower | urlize }}
+              {{ $termsMap = merge $termsMap (dict $slug (dict "Page" $wp.Page "Count" $langCount "Term" $term)) }}
             {{ end }}
           {{ end }}
         {{ end }}
       {{ end }}
     {{ end }}
-  {{ end }}
 
-  {{ if $terms }}
-    {{ if site.Params.taxonomy.cardView }}
-      <section class="w-full grid gap-4 sm:grid-cols-2 md:grid-cols-3">
-        {{ range $termKey, $termData := $terms }}
-          {{ partial "term-link/card.html" $termData }}
-        {{ end }}
-      </section>
-    {{ else }}
-      <section class="flex flex-wrap max-w-prose -mx-2 overflow-hidden">
-        {{ range $termKey, $termData := $terms }}
-          {{ partial "term-link/text.html" $termData }}
-        {{ end }}
-      </section>
+    {{ if $termsMap }}
+    <section class="flex flex-wrap max-w-prose -mx-2 overflow-hidden">
+      {{ range $key, $data := $termsMap }}
+        {{ partial "term-link/text.html" $data }}
+      {{ end }}
+    </section>
     {{ end }}
+
   {{ end }}
 {{ end }}

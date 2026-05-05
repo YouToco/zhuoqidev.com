@@ -19,7 +19,7 @@ defaultContentLanguageInSubdir: false
 languages:
   zh:
     label: "中文"
-    locale: zh-CN
+    languageCode: zh-CN
     weight: 1
     title: "卓琪的开发笔记"
     params:
@@ -30,7 +30,7 @@ languages:
 
   en:
     label: "English"
-    locale: en
+    languageCode: en
     weight: 2
     title: "ZhuoQi Dev"
     params:

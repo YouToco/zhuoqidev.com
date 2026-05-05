@@ -1,0 +1,29 @@
+{{ with .Params.sharingLinks | default (.Site.Params.article.sharingLinks | default false) }}
+  {{ $links := hugo.Data.sharing }}
+  {{ $isEn := in $.RelPermalink "/en/" }}
+  <section class="flex flex-row flex-wrap justify-center pt-4 text-xl">
+    {{ range . }}
+      {{ $shareKey := . }}
+      {{ with index $links $shareKey }}
+        {{ $label := i18n .title }}
+        {{ if $isEn }}
+          {{ if eq $shareKey "x-twitter" }}{{ $label = "Share on X" }}
+          {{ else if eq $shareKey "linkedin" }}{{ $label = "Share on LinkedIn" }}
+          {{ else if eq $shareKey "reddit" }}{{ $label = "Submit to Reddit" }}
+          {{ else if eq $shareKey "facebook" }}{{ $label = "Share on Facebook" }}
+          {{ else if eq $shareKey "whatsapp" }}{{ $label = "Share via WhatsApp" }}
+          {{ else if eq $shareKey "telegram" }}{{ $label = "Share via Telegram" }}
+          {{ else }}{{ $label = $shareKey }}{{ end }}
+        {{ end }}
+        <a
+          class="m-1 rounded bg-neutral-300 p-1.5 text-neutral-700 hover:bg-primary-500 hover:text-neutral dark:bg-neutral-700 dark:text-neutral-300 dark:hover:bg-primary-400 dark:hover:text-neutral-800"
+          target="_blank"
+          href="{{ printf .url $.Permalink $.Title | safeURL }}"
+          title="{{ $label }}"
+          aria-label="{{ $label }}">
+          {{ partial "icon.html" .icon }}
+        </a>
+      {{ end }}
+    {{ end }}
+  </section>
+{{ end }}
