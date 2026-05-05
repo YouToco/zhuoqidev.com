@@ -118,9 +118,11 @@ params:
   enableImageOptimization: true
   fingerprintAlgorithm: "sha512"
 
-  # Homepage — Blowfish 动画背景布局
+  # Homepage — Profile layout with recent posts
   homepage:
-    layout: background
+    layout: profile
+    showRecent: true
+    showRecentItems: 3
     layoutBackgroundBlur: true
 
   # Article display
