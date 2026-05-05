@@ -141,6 +141,7 @@ function buildIndex() {
     };
     fuse = new Fuse(data, options);
     indexed = true;
+    if (input.value) executeQuery(input.value);
   });
 }
 
