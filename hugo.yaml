@@ -46,8 +46,8 @@ languages:
         links:
           - github: "https://github.com/YouToco"
           - x-twitter: "https://x.com/busygod9527"
-          - email: "3132503115@qq.com"
           - telegram: "https://t.me/happyforyou0"
+          - wechat: "/images/wechat.jpg"
           - rss: "/index.xml"
       description: "Personal blog of AI Agent developer Liu ZhuoQi. Sharing practical notes on AI Agent development."
       keywords: [AI Agent, LLM, LangChain, Cursor, dev blog]
@@ -97,8 +97,8 @@ params:
     links:
     - github: "https://github.com/YouToco"
     - x-twitter: "https://x.com/busygod9527"
-    - email: "3132503115@qq.com"
     - telegram: "https://t.me/happyforyou0"
+    - wechat: "/images/wechat.jpg"
     - rss: "/index.xml"
 
   description: "AI Agent 开发者刘卓琪的个人博客，分享 AI Agent 开发、工具工程和创意编程。"
