@@ -6,15 +6,7 @@ tags: ["AI Agent", "LLM", "Memory", "Research"]
 showToc: true
 ---
 
-## TL;DR
 
-"LLMs have no memory" isn't an oversight — it's the equilibrium of four compounding constraints: **O(n²) attention + KV cache VRAM + catastrophic forgetting + GDPR compliance**. Every "Memory" feature from ChatGPT / Claude / Cursor works the same way: **inject structured text back into the system prompt**. Weights never change. Prompt Caching is performance optimization, not memory. The mainstream for the next 1–3 years is **"stateless LLM core + stateful Agent memory layer"**.
-
-| Complexity | 100M ctx Cost | Cache Price | Common TTL |
-|---|---|---|---|
-| **O(n²)** | **638×H100** | **0.1×** | **5min–24h** |
-
----
 
 ## 1. Why LLMs Are Stateless
 

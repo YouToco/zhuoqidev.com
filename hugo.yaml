@@ -64,9 +64,6 @@ menu:
     - name: "关于"
       url: /about/
       weight: 40
-    - name: "搜索"
-      url: /search/
-      weight: 50
     - name: "Posts"
       url: /en/posts/
       weight: 110
@@ -79,9 +76,6 @@ menu:
     - name: "About"
       url: /en/about/
       weight: 140
-    - name: "Search"
-      url: /en/search/
-      weight: 150
 
 outputs:
   home:
