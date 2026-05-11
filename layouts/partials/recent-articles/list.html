@@ -1,10 +1,27 @@
-{{ $recentArticles := 5 }}
-{{ $recentArticles = .Site.Params.homepage.showRecentItems }}
+{{ $recentArticles := .Site.Params.homepage.showRecentItems | default 5 }}
 
+{{ $allPages := (index (hugo.Sites) 0).RegularPages }}
+{{ $pages := where $allPages "Type" "in" .Site.Params.mainSections }}
+
+{{ $currentLang := .Site.Language.Lang }}
+{{ $.Scratch.Set "filtered" (slice) }}
+{{ range $pages }}
+  {{ if eq $currentLang "zh" }}
+    {{ if not (in .RelPermalink "/en/") }}
+      {{ $.Scratch.Add "filtered" (slice .) }}
+    {{ end }}
+  {{ else if eq $currentLang "en" }}
+    {{ if in .RelPermalink "/en/" }}
+      {{ $.Scratch.Add "filtered" (slice .) }}
+    {{ end }}
+  {{ end }}
+{{ end }}
+{{ $filtered := $.Scratch.Get "filtered" }}
+
+{{ if gt (len $filtered) 0 }}
 <section class="space-y-10 w-full">
-  {{ $pages := where .Site.RegularPages "Type" "in" .Site.Params.mainSections }}
-  {{ $filtered := where $pages "Language.Lang" "=" .Lang }}
   {{ range first $recentArticles (.Paginate $filtered).Pages }}
     {{ partial "article-link/simple.html" . }}
   {{ end }}
 </section>
+{{ end }}

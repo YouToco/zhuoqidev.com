@@ -85,6 +85,10 @@ outputs:
     - RSS
     - JSON
 
+mainSections:
+  - posts
+  - projects
+
 params:
   # Blowfish 内置动画背景 SVG（与 blowfish.page 同款）
   defaultBackgroundImage: "img/background.svg"
