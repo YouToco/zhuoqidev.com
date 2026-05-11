@@ -47,7 +47,7 @@ CKS Certified · Container Security · API Security · AI Security (Prompt Injec
 - **GitHub**: [github.com/YouToco](https://github.com/YouToco)
 - **X / Twitter**: [x.com/busygod9527](https://x.com/busygod9527)
 - **Telegram**: [t.me/happyforyou0](https://t.me/happyforyou0)
-- **Email**: [hello@zhuoqidev.com](mailto:hello@zhuoqidev.com)
+
 - **WeChat**: [View QR Code](/images/wechat.jpg)
 
-If you need Agent system integration, architecture design, or security auditing — reach out. I don't do small talk, but I'll talk tech anytime.
+If you need Agent system integration, architecture design, or security auditing — reach out via any channel above.

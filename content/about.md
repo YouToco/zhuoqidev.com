@@ -47,7 +47,7 @@ CKS 认证 · 容器安全 · API 安全 · AI 安全（Prompt Injection / Jailb
 - **GitHub**: [github.com/YouToco](https://github.com/YouToco)
 - **X / Twitter**: [x.com/busygod9527](https://x.com/busygod9527)
 - **Telegram**: [t.me/happyforyou0](https://t.me/happyforyou0)
-- **Email**: [hello@zhuoqidev.com](mailto:hello@zhuoqidev.com)
+
 - **微信**: [查看二维码](/images/wechat.jpg)
 
-有 Agent 系统集成、架构设计或安全审计的需求，直接联系我。不闲聊，但聊技术随时欢迎。
+有 Agent 系统集成、架构设计或安全审计的需求，通过以上方式联系我。
