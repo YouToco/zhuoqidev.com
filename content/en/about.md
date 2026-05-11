@@ -8,7 +8,7 @@ summary: "AI Agent Architect Liu ZhuoQi — full-stack AI engineering, security,
 
 I'm **Liu ZhuoQi**, an AI Agent Architect. I turn AI from demo to production.
 
-I don't wrap APIs. I design **Agent systems from the ground up**: memory layer architecture, multi-agent orchestration, context engineering, RAG pipelines, tool-use protocols, and evaluation frameworks. I write backends in Java, Python, and Go; I tweak React and Next.js frontends; and I hold a **CKS (Certified Kubernetes Security Specialist)** certification. Infrastructure? I've run OpenStack and Ceph clusters in production. Short version — I can take a model all the way to production, solo.
+I don't wrap APIs. I design **Agent systems from the ground up**: memory layer architecture, multi-agent orchestration, context engineering, RAG pipelines, tool-use protocols, and evaluation frameworks. I write backends in Java, Python, and Go; frontend? React, Vue, Angular, Svelte — pick your stack; and I hold a **CKS (Certified Kubernetes Security Specialist)** certification. Infrastructure? I've run OpenStack and Ceph clusters in production. Short version — I can take a model all the way to production, solo.
 
 ---
 
@@ -16,7 +16,7 @@ I don't wrap APIs. I design **Agent systems from the ground up**: memory layer a
 
 - **Agent Architect mindset**, not a prompt engineer. I think about: memory layer design (Mem0 / Zep / Letta), inter-agent communication patterns, context window economics, and the security boundaries of tool calling.
 - **Security-first engineering**. CKS certified with years of infrastructure security experience. I know where prompt injection hits, how to sandbox agent tool calls, and how to design data flows under GDPR and compliance constraints.
-- **Full-stack delivery**. Java microservices, Python agent runtimes, Go middleware — I write all three. React and Next.js frontends too. No layer is a blocker.
+- **Full-stack delivery**. Java microservices, Python agent runtimes, Go middleware — I write all three. Frontend? React, Vue, Angular, Svelte — I adapt to your stack.
 
 ---
 
@@ -29,7 +29,7 @@ Multi-Agent Orchestration · Memory Layer Architecture (Mem0 / Zep / Letta / Mem
 Java / Spring Boot · Python / FastAPI · Go · Node.js · PostgreSQL · Redis · RabbitMQ / Kafka · Docker / Kubernetes (CKS) · OpenStack · Ceph · GitHub Actions CI/CD
 
 **Frontend**
-React · Next.js · TypeScript · Astro · Tailwind CSS
+React · Vue · Angular · Svelte · Next.js · Nuxt · Astro · TypeScript · Tailwind CSS · UnoCSS
 
 **Security**
 CKS Certified · Container Security · API Security · AI Security (Prompt Injection / Jailbreak / Data Exfiltration) · GDPR & Data Compliance
