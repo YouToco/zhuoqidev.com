@@ -1,6 +1,6 @@
 ---
 title: "用 Hugo 和双栈 CDN 搭建个人网站"
-description: "记录我如何用 Hugo + PaperMod，通过阿里云 OSS/CDN（国内）+ Cloudflare Pages（国际）实现全球加速，备案、DNS 分线路解析一次走通。"
+description: "记录如何用 Hugo + Blowfish，通过阿里云 OSS/CDN（国内）+ Cloudflare Pages（国际）实现双栈加速，备案、DNS 分线路解析一次走通。"
 date: 2026-05-04
 tags: ["Hugo", "阿里云", "Cloudflare", "CDN", "ICP备案"]
 categories: ["折腾记录"]
@@ -15,7 +15,7 @@ cover:
 
 做个人博客选框架，我的第一标准是**维护成本低**——不想三个月后因为 npm 依赖地狱放弃写作。
 
-Hugo 是单二进制文件，无需 Node.js，构建几千篇文章只需 1-2 秒，PaperMod 主题开箱就有暗色模式、全文搜索、RSS、Open Graph、阅读时间估算。日常写作只需碰 Markdown。
+Hugo 是单二进制文件，无需 Node.js，构建几千篇文章只需 1-2 秒，Blowfish 主题开箱就有暗色模式、全文搜索、多语言、RSS、Open Graph、阅读时间估算。日常写作只需碰 Markdown。
 
 ## 整体架构
 
@@ -65,4 +65,4 @@ Hugo 是单二进制文件，无需 Node.js，构建几千篇文章只需 1-2 �
 
 ---
 
-后续我会写更多关于 AI Agent 开发的文章。如果你有 Agent 集成开发的需求，欢迎联系我：[hello@zhuoqidev.com](mailto:hello@zhuoqidev.com)
+后续文章会深入 Agent 架构设计、记忆层选型、多 Agent 编排等话题。

@@ -1,6 +1,6 @@
 ---
 title: "Building a Personal Site with Hugo and Dual-Stack CDN"
-description: "How I set up Hugo + PaperMod with Alibaba Cloud OSS/CDN for China and Cloudflare Pages for international visitors — ICP filing, geo-DNS routing, and GitHub Actions all in one go."
+description: "How I set up Hugo + Blowfish with Alibaba Cloud OSS/CDN for China and Cloudflare Pages for international visitors — ICP filing, geo-DNS routing, and GitHub Actions dual-stack deployment."
 date: 2026-05-04
 tags: ["Hugo", "Alibaba Cloud", "Cloudflare", "CDN", "ICP Filing"]
 categories: ["Dev Log"]
@@ -12,7 +12,7 @@ ShowReadingTime: true
 
 When picking a framework for a personal blog, my top criterion was **low maintenance cost** — I didn't want to abandon writing three months later because of npm dependency hell.
 
-Hugo is a single binary, requires no Node.js, builds thousands of posts in 1-2 seconds, and the PaperMod theme comes with dark mode, full-text search, RSS, Open Graph, and reading time estimates out of the box. Day-to-day writing only requires touching Markdown files.
+Hugo is a single binary, requires no Node.js, builds thousands of posts in 1-2 seconds, and the Blowfish theme comes with dark mode, full-text search, multilingual support, RSS, Open Graph, and reading time estimates out of the box. Day-to-day writing only requires touching Markdown files.
 
 ## Architecture
 
@@ -60,4 +60,4 @@ Push to GitHub → Actions runs `hugo build` → uploads in parallel to OSS and 
 
 ---
 
-More posts on AI Agent development coming soon. If you need an AI Agent integration developer, reach out: [hello@zhuoqidev.com](mailto:hello@zhuoqidev.com)
+Upcoming posts will dive into Agent architecture design, memory layer selection, and multi-agent orchestration.
