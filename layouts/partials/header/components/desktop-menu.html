@@ -1,6 +1,6 @@
 <nav class="flex items-center gap-x-5 h-12">
+  {{ $isEN := strings.Contains .RelPermalink "/en/" }}
   {{ if .Site.Menus.main }}
-    {{ $isEN := strings.Contains .RelPermalink "/en/" }}
     {{ range .Site.Menus.main }}
       {{ $itemIsEN := gt .Weight 100 }}
       {{ if or (and (not $isEN) (not $itemIsEN)) (and $isEN $itemIsEN) }}
@@ -15,7 +15,11 @@
   {{ end }}
 
   {{ if .Site.Params.enableSearch | default false }}
-    <button id="search-button" aria-label="Search" class="text-base bf-icon-color-hover" title="{{ i18n "search.open_button_title" }}">{{ partial "icon.html" "search" }}</button>
+    {{ $searchLabel := "搜索 (/)" }}
+    {{ if $isEN }}
+      {{ $searchLabel = "Search (/)" }}
+    {{ end }}
+    <button id="search-button" aria-label="{{ $searchLabel }}" class="text-base bf-icon-color-hover" title="{{ $searchLabel }}">{{ partial "icon.html" "search" }}</button>
   {{ end }}
 
   {{ if .Site.Params.footer.showAppearanceSwitcher | default false }}

@@ -1,10 +1,15 @@
 <div class="flex md:hidden items-center h-14 gap-4">
   {{ if .Site.Params.enableSearch | default false }}
+    {{ $isEN := strings.Contains .RelPermalink "/en/" }}
+    {{ $searchLabel := "搜索 (/)" }}
+    {{ if $isEN }}
+      {{ $searchLabel = "Search (/)" }}
+    {{ end }}
     <button
       id="search-button-mobile"
-      aria-label="Search"
+      aria-label="{{ $searchLabel }}"
       class="flex items-center justify-center bf-icon-color-hover"
-      title="{{ i18n "search.open_button_title" }}">
+      title="{{ $searchLabel }}">
       {{ partial "icon.html" "search" }}
     </button>
   {{ end }}
