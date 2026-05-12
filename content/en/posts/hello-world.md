@@ -33,10 +33,10 @@ Hugo is a single binary, requires no Node.js, builds thousands of posts in 1-2 s
         GitHub Actions auto-build & dual-stack push
 ```
 
-Annual cost: approximately ¥206 (~$29 USD):
+Annual cost: approximately ¥212 (~$30 USD):
 - Domain `zhuoqidev.com`: ¥85/yr (bought 3 years)
-- Function Compute resource pack (ICP filing): ¥101/yr
-- Alibaba CDN 100GB traffic pack: ¥14/yr
+- Function Compute resource pack (ICP filing): ¥101/yr (¥126 annual pack with 20% ongoing discount)
+- Alibaba CDN 100GB traffic pack: ¥20/yr
 - OSS storage: ~¥6/yr
 - Cloudflare Pages: ¥0
 
@@ -44,7 +44,7 @@ Annual cost: approximately ¥206 (~$29 USD):
 
 Websites served to mainland China visitors need an ICP filing, which requires a "filing carrier" (a server IP). Instead of buying a full server, Alibaba Cloud's **Function Compute resource pack** (¥101/yr) works as a filing carrier and provides a filing service code.
 
-Timeline: Alibaba Cloud initial review ~1 day + MIIT review 5-20 business days. Plenty of time to finish the site while waiting.
+Timeline: Alibaba Cloud initial review 1-5 working days + MIIT review 10-20 business days, about 3-6 weeks total. Plenty of time to finish the site while waiting.
 
 ## Geo-DNS Routing
 
