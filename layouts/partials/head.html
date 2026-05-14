@@ -1,6 +1,7 @@
 {{ $siteTitleForHead := .Site.Title }}
 {{ if in .RelPermalink "/en/" }}{{ $siteTitleForHead = "ZhuoQi Dev" }}{{ end }}
 <head>
+  <meta name="baidu-site-verification" content="codeva-Wxyreu1dlm">
   <meta charset="utf-8">
   {{ with .Site.Language.Params.htmlCode | default .Site.Language.Locale }}
     <meta http-equiv="content-language" content="{{ . }}">
