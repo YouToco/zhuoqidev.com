@@ -77,6 +77,43 @@ Key takeaway:
 
 ---
 
+## Timeline: The Leak Cadence
+
+{{< mermaid >}}
+gantt
+    title       ChatGPT Business Promo Code Leak Timeline
+    dateFormat  YYYY-MM-DD
+    axisFormat  %m-%d
+    tickInterval 2day
+
+    section Prelude
+    Team free trial interface shut down :done,   crit,   a1, 2026-04-28, 1d
+    80aj re-posts 2-month free edition   :done,           a2, 2026-04-30, 1d
+
+    section First Wave
+    alongsideus / monicaius             :active,         b1, 2026-05-01, 1d
+    (first on mailberry blog)           :                 b1a, 2026-05-01, 1d
+
+    section Breakout
+    THINKTECHNOLOGIESUS                 :done,   crit,   c1, 2026-05-09, 1d
+    codestonegb (X + L站 simultaneous)  :done,   crit,   c2, 2026-05-09, 1d
+
+    section Diffusion
+    firstfocus (OzBargain first)        :done,           d1, 2026-05-10, 1d
+    thealloynetwork (L站 first)         :done,           d2, 2026-05-10, 1d
+    geccogb (OzBargain)                 :done,           d3, 2026-05-10, 1d
+    xwuxl.com tutorial published        :done,           d4, 2026-05-10, 1d
+
+    section Long Tail
+    L站 price comparison post           :done,           e1, 2026-05-11, 1d
+    V2EX mass distribution              :done,           e2, 2026-05-11, 1d
+    datroaiuk (shuzijumin forum)        :done,           e3, 2026-05-12, 1d
+{{< /mermaid >}}
+
+**April 28: GPT Team free trial interface closed → April 30: Chinese community notices the US-IP 2-month free edition → May 1: First Stripe enterprise codes leak → May 9 ~1 AM: Dual-platform breakout → May 10-12: Regional codes appear in rapid succession.**
+
+---
+
 ## The Full Propagation Map
 
 {{< mermaid >}}
@@ -105,6 +142,45 @@ flowchart TD
 {{< /mermaid >}}
 
 **The pattern isn't linear—it's parallel multi-source leakage.**
+
+---
+
+## Actual Monthly Cost by Region
+
+Same plan (2 seats, monthly billing), up to 40% price spread depending on region:
+
+{{< chart >}}
+type: 'bar',
+data: {
+  labels: ['UK codestonegb', 'UK datroaiuk', 'AU firstfocus', 'US thealloynetwork', 'US THINKTECHNOLOGIES'],
+  datasets: [{
+    label: 'Monthly cost (USD equivalent)',
+    data: [14.5, 14.5, 16.8, 20, 20],
+    backgroundColor: ['#c44020', '#c44020', '#2563eb', '#059669', '#059669'],
+    borderRadius: 6,
+  }]
+},
+options: {
+  indexAxis: 'x',
+  plugins: {
+    legend: { display: false }
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      title: { display: true, text: 'USD / month' }
+    }
+  }
+}
+{{< /chart >}}
+
+| Region | Original (2 seats) | After Promo | USD Equivalent | Discount |
+|--------|--------------------|-------------|----------------|----------|
+| UK | £36 | **£11** | ~$14.5 | £25 off (69%) |
+| AU | AU$70 | **AU$25** | ~$16.8 | AU$45 off (64%) |
+| US | US$50 | **US$20** | ~$20 | $30 off (60%) |
+
+> UK codes offer the lowest absolute price, roughly 28% cheaper than US codes. Requires UK IP + matching promo code.
 
 ---
 

@@ -77,6 +77,43 @@ OpenAI 从 2023 年起使用 **Stripe Billing + Stripe Checkout** 处理 ChatGPT
 
 ---
 
+## 时间线：各码泄露的精确节奏
+
+{{< mermaid >}}
+gantt
+    title       ChatGPT Business 优惠码泄露时间线
+    dateFormat  YYYY-MM-DD
+    axisFormat  %m-%d
+    tickInterval 2day
+
+    section 前奏期
+    Team免费试用接口关闭        :done,   crit,   a1, 2026-04-28, 1d
+    80aj转载2月免费版            :done,           a2, 2026-04-30, 1d
+
+    section 第一批码
+    alongsideus / monicaius     :active,         b1, 2026-05-01, 1d
+    码(邮莓生活首发)            :                 b1a, 2026-05-01, 1d
+
+    section 爆发期
+    THINKTECHNOLOGIESUS         :done,   crit,   c1, 2026-05-09, 1d
+    codestonegb (X+L站同时)     :done,   crit,   c2, 2026-05-09, 1d
+
+    section 扩散期
+    firstfocus (OzBargain首发)  :done,           d1, 2026-05-10, 1d
+    thealloynetwork (L站首发)   :done,           d2, 2026-05-10, 1d
+    geccogb (OzBargain)         :done,           d3, 2026-05-10, 1d
+    xwuxl.com教程发布           :done,           d4, 2026-05-10, 1d
+
+    section 长尾期
+    L站价格对比帖               :done,           e1, 2026-05-11, 1d
+    V2EX大规模扩散              :done,           e2, 2026-05-11, 1d
+    datroaiuk (数字居民论坛)    :done,           e3, 2026-05-12, 1d
+{{< /mermaid >}}
+
+**4月28日 GPT Team 免费试用接口被关 → 4月30日 中文圈开始注意到 US IP 2月免费版 → 5月1日 第一批 Stripe 企业码流出 → 5月9日凌晨 信息双平台同时引爆 → 5月10-12日 各区域码密集出现。**
+
+---
+
 ## 完整传播链路
 
 {{< mermaid >}}
@@ -105,6 +142,45 @@ flowchart TD
 {{< /mermaid >}}
 
 **关键特征：不是链式传播，而是多源并行泄露。**
+
+---
+
+## 各区域实际到手价对比
+
+同一套餐（2 席位月付），不同区域码的到手价差异可达 40%：
+
+{{< chart >}}
+type: 'bar',
+data: {
+  labels: ['英国 codestonegb', '英国 datroaiuk', '澳洲 firstfocus', '美国 thealloynetwork', '美国 THINKTECHNOLOGIESUS'],
+  datasets: [{
+    label: '月付折合人民币 (元)',
+    data: [102, 102, 120, 145, 145],
+    backgroundColor: ['#c44020', '#c44020', '#2563eb', '#059669', '#059669'],
+    borderRadius: 6,
+  }]
+},
+options: {
+  indexAxis: 'x',
+  plugins: {
+    legend: { display: false }
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      title: { display: true, text: '人民币 / 月' }
+    }
+  }
+}
+{{< /chart >}}
+
+| 区域 | 原价 (2席位) | 优惠后 | 折合 CNY | 优惠幅度 |
+|------|------------|--------|---------|---------|
+| 英国 | £36 | **£11** | ~¥102 | 减 £25 (69%) |
+| 澳洲 | AU$70 | **AU$25** | ~¥120 | 减 AU$45 (64%) |
+| 美国 | US$50 | **US$20** | ~¥145 | 减 US$30 (60%) |
+
+> 英国区码到手价最低，比美区便宜约 30%。但需要英国 IP + 对应码。
 
 ---
 
