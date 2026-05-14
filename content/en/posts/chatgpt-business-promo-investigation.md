@@ -79,31 +79,30 @@ Key takeaway:
 
 ## The Full Propagation Map
 
-```
-                Stripe Enterprise Partners
-                (where codes are born)
-                         │
-        ┌────────────────┼────────────────┐
-        ▼                ▼                 ▼
-   Employee leaks    X (Twitter)      OzBargain
-   (TG/Discord)      JP/EN bloggers   AU deal forum
-        │                │                 │
-        └────────────────┼─────────────────┘
-                         │
-                         ▼
-                    linux.do
-            Chinese aggregation hub
-                         │
-        ┌────────────────┼────────────────┐
-        ▼                ▼                 ▼
-  80aj.com/Toy        V2EX           Personal blogs
-  (early re-poster)   (mass spread)   (xwuxl.com, etc.)
-        │                │                 │
-        └────────────────┼─────────────────┘
-                         ▼
-              Bilibili / Zhihu / WeChat
-              (long-tail distribution)
-```
+{{< mermaid >}}
+flowchart TD
+    A["🏢 Stripe Enterprise Partners<br/>（where codes are born）"]
+    
+    A --> B["💬 Employee Leaks<br/>TG / Discord DMs"]
+    A --> C["🐦 X (Twitter)<br/>JP / EN bloggers"]
+    A --> D["🦘 OzBargain<br/>AU deal forum"]
+    
+    B --> E["🐧 linux.do<br/>Chinese aggregation hub"]
+    C --> E
+    D --> E
+    
+    E --> F["📰 80aj.com / Toy<br/>early re-poster"]
+    E --> G["🌐 V2EX<br/>mass spread"]
+    E --> H["📝 Personal blogs<br/>xwuxl / mailberry"]
+    
+    F --> I["📱 Bilibili / Zhihu / WeChat<br/>long-tail distribution"]
+    G --> I
+    H --> I
+
+    style A fill:#c44020,stroke:#a03018,color:#fff
+    style E fill:#2563eb,stroke:#1d4ed8,color:#fff
+    style I fill:#6b7280,stroke:#4b5563,color:#fff
+{{< /mermaid >}}
 
 **The pattern isn't linear—it's parallel multi-source leakage.**
 

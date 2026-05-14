@@ -79,32 +79,30 @@ OpenAI 从 2023 年起使用 **Stripe Billing + Stripe Checkout** 处理 ChatGPT
 
 ## 完整传播链路
 
-```
-                  Stripe 企业合作伙伴
-                  （码的真正诞生点）
-                         │
-        ┌────────────────┼────────────────┐
-        ▼                ▼                 ▼
-   企业员工泄露      X (Twitter)       OzBargain
-   (TG私聊/Discord)  日英博主分享    澳洲 deal 社区
-        │                │                 │
-        └────────────────┼─────────────────┘
-                         │
-                         ▼
-                    linux.do
-                 中文圈信息集散地
-                         │
-        ┌────────────────┼────────────────┐
-        ▼                ▼                 ▼
-   80aj.com/Toy       V2EX             博客转载
-   (4.30 首发2月      (5.11 传播)      (xwuxl.com
-    免费版消息)                        mailberry等)
-        │                │                 │
-        └────────────────┼─────────────────┘
-                         ▼
-                   B站 / 知乎 / 公众号
-                   (5.11-12 末梢扩散)
-```
+{{< mermaid >}}
+flowchart TD
+    A["🏢 Stripe 企业合作伙伴<br/>（码的真正诞生点）"]
+    
+    A --> B["💬 企业员工泄露<br/>TG / Discord 私聊"]
+    A --> C["🐦 X (Twitter)<br/>日英博主分享"]
+    A --> D["🦘 OzBargain<br/>澳洲 deal 社区"]
+    
+    B --> E["🐧 linux.do<br/>中文圈信息集散地"]
+    C --> E
+    D --> E
+    
+    E --> F["📰 80aj.com / Toy<br/>4.30 首发2月免费版"]
+    E --> G["🌐 V2EX<br/>5.11 大规模传播"]
+    E --> H["📝 博客转载<br/>xwuxl.com / mailberry"]
+    
+    F --> I["📱 B站 / 知乎 / 公众号<br/>5.11-12 末梢扩散"]
+    G --> I
+    H --> I
+
+    style A fill:#c44020,stroke:#a03018,color:#fff
+    style E fill:#2563eb,stroke:#1d4ed8,color:#fff
+    style I fill:#6b7280,stroke:#4b5563,color:#fff
+{{< /mermaid >}}
 
 **关键特征：不是链式传播，而是多源并行泄露。**
 
