@@ -89,6 +89,7 @@ jobs:
         run: |
           ossutil sync public/ oss://zhuoqidev/ \
             --endpoint oss-cn-shenzhen.aliyuncs.com \
+            --region cn-shenzhen \
             --delete \
             --update
 
