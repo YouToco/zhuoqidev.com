@@ -100,7 +100,7 @@ jobs:
           ALIYUN_ACCESS_KEY_ID: ${{ secrets.ALIYUN_ACCESS_KEY_ID }}
           ALIYUN_ACCESS_KEY_SECRET: ${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}
         run: |
-          pip install aliyun-python-sdk-cdn==2.0.4 --quiet
+          pip install aliyun-python-sdk-cdn --quiet
           python3 - <<'EOF'
           import os
           from aliyunsdkcore.client import AcsClient
