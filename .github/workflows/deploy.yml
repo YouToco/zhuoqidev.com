@@ -20,7 +20,7 @@ jobs:
     outputs:
       artifact-name: hugo-public
     steps:
-      - name: Checkout (with submodules for PaperMod)
+      - name: Checkout (with submodules for Blowfish)
         uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -76,11 +76,13 @@ jobs:
           path: public/
 
       - name: Install ossutil
+        env:
+          OSSUTIL_VERSION: "2.2.2"
         run: |
-          curl -o ossutil.zip https://gosspublic.alicdn.com/ossutil/v2/2.2.2/ossutil-2.2.2-linux-amd64.zip
+          curl -o ossutil.zip "https://gosspublic.alicdn.com/ossutil/v2/${OSSUTIL_VERSION}/ossutil-${OSSUTIL_VERSION}-linux-amd64.zip"
           unzip -q ossutil.zip
-          chmod +x ossutil-2.2.2-linux-amd64/ossutil
-          mv ossutil-2.2.2-linux-amd64/ossutil /usr/local/bin/ossutil
+          chmod +x "ossutil-${OSSUTIL_VERSION}-linux-amd64/ossutil"
+          mv "ossutil-${OSSUTIL_VERSION}-linux-amd64/ossutil" /usr/local/bin/ossutil
 
       - name: Sync to OSS
         env:
@@ -98,7 +100,7 @@ jobs:
           ALIYUN_ACCESS_KEY_ID: ${{ secrets.ALIYUN_ACCESS_KEY_ID }}
           ALIYUN_ACCESS_KEY_SECRET: ${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}
         run: |
-          pip install aliyun-python-sdk-cdn --quiet
+          pip install aliyun-python-sdk-cdn==2.0.4 --quiet
           python3 - <<'EOF'
           import os
           from aliyunsdkcore.client import AcsClient

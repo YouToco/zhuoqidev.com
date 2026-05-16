@@ -205,7 +205,7 @@ Anthropic 在 2026-03 把默认 cache TTL 从 1h **静默降到 5min**，导致 
 
 **Google**
 - [Gemini API Context Caching](https://ai.google.dev/gemini-api/docs/caching) — implicit vs explicit、TTL、storage 计费
-- [Vertex AI Context caching overview](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/context-cache/context-cache-overview) — 90% 折扣 + 跨租户隔离
+- [Vertex AI Context caching overview](https://cloud.google.com/vertex-ai/generative-ai/docs/context-cache/context-cache-overview) — 90% 折扣 + 跨租户隔离
 
 **Cursor / Windsurf / Devin / Replit**
 - [Cursor Rules](https://cursor.com/docs/context/memories) + [Codebase Indexing](https://cursor.com/docs/context/codebase-indexing) + [1.0 changelog](https://www.cursor.com/changelog/1-0) + [1.2 changelog](https://cursor.com/en/changelog/1-2)

@@ -37,7 +37,7 @@ Bottom-up:
 - **L3 · Ultra-Long Context**: Gemini 2M, Magic 100M. Best in-session carrier, but O(n²) ceiling remains.
 - **L4 · Agent Memory Layer**: External DB + Agent runtime. Most commercially mature. Mem0, Zep, Letta, LangGraph Store.
 
-**→ [Full four-layer analysis + 14-product comparison](/en/projects/llm-memory-research/#2-主流产品的记忆策略对比含-cache-vs-memory-辨析)**
+**→ [Full four-layer analysis + 14-product comparison](/en/projects/llm-memory-research/#2-product-landscape-cache-vs-memory-vs-true-memory)**
 
 ## Top 3 Takeaways for Engineering Teams
 

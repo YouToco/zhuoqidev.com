@@ -1,3 +1,13 @@
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 var fuse;
 var showButton = document.getElementById("search-button");
 var showButtonMobile = document.getElementById("search-button-mobile");
@@ -156,12 +166,12 @@ function executeQuery(term) {
       var div = document.createElement("div");
       div.innerHTML = html;
       value.item.summary = div.textContent || div.innerText || "";
-      var title = value.item.externalUrl
+      var title = escapeHtml(value.item.externalUrl
         ? value.item.title +
           '<span class="text-xs ml-2 align-center cursor-default text-neutral-400 dark:text-neutral-500">' +
           value.item.externalUrl +
           "</span>"
-        : value.item.title;
+        : value.item.title);
       var linkconfig = value.item.externalUrl
         ? 'target="_blank" rel="noopener" href="' + value.item.externalUrl + '"'
         : 'href="' + value.item.permalink + '"';
@@ -174,7 +184,7 @@ function executeQuery(term) {
               <div class="-mb-1 text-lg font-bold">
                 ${title}
               </div>
-              <div class="text-sm text-neutral-500 dark:text-neutral-400">${value.item.section}<span class="px-2 text-primary-500">&middot;</span>${value.item.date ? value.item.date : ""}</span></div>
+              <div class="text-sm text-neutral-500 dark:text-neutral-400">${escapeHtml(value.item.section)}<span class="px-2 text-primary-500">&middot;</span>${escapeHtml(value.item.date ? value.item.date : "")}</span></div>
               <div class="text-sm italic">${value.item.summary}</div>
             </div>
             <div class="ml-2 ltr:block rtl:hidden text-neutral-500">&rarr;</div>

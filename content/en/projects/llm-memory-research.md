@@ -187,7 +187,7 @@ All primary sources from 2024–2026. 30+ curated entries covering vendor docs, 
 
 **Anthropic**: [Prompt Caching docs](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching) · [Lessons from Claude Code](https://claude.com/blog/lessons-from-building-claude-code-prompt-caching-is-everything) · [Claude Code Memory](https://docs.anthropic.com/en/docs/claude-code/memory) · [How Claude's memory works](https://support.anthropic.com/en/articles/11817273-how-does-claude-s-memory-work)
 
-**Google**: [Gemini Context Caching](https://ai.google.dev/gemini-api/docs/caching) · [Vertex AI caching overview](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/context-cache/context-cache-overview)
+**Google**: [Gemini Context Caching](https://ai.google.dev/gemini-api/docs/caching) · [Vertex AI caching overview](https://cloud.google.com/vertex-ai/generative-ai/docs/context-cache/context-cache-overview)
 
 **Cursor / Windsurf / Devin / Replit**: [Cursor Rules](https://cursor.com/docs/context/memories) · [Codebase Indexing](https://cursor.com/docs/context/codebase-indexing) · [Cursor 1.0](https://www.cursor.com/changelog/1-0) + [1.2](https://cursor.com/en/changelog/1-2) changelogs · [Windsurf Memories](https://docs.windsurf.com/windsurf/cascade/memories) · [Devin Knowledge](https://cognitionai.mintlify.app/product-guides/knowledge) · [Replit Checkpoints](https://docs.replit.com/core-concepts/agent/checkpoints-and-rollbacks)
 

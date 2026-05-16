@@ -27,6 +27,19 @@ languages:
       isoCode: zh-CN
       rtl: false
       dateFormat: "2006-01-02"
+      description: "AI Agent 开发者刘卓琪的个人博客，分享 AI Agent 开发、工具工程和创意编程。"
+      keywords: [AI Agent, LangChain, Cursor, 个人博客, 开发笔记]
+      author:
+        name: "Liu ZhuoQi"
+        image: "avatar.jpg"
+        headline: "AI Agent 开发者 · 把 AI 能力落到实际产品里"
+        bio: "AI Agent 开发者刘卓琪的个人博客，分享 AI Agent 开发、工具工程和创意编程。"
+        links:
+          - github: "https://github.com/YouToco"
+          - x-twitter: "https://x.com/busygod9527"
+          - telegram: "https://t.me/happyforyou0"
+          - wechat: "/images/wechat.jpg"
+          - rss: "/index.xml"
 
   en:
     label: "English"
@@ -107,6 +120,9 @@ params:
 
   description: "AI Agent 开发者刘卓琪的个人博客，分享 AI Agent 开发、工具工程和创意编程。"
   keywords: [AI Agent, LangChain, Cursor, 个人博客, 开发笔记]
+  icp: "湘ICP备2026017384号"
+  defaultSocialImage: "img/og-default.png"
+  twitter: "busygod9527"
 
   # Blowfish 默认外观
   colorScheme: "blowfish"
@@ -117,7 +133,7 @@ params:
   enableSearch: true
   enableCodeCopy: true
   enableA11y: true
-  enableImageOptimization: true
+  disableImageOptimization: false
   fingerprintAlgorithm: "sha512"
 
   # Homepage — Profile layout with recent posts
@@ -189,7 +205,6 @@ params:
 taxonomies:
   category: categories
   tag: tags
-  series: series
 
 markup:
   goldmark:

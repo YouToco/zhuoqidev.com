@@ -1,5 +1,4 @@
-{{ $siteTitleForHead := .Site.Title }}
-{{ if in .RelPermalink "/en/" }}{{ $siteTitleForHead = "ZhuoQi Dev" }}{{ end }}
+{{ $siteTitleForHead := .Site.Language.Title }}
 <head>
   <meta charset="utf-8">
   {{ with .Site.Language.Params.htmlCode | default .Site.Language.Locale }}
@@ -7,15 +6,14 @@
   {{ end }}
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <meta name="theme-color">
+  <meta name="theme-color" content="#c44020">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://pagead2.googlesyndication.com https://cdnjs.buymeacoffee.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; frame-src https://codepen.io https://codesandbox.io; connect-src 'self';">
 
   {{/* Title */}}
   {{ if .IsHome }}
     <title>{{ $siteTitleForHead | emojify }}</title>
-    <meta name="title" content="{{ $siteTitleForHead | emojify }}">
   {{ else }}
     <title>{{ .Title | plainify | emojify }} &middot; {{ $siteTitleForHead | emojify }}</title>
-    <meta name="title" content="{{ .Title | plainify | emojify }} &middot; {{ $siteTitleForHead | emojify }}">
   {{ end }}
 
   {{/* Metadata */}}
@@ -39,6 +37,7 @@
         <link rel="alternate" hreflang="{{ $hreflang }}" href="{{ .Permalink }}">
       {{ end }}
     {{ end }}
+    <link rel="alternate" hreflang="x-default" href="{{ .Site.Home.Permalink }}">
   {{ end }}
   {{ range .AlternativeOutputFormats }}
     {{ printf `
