@@ -128,6 +128,7 @@ params:
   enableSearch: true
   enableCodeCopy: true
   enableA11y: true
+  enableStructuredBreadcrumbs: true
   disableImageOptimization: false
   fingerprintAlgorithm: "sha512"
 
@@ -152,7 +153,9 @@ params:
     showBreadcrumbs: true
     showPagination: true
     showHeadingAnchors: true
-    showZenMode: false
+    showZenMode: true
+    showAuthorBottom: true
+    seriesOpened: true
     sharingLinks:
       - x-twitter
       - linkedin
@@ -182,6 +185,7 @@ params:
 
   # Blowfish 默认 Footer
   footer:
+    showMenu: true
     showCopyright: true
     showThemeAttribution: false
     showAppearanceSwitcher: true
