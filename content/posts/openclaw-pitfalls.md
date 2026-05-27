@@ -4,6 +4,8 @@ description: "从部署到排障，记录 OpenClaw 从启动失败、飞书消�
 date: 2026-05-27
 tags: ["OpenClaw", "AI Agent", "飞书", "记忆系统", "Compaction", "排障"]
 categories: ["AI Agent 实战"]
+series: ["OpenClaw 生产实战"]
+series_order: 1
 showToc: true
 ShowReadingTime: true
 ---
@@ -11,6 +13,50 @@ ShowReadingTime: true
 ## 为什么是 OpenClaw
 
 > 编程 Agent 按能力跃迁分三代：**Gen 1 补全**（Copilot，行级补全，无跨会话记忆）→ **Gen 2 AI-native IDE**（Cursor，对话+编辑+基础 Agent，server-side 自动记忆）→ **Gen 3 自治团队**（Claude Code / Codex CLI / OpenClaw，多 Agent 并行 + 云端沙箱 + 全仓库自主操作，文件记忆 + 自动巩固 + 跨会话持久化）。同一代内，OpenClaw 在记忆架构上走得最远、但生产成熟度最低。
+
+先看一眼 OpenClaw 的整体架构——下面这张图会让你对它的运行方式有个直观印象，后面所有踩坑都跟这些组件有关：
+
+```mermaid
+flowchart TB
+    subgraph 消息入口["📨 消息入口"]
+        FEISHU["飞书"]
+        WECHAT["企业微信"]
+        WEBCHAT["WebChat"]
+        TELEGRAM["Telegram"]
+    end
+
+    subgraph CHANNELS["🔌 Channels 层<br/>src/channels/"]
+        ROUTE["消息路由<br/>allowlist / mention-gating"]
+        DEDUP["去重 / 会话绑定<br/>dedup / session-envelope"]
+    end
+
+    subgraph GATEWAY["🖥️ Gateway 层<br/>src/gateway/ — WebSocket 常驻守护进程"]
+        WS["WebSocket Server<br/>:18789"]
+        AUTH["认证 & 设备配对<br/>device-auth / pairing"]
+        CRON["定时任务引擎<br/>src/cron/ — 独立 Agent 隔离执行"]
+    end
+
+    subgraph LOOP["🔄 Agent Loop<br/>src/gateway/server-chat.ts"]
+        INTAKE["消息摄入<br/>agent RPC"]
+        CONTEXT["上下文组装<br/>bootstrap + session + skills"]
+        MODEL["模型推理<br/>多后端 fallback 链"]
+        TOOLS["工具执行<br/>memory_search / shell / web_fetch..."]
+        REPLY["回复生成 & 流式投递"]
+    end
+
+    subgraph MEMORY["🧠 Memory 系统<br/>memory-core 插件"]
+        MEMFILE["MEMORY.md<br/>长期记忆"]
+        DAILY["memory/YYYY-MM-DD.md<br/>每日流水"]
+        DREAM["DREAMS.md<br/>Dreaming 巩固日记"]
+        HYBRID["向量 + BM25 混合检索<br/>7:3 权重"]
+    end
+
+    FEISHU & WECHAT & WEBCHAT & TELEGRAM --> CHANNELS
+    CHANNELS --> GATEWAY
+    GATEWAY --> LOOP
+    LOOP --> MEMORY
+    MEMORY -.->|"自动巩固 (Dreaming)"| MEMFILE
+```
 
 OpenClaw 是 Gen 3 自治编程 Agent，跨模型 CLI，支持 DeepSeek / Anthropic / OpenAI 多后端。它最吸引我的一点是**记忆系统**——在当前所有生产可用的编程 Agent 中，它的记忆架构是最激进的：
 
@@ -48,7 +94,37 @@ journalctl -u openclaw-gateway.service -f
 
 ## 第三坑（最严重）：Compaction 静默吞回复
 
-这是这三周里最严重的一次事故。一条正常的用户消息，Agent 已经生成了完整回复，但**用户什么都没收到**，bot 像死了一样安静。
+这是这三周里最严重的一次事故。在说具体时间线之前，先看图理解 Compaction 在 Agent Loop 中的位置和失败路径：
+
+```mermaid
+flowchart TB
+    MSG["👤 用户消息进入<br/>飞书新闻群"]
+    LOOP["🔄 Agent Loop 处理<br/>组装上下文 → 模型推理 → 生成回复"]
+    CHECK{"📏 上下文检查<br/>context ≤ 模型限制?"}
+    DELIVER["✅ 回复投递到飞书<br/>用户看到回复"]
+    COMPACT["🧹 Auto-Compaction 触发<br/>压缩旧消息为摘要"]
+    OVERFLOW{"⚠️ Compaction<br/>prompt 也超限?"}
+    EMPTY["💀 模型输出空字符串<br/>'Conversation is empty'"]
+    LOST["❌ 已生成的回复被静默丢弃<br/>用户感知：bot 不回复"]
+    SAFEGUARD["🛡️ safeguard 模式<br/>reserveTokens + fallback model<br/>压缩完成 → 回复正常投递"]
+
+    MSG --> LOOP
+    LOOP --> CHECK
+    CHECK -->|"✅ 未超限"| DELIVER
+    CHECK -->|"❌ 超限 (209K > 200K)"| COMPACT
+    COMPACT --> OVERFLOW
+    OVERFLOW -->|"❌ 无保护（默认行为）"| EMPTY
+    OVERFLOW -->|"🛡️ 有保护（修复后）"| SAFEGUARD
+    EMPTY --> LOST
+    SAFEGUARD --> DELIVER
+
+    style EMPTY fill:#ff6b6b,color:#fff
+    style LOST fill:#ff6b6b,color:#fff
+    style SAFEGUARD fill:#51cf66,color:#fff
+    style DELIVER fill:#51cf66,color:#fff
+```
+
+一条正常的用户消息，Agent 已经生成了完整回复，但**用户什么都没收到**，bot 像死了一样安静。
 
 ### 时间线
 
@@ -98,12 +174,47 @@ Compaction 是一个**隐式中间层**。正常情况下它压缩上下文；�
 | L4 模型调用层 | 模型是否正常响应 | journalctl grep 429/401/500/timeout |
 | L5 投递层 | 飞书发送是否成功 | 用 CLI 直接发一条测试消息验证权限 |
 
-L3 是黄金排查点。trajectory 的最后一条 event 直接告诉你发生了什么：
-- 最后是 `message(assistant text)` → 回复生成了但投递失败
-- 最后是 `compaction` 且内容为空 → **就是本文说的事故**
-- 最后是 `error` → agent 处理失败
+以后再遇到消息不响应，按下面这个决策树走，先看 trajectory 的最后 10 行——八成问题在第三步就能定位：
 
-以后遇到消息不响应，先 cat session trajectory 的最后 10 行，八成问题都在这。
+```mermaid
+flowchart TD
+    PROBLEM["❓ 飞书群 bot 不回复"]
+    L1["L1: 群权限<br/>lark-cli im +chat-list --as bot"]
+    L1_OK{"群在 allowlist?<br/>Bot 在群内?"}
+    L1_FIX["修复权限 / 加群到 allowlist"]
+
+    L2["L2: 消息到达<br/>查看 dedup 记录"]
+    L2_OK{"dedup 有最近条目?"}
+    L2_FIX["检查飞书事件订阅 URL<br/>OPENCLAW_GATEWAY_TOKEN"]
+
+    L3["🔑 L3: Session Trajectory<br/>cat session/*.jsonl 最后 10 events"]
+    L3_MSG{"最后 event 是什么?"}
+    L4["L4: 模型调用<br/>journalctl grep 429/500/timeout"]
+    L5["L5: 投递<br/>lark-cli im +send-message 测试"]
+
+    L3_CTX["💀 compaction 为空<br/>→ context overflow<br/>→ 本文事故，立即加 safeguard"]
+    L3_MESSAGE["回复已生成<br/>→ 问题在投递层<br/>→ 跳到 L5"]
+    L3_ERROR["有 error event<br/>→ 跳到 L4 查模型"]
+
+    PROBLEM --> L1
+    L1 --> L1_OK
+    L1_OK -->|"✓ 正常"| L2
+    L1_OK -->|"✗ 异常"| L1_FIX
+    L2 --> L2_OK
+    L2_OK -->|"✓ 有记录"| L3
+    L2_OK -->|"✗ 无记录"| L2_FIX
+    L3 --> L3_MSG
+    L3_MSG -->|"compaction 空"| L3_CTX
+    L3_MSG -->|"assistant text"| L3_MESSAGE
+    L3_MSG -->|"error"| L3_ERROR
+    L3_ERROR --> L4
+    L3_MESSAGE --> L5
+
+    style L3 fill:#ffd43b,color:#333
+    style L3_CTX fill:#ff6b6b,color:#fff
+    style L3_MESSAGE fill:#51cf66,color:#fff
+    style L3_ERROR fill:#ff922b,color:#fff
+```
 
 ## Model-Harness-Fit：模型和工具框架有"化学反应"
 
@@ -114,6 +225,43 @@ L3 是黄金排查点。trajectory 的最后一条 event 直接告诉你发生�
 具体到 OpenClaw：它同时支持 DeepSeek / Anthropic / OpenAI 多后端，但也因此带来了"用哪个模型"的决策负担。每个模型的 context window、reasoning profile、API 行为都不一样，compaction 配置需要针对 primary model 的窗口大小来调。
 
 ## OpenClaw vs Claude Code：记忆系统的路线分歧
+
+OpenClaw 记忆系统最独特的机制是 **Dreaming 后台巩固**——它不是简单的"记下来"，而是有一个三阶段自动流水线：
+
+```mermaid
+flowchart LR
+    subgraph 短期["📝 短期记忆"]
+        SESSION["Session 对话"]
+        RECALL["召回轨迹<br/>recall traces"]
+    end
+
+    subgraph LIGHT["💡 Light Sleep<br/>零 LLM 成本"]
+        SORT["排序 + 去重<br/>Jaccard 语义去重"]
+    end
+
+    subgraph REM["🌙 REM Sleep<br/>主题提取"]
+        REFLECT["模式识别 + 反思<br/>不写 MEMORY.md"]
+    end
+
+    subgraph DEEP["🧠 Deep Sleep<br/>三条件晋升门"]
+        RANK["加权评分<br/>score≥0.80"]
+        MERGE["合并验证<br/>merge≥3"]
+        RECALL_THRESH["召回验证<br/>recall≥3"]
+    end
+
+    subgraph 长期["📦 长期记忆"]
+        MEM["MEMORY.md"]
+    end
+
+    短期 --> LIGHT
+    LIGHT --> REM
+    REM --> DEEP
+    DEEP -->|"✓ 三条件全过"| MEM
+    DEEP -->|"✗ 任一条件不满足"| LIGHT
+
+    style DEEP fill:#b197fc,color:#fff
+    style MEM fill:#51cf66,color:#fff
+```
 
 跑了一段时间后，两个系统可以并排对比：
 
