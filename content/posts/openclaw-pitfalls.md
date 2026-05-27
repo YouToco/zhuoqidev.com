@@ -12,7 +12,9 @@ ShowReadingTime: true
 
 ## 为什么是 OpenClaw
 
-> 编程 Agent 按能力跃迁分三代：**Gen 1 补全**（Copilot，行级补全，无跨会话记忆）→ **Gen 2 AI-native IDE**（Cursor，对话+编辑+基础 Agent，server-side 自动记忆）→ **Gen 3 自治团队**（Claude Code / Codex CLI / OpenClaw，多 Agent 并行 + 云端沙箱 + 全仓库自主操作，文件记忆 + 自动巩固 + 跨会话持久化）。同一代内，OpenClaw 在记忆架构上走得最远、但生产成熟度最低。
+> 编程 Agent 的能力跃迁不只是"更强"--每次代际跃迁改变的是**验证循环的归属权**。Gen 1 补全时代（Copilot, 2021）：人类写、AI 补、人类验证--验证完全在人手里。Gen 2 对话时代（Cursor, 2023）：AI 生成代码块、人类审查 diff--验证仍以人为主，但 AI 开始做 lint/fix 的轻量自检。Gen 3 自治时代（Claude Code / Codex CLI / OpenClaw, 2025）：AI 写代码、AI 跑测试、AI 看报错、AI 修--验证循环从人转移到 harness。**整个 Outer Loop（模型外的一切：上下文管理、工具调用、验证、记忆巩固）开始比模型推理本身更决定系统质量**。OpenClaw 是这个趋势里记忆侧最激进、但 harness 稳定性最不足的一个。
+>
+> 同一代内还有一条关键分岔：**Vibe Coding**（Bolt.new、Lovable、Replit）把验证也扔给用户--"生成即交付"；**Engineering Rigor**（Claude Code、Aider、OpenClaw）则把验证编码进 harness--测试跑不过就重试。两者的差距不在模型，在 outer loop 的设计哲学。
 
 先看一眼 OpenClaw 的整体架构——下面这张图会让你对它的运行方式有个直观印象，后面所有踩坑都跟这些组件有关：
 
@@ -216,13 +218,23 @@ flowchart TD
     style L3_ERROR fill:#ff922b,color:#fff
 ```
 
-## Model-Harness-Fit：模型和工具框架有"化学反应"
+## Outer Loop：为什么框架比模型更决定成败
 
-一个反直觉的发现：OpenClaw + DeepSeek-R1-0528 在 Terminal-Bench 2.0 排名第一。不是最强的模型，也不是最强的框架，但**组合起来反而是最优**。
+有一个反直觉的数据点：OpenClaw + DeepSeek-R1-0528 在 Terminal-Bench 2.0 排名第一。不是最强的模型（当时 Claude Opus 推理更强），也不是最成熟的框架（Claude Code 的 harness 更稳定），但**组合反而是最优**。
 
-这意味着选 Agent 框架时，"框架支持哪个模型"比"框架本身有多强"更关键。如果你的主力模型和框架之间存在不匹配——比如框架设计假设了某个 API 协议族但你的模型用另一套——debug 成本会远超框架本身带来的收益。
+这不是偶然。2025 年行业里一个收敛的认知是：**"Structure around the model matters more than cleverness inside the model."** 模型只负责生成，而**生成是便宜的**——真正决定系统质量的是 Outer Loop 里的三件事：
 
-具体到 OpenClaw：它同时支持 DeepSeek / Anthropic / OpenAI 多后端，但也因此带来了"用哪个模型"的决策负担。每个模型的 context window、reasoning profile、API 行为都不一样，compaction 配置需要针对 primary model 的窗口大小来调。
+| Outer Loop 组件 | 做什么 | 失败时发生什么 |
+|---|---|---|
+| **验证（Verification）** | 编译器、测试套件、linter 检查输出 | AI 生成错误代码没人发现 |
+| **上下文管理（Context Engineering）** | Compaction、pruning、memory flush | 就是本文的事故——静默丢回复 |
+| **工具定义（ACI）** | Tool schema、参数约束、防呆设计 | 参数传错、文件写错路径、静默重试 |
+
+这三层都**不在模型里面**——它们是你部署和维护的系统。Compaction 事故的根因不是模型不够聪明，是你没告诉 harness "当压缩失败时，不要扔回复，要报错"。
+
+这也解释了为什么 Anthropic 观察到"最成功的 Agent 实现很少用复杂框架"——框架是别人写的 Outer Loop，你没法控制它的失败模式。OpenClaw 的多后端支持看起来是优势，但每个模型的 context window 不同、reasoning profile 不同、API 行为不同——**每多一个模型，compaction 的边界条件就多一组组合**，outer loop 的测试矩阵指数增长。
+
+这引向一个更根本的结构性问题——记忆系统的路线分歧。
 
 ## OpenClaw vs Claude Code：记忆系统的路线分歧
 
@@ -274,11 +286,18 @@ flowchart LR
 | 记忆分类 | 按时间（长期蒸馏/短期流水） | 按类型（user/feedback/project/reference） |
 | 生产成熟度 | 早期 | 百万级 Agent 验证 |
 
-OpenClaw 在记忆架构上更"学术正确"——PPO 自适应权重、三重睡眠、混合检索，每一层都接近前沿论文。但**架构先进性和生产稳定性之间有一条鸿沟**。Claude Code 的记忆分类是手工的四类标签，检索也只是 LLM 语义判断，不 fancy，但在百万级 Agent 中验证过"不会丢记忆、不会静默失败"。
+OpenClaw 的记忆架构更"学术正确"——PPO 自适应权重、三重睡眠、混合检索，每一层都接近记忆系统前沿论文。Claude Code 看上去"更土"：记忆就是四类 Markdown 文件（user/feedback/project/reference），检索靠 Sonnet 语义判断，没有 PPO 也没有 BM25。
 
-## 总结
+但这里有一个反直觉的结构事实：**文件记忆 > 向量记忆**。不是量化的"好一点"，是质的差异。工业界从 Claude Code、Codex CLI 到 Cursor，全部选择 Markdown 文件作为主记忆介质，向量只做辅助索引。为什么？因为编程场景下**确定性 > 概率检索**——你不能让 PPO 权重决定"要不要记住 API key 泄漏过"。
 
-1. **Compaction 是 Agent 系统中最危险的隐式中间层**——它失败时不会报错，只会悄悄丢东西。任何带自动压缩的系统上线前都必须配 safequard 模式 + 大窗口 fallback
-2. **消息不响应时先看 session trajectory 的最后 10 行**——不要从权限开始排查，先看 agent 到底有没有生成回复
-3. **模型名格式、环境变量、JSON 语法**——这三个问题的排查成本接近于零，但犯错的概率远高于预期
-4. **记忆系统选型不只是"谁架构更先进"**——OpenClaw 的记忆架构比 Claude Code 先进，但生产稳定性是另一维度的考量。选型时至少看三个维度：检索准确率、不丢记忆、失败有信号
+更大的问题在于：**记忆系统的先进程度和 Outer Loop 的稳定性是乘积关系，不是加法**。你的记忆检索算法再精准，如果 compaction 中间层悄悄把回复扔了，用户感知的不是"记忆不够好"，是"bot 死了"。OpenClaw 把 80% 的创新预算花在记忆侧（PPO、Dreaming、混合检索），但 Outer Loop 的防御侧（compaction safeguard、故障信号、降级路径）投入不足。Claude Code 反过来——记忆侧保守，但 harness 花了几百万 Agent 的实战验证。
+
+这是选型时需要警惕的陷阱：**看 benchmark 时看的是模型+记忆的能力上限，但生产系统活在 Outer Loop 的下限里**。
+
+## 总结：三个比踩坑更底层的判断
+
+**1. Outer Loop 是新的护城河，不是模型。** 2025 年后，模型能力在快速趋同——Gemini 2.5 Pro 有 1M context、DeepSeek-V4 有 1M、GPT-5.5 有 200K。模型之间的差距在收敛，但 harness 质量（compaction safeguard、验证循环、降级路径、故障信号）的差距在拉大。本文的 compaction 事故就是证据——它不是"模型不够好"的问题，是 harness 少了一行配置。Claude Code 2026年1月 ARR 到 ~$2B，不是因为它用的 Claude 模型比别人聪明，是它的 outer loop 经过了百万级 Agent 的实战验证。
+
+**2. 确定性优于概率性——在记忆、在路由、在故障处理。** OpenClaw 的 PPO 自适应权重和混合检索在论文上是对的，但当 compaction 静默失败时，用户不关心你的检索 recall 提高了多少。在系统边界上（compaction、fallback、错误处理），**确定性规则（rule-based）比概率规则（RL-based）更安全**。Claude Code 选"土"的分类法不是因为它不会做 PPO，是因为手工规则在"不丢东西"这件事上更可预期。
+
+**3. 2025-2026 的行业趋势是 BYOK 和 harness 开源化。** 大量用户从 Cursor 迁移到 Claude Code CLI、Aider、OpenCode——不是因为这些工具功能更多，是因为 BYOK（Bring Your Own Key）让你**掌控 outer loop**。SaaS 工具的 compaction 策略、缓存策略、重试策略全是黑盒，出问题你只能等厂商修。而 OpenClaw 的 `openclaw.json` 里每一行配置你都能看到、能改、能版本控制。这也是 OpenClaw 真正的长期价值——不是记忆系统多先进，而是 **harness 完全透明**。
