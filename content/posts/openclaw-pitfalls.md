@@ -10,7 +10,9 @@ ShowReadingTime: true
 
 ## 为什么是 OpenClaw
 
-OpenClaw 是一个 Gen 3 自治编程 Agent，跨模型 CLI，支持 DeepSeek / Anthropic / OpenAI 多后端。它最吸引我的一点是**记忆系统**——在当前所有生产可用的编程 Agent 中，它的记忆架构是最激进的：
+> 编程 Agent 按能力跃迁分三代：**Gen 1 补全**（Copilot，行级补全，无跨会话记忆）→ **Gen 2 AI-native IDE**（Cursor，对话+编辑+基础 Agent，server-side 自动记忆）→ **Gen 3 自治团队**（Claude Code / Codex CLI / OpenClaw，多 Agent 并行 + 云端沙箱 + 全仓库自主操作，文件记忆 + 自动巩固 + 跨会话持久化）。同一代内，OpenClaw 在记忆架构上走得最远、但生产成熟度最低。
+
+OpenClaw 是 Gen 3 自治编程 Agent，跨模型 CLI，支持 DeepSeek / Anthropic / OpenAI 多后端。它最吸引我的一点是**记忆系统**——在当前所有生产可用的编程 Agent 中，它的记忆架构是最激进的：
 
 - **PPO 认知权重自适应**：唯一的在生产工具中用强化学习调整记忆检索权重的系统。检索信号五维加权（recency 0.35 + frequency 0.25 + semantic 0.25 + saliency 0.15 + procedural 按需），随时间动态衰减
 - **三重睡眠巩固**：Light Sleep（Jaccard 去重，零 LLM 成本）→ REM Sleep（置信度评分）→ Deep Sleep（三条件晋升门：score≥0.80 + merge≥3 + recall≥3），自动将短期经验固化为长期记忆
