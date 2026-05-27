@@ -16,49 +16,37 @@ ShowReadingTime: true
 >
 > 同一代内还有一条关键分岔：**Vibe Coding**（Bolt.new、Lovable、Replit）把验证也扔给用户--"生成即交付"；**Engineering Rigor**（Claude Code、Aider、OpenClaw）则把验证编码进 harness--测试跑不过就重试。两者的差距不在模型，在 outer loop 的设计哲学。
 
-先看一眼 OpenClaw 的整体架构——下面这张图会让你对它的运行方式有个直观印象，后面所有踩坑都跟这些组件有关：
+先看一眼 OpenClaw 的整体架构——用思维导图展示组件层级，后面所有踩坑都跟这些模块有关：
 
-```mermaid
-flowchart TB
-    subgraph 消息入口["📨 消息入口"]
-        FEISHU["飞书"]
-        WECHAT["企业微信"]
-        WEBCHAT["WebChat"]
-        TELEGRAM["Telegram"]
-    end
+{{< mermaid >}}
+mindmap
+  root((OpenClaw))
+    📨 消息入口
+      飞书
+      企业微信
+      WebChat
+      Telegram
+    🔌 Channels 层
+      消息路由 allowlist
+      去重 dedup
+      会话绑定 envelope
+    🖥️ Gateway 守护进程
+      WebSocket Server :18789
+      认证 设备配对
+      定时任务 CRON 引擎
+    🔄 Agent Loop
+      消息摄入 agent RPC
+      上下文组装 bootstrap session skills
+      模型推理 多后端 fallback
+      工具执行 memory shell web
+      回复生成 流式投递
+    🧠 Memory 系统
+      MEMORY.md 长期记忆
+      每日流水 YYYY-MM-DD.md
+      DREAMS.md 巩固日记
+      向量 BM25 混合检索 7:3
+{{< /mermaid >}}
 
-    subgraph CHANNELS["🔌 Channels 层<br/>src/channels/"]
-        ROUTE["消息路由<br/>allowlist / mention-gating"]
-        DEDUP["去重 / 会话绑定<br/>dedup / session-envelope"]
-    end
-
-    subgraph GATEWAY["🖥️ Gateway 层<br/>src/gateway/ — WebSocket 常驻守护进程"]
-        WS["WebSocket Server<br/>:18789"]
-        AUTH["认证 & 设备配对<br/>device-auth / pairing"]
-        CRON["定时任务引擎<br/>src/cron/ — 独立 Agent 隔离执行"]
-    end
-
-    subgraph LOOP["🔄 Agent Loop<br/>src/gateway/server-chat.ts"]
-        INTAKE["消息摄入<br/>agent RPC"]
-        CONTEXT["上下文组装<br/>bootstrap + session + skills"]
-        MODEL["模型推理<br/>多后端 fallback 链"]
-        TOOLS["工具执行<br/>memory_search / shell / web_fetch..."]
-        REPLY["回复生成 & 流式投递"]
-    end
-
-    subgraph MEMORY["🧠 Memory 系统<br/>memory-core 插件"]
-        MEMFILE["MEMORY.md<br/>长期记忆"]
-        DAILY["memory/YYYY-MM-DD.md<br/>每日流水"]
-        DREAM["DREAMS.md<br/>Dreaming 巩固日记"]
-        HYBRID["向量 + BM25 混合检索<br/>7:3 权重"]
-    end
-
-    FEISHU & WECHAT & WEBCHAT & TELEGRAM --> CHANNELS
-    CHANNELS --> GATEWAY
-    GATEWAY --> LOOP
-    LOOP --> MEMORY
-    MEMORY -.->|"自动巩固 (Dreaming)"| MEMFILE
-```
 
 OpenClaw 是 Gen 3 自治编程 Agent，跨模型 CLI，支持 DeepSeek / Anthropic / OpenAI 多后端。它最吸引我的一点是**记忆系统**——在当前所有生产可用的编程 Agent 中，它的记忆架构是最激进的：
 
@@ -98,33 +86,29 @@ journalctl -u openclaw-gateway.service -f
 
 这是这三周里最严重的一次事故。在说具体时间线之前，先看图理解 Compaction 在 Agent Loop 中的位置和失败路径：
 
-```mermaid
+{{< mermaid >}}
 flowchart TB
-    MSG["👤 用户消息进入<br/>飞书新闻群"]
-    LOOP["🔄 Agent Loop 处理<br/>组装上下文 → 模型推理 → 生成回复"]
-    CHECK{"📏 上下文检查<br/>context ≤ 模型限制?"}
-    DELIVER["✅ 回复投递到飞书<br/>用户看到回复"]
+    MSG["👤 用户消息进入"]
+    LOOP["🔄 Agent Loop 处理<br/>组装上下文 → 推理 → 生成回复"]
+    CHECK{"📏 上下文 ≤ 模型限制?"}
+    DELIVER["✅ 回复投递到飞书"]
     COMPACT["🧹 Auto-Compaction 触发<br/>压缩旧消息为摘要"]
-    OVERFLOW{"⚠️ Compaction<br/>prompt 也超限?"}
-    EMPTY["💀 模型输出空字符串<br/>'Conversation is empty'"]
-    LOST["❌ 已生成的回复被静默丢弃<br/>用户感知：bot 不回复"]
-    SAFEGUARD["🛡️ safeguard 模式<br/>reserveTokens + fallback model<br/>压缩完成 → 回复正常投递"]
+    OVERFLOW{"⚠️ Compaction prompt 也超限?"}
+    EMPTY["💀 模型输出空字符串<br/>Conversation is empty"]
+    LOST["❌ 回复静默丢弃<br/>用户感知：bot 不回复"]
+    SAFEGUARD["🛡️ safeguard 模式<br/>reserveTokens + fallback<br/>压缩完成 → 正常投递"]
 
-    MSG --> LOOP
-    LOOP --> CHECK
+    MSG --> LOOP --> CHECK
     CHECK -->|"✅ 未超限"| DELIVER
-    CHECK -->|"❌ 超限 (209K > 200K)"| COMPACT
-    COMPACT --> OVERFLOW
-    OVERFLOW -->|"❌ 无保护（默认行为）"| EMPTY
-    OVERFLOW -->|"🛡️ 有保护（修复后）"| SAFEGUARD
-    EMPTY --> LOST
-    SAFEGUARD --> DELIVER
+    CHECK -->|"❌ 超限 209K > 200K"| COMPACT --> OVERFLOW
+    OVERFLOW -->|"❌ 无保护"| EMPTY --> LOST
+    OVERFLOW -->|"🛡️ 修复后"| SAFEGUARD --> DELIVER
 
     style EMPTY fill:#ff6b6b,color:#fff
     style LOST fill:#ff6b6b,color:#fff
     style SAFEGUARD fill:#51cf66,color:#fff
     style DELIVER fill:#51cf66,color:#fff
-```
+{{< /mermaid >}}
 
 一条正常的用户消息，Agent 已经生成了完整回复，但**用户什么都没收到**，bot 像死了一样安静。
 
@@ -178,7 +162,7 @@ Compaction 是一个**隐式中间层**。正常情况下它压缩上下文；�
 
 以后再遇到消息不响应，按下面这个决策树走，先看 trajectory 的最后 10 行——八成问题在第三步就能定位：
 
-```mermaid
+{{< mermaid >}}
 flowchart TD
     PROBLEM["❓ 飞书群 bot 不回复"]
     L1["L1: 群权限<br/>lark-cli im +chat-list --as bot"]
@@ -216,7 +200,7 @@ flowchart TD
     style L3_CTX fill:#ff6b6b,color:#fff
     style L3_MESSAGE fill:#51cf66,color:#fff
     style L3_ERROR fill:#ff922b,color:#fff
-```
+{{< /mermaid >}}
 
 ## Outer Loop：为什么框架比模型更决定成败
 
@@ -240,40 +224,34 @@ flowchart TD
 
 OpenClaw 记忆系统最独特的机制是 **Dreaming 后台巩固**——它不是简单的"记下来"，而是有一个三阶段自动流水线：
 
-```mermaid
+{{< mermaid >}}
 flowchart LR
     subgraph 短期["📝 短期记忆"]
         SESSION["Session 对话"]
-        RECALL["召回轨迹<br/>recall traces"]
+        RECALL["recall traces"]
     end
-
-    subgraph LIGHT["💡 Light Sleep<br/>零 LLM 成本"]
-        SORT["排序 + 去重<br/>Jaccard 语义去重"]
+    subgraph LIGHT["💡 Light Sleep — 零 LLM"]
+        SORT["Jaccard 语义去重 + 排序"]
     end
-
-    subgraph REM["🌙 REM Sleep<br/>主题提取"]
+    subgraph REM["🌙 REM Sleep — 主题发现"]
         REFLECT["模式识别 + 反思<br/>不写 MEMORY.md"]
     end
-
-    subgraph DEEP["🧠 Deep Sleep<br/>三条件晋升门"]
-        RANK["加权评分<br/>score≥0.80"]
-        MERGE["合并验证<br/>merge≥3"]
-        RECALL_THRESH["召回验证<br/>recall≥3"]
+    subgraph DEEP["🧠 Deep Sleep — 三条件晋升"]
+        RANK["score ≥ 0.80"]
+        MERGE["merge ≥ 3"]
+        RECALL_THRESH["recall days ≥ 3"]
     end
-
     subgraph 长期["📦 长期记忆"]
         MEM["MEMORY.md"]
     end
 
-    短期 --> LIGHT
-    LIGHT --> REM
-    REM --> DEEP
-    DEEP -->|"✓ 三条件全过"| MEM
-    DEEP -->|"✗ 任一条件不满足"| LIGHT
+    短期 --> LIGHT --> REM --> DEEP
+    DEEP -->|"✓ 全过"| MEM
+    DEEP -->|"✗ 不满足"| LIGHT
 
     style DEEP fill:#b197fc,color:#fff
     style MEM fill:#51cf66,color:#fff
-```
+{{< /mermaid >}}
 
 跑了一段时间后，两个系统可以并排对比：
 
