@@ -114,6 +114,8 @@ params:
   description: "把 AI Agent 做进真实产品里。写代码，也写思考。记录 AI Agent 开发、工具工程与产品落地的实战笔记。"
   keywords: [AI Agent, LangChain, Cursor, 个人博客, 开发笔记]
   icp: "湘ICP备2026017384号"
+  gongan: "湘公网安备43090302000353号"
+  gonganCode: "43090302000353"
   defaultSocialImage: "img/og-default.png"
   twitter: "busygod9527"
 

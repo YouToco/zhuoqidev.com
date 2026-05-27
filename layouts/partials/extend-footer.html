@@ -1,9 +1,17 @@
 {{ if not (strings.Contains .RelPermalink "/en/") }}
-  {{ with .Site.Params.icp }}
-  <div class="text-sm text-neutral-500 dark:text-neutral-400 mt-2 text-center">
+  {{ if or .Site.Params.icp .Site.Params.gongan }}
+  <div class="text-sm text-neutral-500 dark:text-neutral-400 mt-2 text-center space-x-3">
+    {{ with .Site.Params.gongan }}
+    <a href="https://beian.mps.gov.cn/#/query/webSearch?code={{ $.Site.Params.gonganCode }}" target="_blank" rel="noreferrer" class="hover:underline hover:decoration-primary-400 hover:text-primary-500 inline-flex items-center gap-1">
+      <img src="/images/beian-icon.png" alt="公安备案图标" class="inline-block align-middle" style="height:1em;" />
+      <span>{{ . }}</span>
+    </a>
+    {{ end }}
+    {{ with .Site.Params.icp }}
     <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" class="hover:underline hover:decoration-primary-400 hover:text-primary-500">
       {{ . }}
     </a>
+    {{ end }}
   </div>
   {{ end }}
 {{ end }}
