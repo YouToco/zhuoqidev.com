@@ -138,7 +138,7 @@ params:
 
   # Homepage — Profile layout with recent posts
   homepage:
-    layout: profile
+    layout: background
     showRecent: true
     showRecentItems: 5
     layoutBackgroundBlur: true
