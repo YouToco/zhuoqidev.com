@@ -4,6 +4,10 @@ theme: blowfish
 paginate: 10
 copyright: "© 2026 Liu ZhuoQi"
 
+services:
+  googleAnalytics:
+    id: "G-8T5T6HPCBC"
+
 enableRobotsTXT: true
 buildDrafts: false
 buildFuture: false
