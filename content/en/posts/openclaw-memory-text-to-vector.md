@@ -188,4 +188,4 @@ The last row deserves emphasis: even if NVIDIA's API occasionally times out or b
 
 ---
 
-> The next post might cover OpenClaw cron job SKILL.md optimization — when your AI Agent spends 15 exec calls every run searching for a skill's file path, inflating message count from 54 to 165, and the root cause is a single missing absolute path in the SKILL.md. This matters more than any algorithm tuning.
+> Next: [One File Path Eliminated 84% of Tool Calls — A Cron Job Debugging Story](/posts/openclaw-cron-skill-optimization/). When your AI Agent spends 15 exec calls every run searching for a skill's file path, inflating message count from 54 to 165, and the root cause is a single missing absolute path in the SKILL.md. This matters more than any algorithm tuning.

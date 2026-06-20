@@ -188,4 +188,4 @@ openclaw memory search "Gemini quota issue"
 
 ---
 
-> 下一篇可能写 OpenClaw cron job 的 SKILL.md 优化——当你的 AI Agent 每次执行都花 15 次 exec 调用搜索一个 skill 的路径，消息数从 54 膨胀到 165，根因只是 SKILL.md 里少写了一行绝对路径。这比任何算法调优都管用。
+> 下一篇：[一行路径省掉 84% 的工具调用——Cron Job 排障实录](/posts/openclaw-cron-skill-optimization/)。当你的 AI Agent 每次执行都花 15 次 exec 调用搜索一个 skill 的路径，消息数从 54 膨胀到 165，根因只是 SKILL.md 里少写了一行绝对路径。这比任何算法调优都管用。
