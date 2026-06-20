@@ -7,6 +7,7 @@ categories: ["AI Agent 实战"]
 series: ["OpenClaw 生产实战"]
 series_order: 3
 seriesOpened: true
+summary: "OpenClaw 的 daily-ai-news 定时任务连续超时。根因不是模型不够强——是 SKILL.md 里少写了一行绝对路径，导致 Agent 每次花 15 次 exec 搜索工具位置。消息数 165→54，exec 调用 44→7，一行路径比任何算法调优都管用。"
 showToc: true
 ShowReadingTime: true
 ---

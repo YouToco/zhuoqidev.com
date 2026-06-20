@@ -2,7 +2,7 @@
 title: "什么时候用 RAG，什么时候用 LLM Wiki，什么时候用纯文本记忆——一个 Agent 记忆选型框架"
 description: "RAG、结构化知识库、纯文本上下文记忆——三种 Agent 长期记忆方案的成本、延迟、精度和可维护性对比，附决策树。"
 date: 2026-05-11
-tags: ["AI Agent", "Memory", "RAG", "上下文工程", "Agent架构"]
+tags: ["AI Agent", "记忆系统", "RAG", "上下文工程", "Agent 架构"]
 categories: ["Agent 架构"]
 showToc: true
 ---

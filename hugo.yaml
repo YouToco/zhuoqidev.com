@@ -28,7 +28,7 @@ languages:
       rtl: false
       dateFormat: "2006-01-02"
       description: "把 AI Agent 做进真实产品里。写代码，也写思考。记录 AI Agent 开发、工具工程与产品落地的实战笔记。"
-      keywords: [AI Agent, LangChain, Cursor, 个人博客, 开发笔记]
+      keywords: [AI Agent, OpenClaw, Agent 架构, Prompt Engineering, 开发笔记]
       author:
         name: "Liu ZhuoQi"
         image: "avatar.jpg"
@@ -63,7 +63,7 @@ languages:
           - wechat: "/images/wechat.jpg"
           - rss: "/index.xml"
       description: "Building AI agents that ship. Notes on LLM engineering, agent architecture, and tooling."
-      keywords: [AI Agent, LLM, LangChain, Cursor, dev blog]
+      keywords: [AI Agent, OpenClaw, Agent Architecture, Prompt Engineering, dev blog]
 
 menu:
   main:
@@ -112,7 +112,7 @@ params:
     - rss: "/index.xml"
 
   description: "把 AI Agent 做进真实产品里。写代码，也写思考。记录 AI Agent 开发、工具工程与产品落地的实战笔记。"
-  keywords: [AI Agent, LangChain, Cursor, 个人博客, 开发笔记]
+  keywords: [AI Agent, OpenClaw, Agent 架构, Prompt Engineering, 开发笔记]
   icp: "湘ICP备2026017384号"
   gongan: "湘公网安备43090302000353号"
   gonganCode: "43090302000353"
@@ -136,7 +136,7 @@ params:
   homepage:
     layout: profile
     showRecent: true
-    showRecentItems: 3
+    showRecentItems: 5
     layoutBackgroundBlur: true
 
   # Article display
@@ -215,5 +215,5 @@ markup:
     anchorLineNos: true
     codeFences: true
     guessSyntax: true
-    lineNos: true
+    lineNos: false
     style: monokai

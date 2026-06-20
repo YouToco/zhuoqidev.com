@@ -2,7 +2,7 @@
 title: "RAG vs LLM Wiki vs Plain Text — A Decision Framework for Agent Long-Term Memory"
 description: "Cost, latency, accuracy, and maintainability trade-offs across three Agent memory approaches: RAG, structured knowledge bases, and plain-text context memory. Includes decision tree."
 date: 2026-05-11
-tags: ["AI Agent", "Memory", "RAG", "Context Engineering", "Agent Architecture"]
+tags: ["AI Agent", "Memory", "RAG", "Context Engineering"]
 categories: ["Agent Architecture"]
 showToc: true
 ---

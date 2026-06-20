@@ -2,7 +2,7 @@
 title: "大模型为什么没有记忆——67 条一手资料的交叉验证"
 description: "覆盖 Anthropic / OpenAI / Google / Cursor 官方文档，Karpathy / LeCun / Raschka 原文，以及 MemGPT / Titans / Mamba-2 / Mem0 等关键论文的调研。"
 date: 2026-05-04
-tags: ["AI Agent", "LLM", "Memory", "调研报告", "上下文工程"]
+tags: ["AI Agent", "LLM", "记忆系统", "调研报告", "上下文工程"]
 categories: ["调研报告"]
 showToc: true
 ---

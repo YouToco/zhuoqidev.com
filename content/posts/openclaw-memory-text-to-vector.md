@@ -7,6 +7,7 @@ categories: ["AI Agent 实战"]
 series: ["OpenClaw 生产实战"]
 series_order: 2
 seriesOpened: true
+summary: "OpenClaw 记忆系统的向量检索默认不可用——但 BM25 文本搜索兜底让系统照常运转了两周。当你发现「不配 embedding 也能跑」，到底要不要修？怎么用 NVIDIA 免费 API 零成本补上？"
 showToc: true
 ShowReadingTime: true
 ---

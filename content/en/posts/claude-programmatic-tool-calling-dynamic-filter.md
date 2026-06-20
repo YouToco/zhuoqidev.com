@@ -3,7 +3,7 @@ title: "Claude's Tool Calling Paradigm Shift: A Deep Dive into Programmatic Tool
 description: "Anthropic's Programmatic Tool Calling and Dynamic Filtering aren't just feature additions — they represent a paradigm shift in Agent architecture: from natural language orchestration to code-driven orchestration, from full context injection to on-demand filtering. Synthesizing multiple non-AI-written deep-dive articles, this post covers architecture, benchmarks, and production patterns."
 date: 2026-06-13
 tags: ["Claude", "AI Agent", "Agent Architecture", "Tool Calling", "Context Engineering", "Programmatic Tool Calling", "Dynamic Filtering", "Code Execution"]
-categories: ["Agent Architecture"]
+categories: ["AI Agent in Practice"]
 series: ["Agent Architecture Deep Dives"]
 series_order: 1
 seriesOpened: true

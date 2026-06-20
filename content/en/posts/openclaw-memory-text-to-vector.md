@@ -7,6 +7,7 @@ categories: ["AI Agent in Practice"]
 series: ["OpenClaw Production Notes"]
 series_order: 2
 seriesOpened: true
+summary: "OpenClaw's vector retrieval silently failed — but BM25 text search kept the memory system running for two weeks unnoticed. Should you even bother fixing it? Here's how I used NVIDIA's free embedding API to complete the picture at zero cost."
 showToc: true
 ShowReadingTime: true
 ---

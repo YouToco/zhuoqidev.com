@@ -7,6 +7,7 @@ categories: ["AI Agent in Practice"]
 series: ["OpenClaw Production Notes"]
 series_order: 3
 seriesOpened: true
+summary: "OpenClaw's daily-ai-news cron job kept timing out. The root cause: a missing absolute path in the SKILL.md caused the Agent to spend 15 exec calls searching for a tool every run. Messages 165→54, exec calls 44→7 — one file path beat any algorithm optimization."
 showToc: true
 ShowReadingTime: true
 ---
