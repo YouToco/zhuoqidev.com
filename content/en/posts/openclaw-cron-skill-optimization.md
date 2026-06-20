@@ -106,29 +106,23 @@ That's right — **compaction discarded exactly the tool path the Agent had pain
 
 ## The Fix: One Absolute Path
 
-The fix was absurdly simple. Append this to the `ai-news-digest` SKILL.md:
+The fix was absurdly simple. Append this to the `ai-news-digest` SKILL.md, telling the Agent exactly how to invoke the tool:
 
-```markdown
-### create-img invocation (use directly, do not search)
+> **create-img invocation (use directly, do not search)**
+>
+> 1. Read the skill spec first: `/home/openclaw/.openclaw/plugin-skills/create-img/SKILL.md`
+> 2. Run the script (command below)
+> 3. After generation, upload to Lark with `lark-cli im images create --file <image_path>` to get the `image_key`
 
-1. Read the skill spec first:
-   `/home/openclaw/.openclaw/plugin-skills/create-img/SKILL.md`
-
-2. Run the script:
-   ```bash
-   source /home/openclaw/.bashrc
-   /home/openclaw/workspace/.venv314/bin/python \
-     /home/openclaw/.openclaw/plugin-skills/create-img/scripts/omniroute_image_batch.py \
-     --prompt "<image description>" \
-     --size 1536x864 \
-     --quality high \
-     --format png \
-     --out-dir /home/openclaw/.openclaw/workspace/tmp/ai-news-banner
-   ```
-
-3. After generation, upload to Lark with
-   `lark-cli im images create --file <image_path>`
-   to get the `image_key`.
+```bash
+source /home/openclaw/.bashrc
+/home/openclaw/workspace/.venv314/bin/python \
+  /home/openclaw/.openclaw/plugin-skills/create-img/scripts/omniroute_image_batch.py \
+  --prompt "<image description>" \
+  --size 1536x864 \
+  --quality high \
+  --format png \
+  --out-dir /home/openclaw/.openclaw/workspace/tmp/ai-news-banner
 ```
 
 That's it. Give the Agent a **complete, copy-pasteable command** including:

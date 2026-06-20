@@ -106,28 +106,23 @@ SKILL.md 缺路径
 
 ## 修复：一行绝对路径
 
-修复方法极其简单。在 `ai-news-digest` 的 SKILL.md 末尾加一段：
+修复方法极其简单。在 `ai-news-digest` 的 SKILL.md 末尾加一段，告诉 Agent 工具的完整调用方式：
 
-```markdown
-### create-img 调用方式（直接使用，不要搜索）
+> **create-img 调用方式（直接使用，不要搜索）**
+>
+> 1. 先读取 skill 规范：`/home/openclaw/.openclaw/plugin-skills/create-img/SKILL.md`
+> 2. 调用脚本（命令见下方）
+> 3. 生成后用 `lark-cli im images create --file <图片路径>` 上传飞书取得 `image_key`
 
-1. 先读取 skill 规范：
-   `/home/openclaw/.openclaw/plugin-skills/create-img/SKILL.md`
-
-2. 调用脚本：
-   ```bash
-   source /home/openclaw/.bashrc
-   /home/openclaw/workspace/.venv314/bin/python \
-     /home/openclaw/.openclaw/plugin-skills/create-img/scripts/omniroute_image_batch.py \
-     --prompt "<图片描述>" \
-     --size 1536x864 \
-     --quality high \
-     --format png \
-     --out-dir /home/openclaw/.openclaw/workspace/tmp/ai-news-banner
-   ```
-
-3. 生成后用 `lark-cli im images create --file <图片路径>`
-   上传飞书取得 `image_key`。
+```bash
+source /home/openclaw/.bashrc
+/home/openclaw/workspace/.venv314/bin/python \
+  /home/openclaw/.openclaw/plugin-skills/create-img/scripts/omniroute_image_batch.py \
+  --prompt "<图片描述>" \
+  --size 1536x864 \
+  --quality high \
+  --format png \
+  --out-dir /home/openclaw/.openclaw/workspace/tmp/ai-news-banner
 ```
 
 就这些。给 Agent 一个**可以直接复制粘贴的完整命令**，包括：
