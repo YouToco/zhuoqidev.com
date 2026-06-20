@@ -145,6 +145,7 @@ params:
 
   # Article display
   article:
+    heroStyle: "background"
     showDate: true
     showDateUpdated: true
     showReadingTime: true
@@ -171,6 +172,7 @@ params:
 
   # Section list pages
   list:
+    heroStyle: "background"
     showBreadcrumbs: true
     showSummary: true
     showCards: true
