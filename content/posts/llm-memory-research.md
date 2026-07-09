@@ -2,14 +2,15 @@
 title: "大模型为什么没有记忆——67 条一手资料的交叉验证"
 description: "覆盖 Anthropic / OpenAI / Google / Cursor 官方文档，Karpathy / LeCun / Raschka 原文，以及 MemGPT / Titans / Mamba-2 / Mem0 等关键论文的调研。"
 date: 2026-05-04
+lastmod: 2026-07-09
 tags: ["AI Agent", "LLM", "记忆系统", "调研报告", "上下文工程"]
 categories: ["调研报告"]
 showToc: true
 ---
 
-这不是一篇"AI 科普"——这是一次用 Exa / Tavily / Context7 / WebSearch 四源交叉验证，覆盖 **67 条一手资料** 的硬核调研。如果你在给 Agent 系统设计记忆层，或者想搞清楚 ChatGPT Memory / Claude Memory / Cursor Rules 到底是怎么回事，这篇是你要看的东西。
+这不是一篇"AI 科普"——这是一次用 Exa / Tavily / Context7 / WebSearch 四源交叉验证，覆盖 **67+ 条一手资料** 的硬核调研。如果你在给 Agent 系统设计记忆层，或者想搞清楚 ChatGPT Memory / Claude Memory / Cursor Rules 到底是怎么回事，这篇是你要看的东西。
 
-**→ [完整报告（含 14 产品对比表、9 条工程结论、3 年范式演进地图）](/projects/llm-memory-research/)**
+**→ [完整报告（含 14 产品对比表、记忆类型四分类、写入/冲突策略、评估 benchmark 全景、9 条工程结论、3 年范式演进地图）](/projects/llm-memory-research/)**
 
 ---
 
@@ -39,11 +40,26 @@ showToc: true
 
 **→ [完整四层栈分析 + 14 产品对比表](/projects/llm-memory-research/#2-主流产品的记忆策略对比含-cache-vs-memory-辨析)**
 
+## 2026-07 更新：面向 Agent 架构师的深度补充
+
+基于 6 路 Exa 深度研究，完整报告新增以下内容：
+
+- **记忆类型的四分类**（CoALA 框架）：Working / Episodic / Semantic / Procedural——为什么"用同一个向量库服务四种不同需求"是最常见的设计错误
+- **写入策略与冲突解决**：Mem0 ADD-only vs Zep 双时序 vs A-MEM 记忆进化三条路线对比
+- **记忆生命周期管理**：衰减（指数衰减 + 半衰期分级）→ 合并（HDBSCAN + LLM 摘要）→ GC → Sleep-time Compute
+- **检索质量工程**：三信号复合评分公式 + Contextual Retrieval（检索失败率降 49%）
+- **存储选型**：向量库 / 知识图谱 / 关系库 / Markdown 的决策矩阵
+- **多 Agent 共享记忆**：LangGraph / AutoGen / CrewAI / Mem0 + StateFuse / MemClaw 前沿研究
+- **评估 benchmark 全景**：LoCoMo / LongMemEval / MemBench / MemoryAgentBench 等 8+ 个 benchmark
+- **安全威胁模型**：从 prompt injection 扩展到环境注入投毒、潜伏式投毒、自我强化注入
+
+**→ [查看完整报告](/projects/llm-memory-research/)**
+
 ## 最适合工程团队的 3 条结论
 
-1. **不要把 Cache 和 Memory 混为一谈**——Cache 跳过 prefill（省钱），Memory 决定 prompt 内容（涨能力），完全正交
-2. **写 Memory 就是写 System Prompt**——markdown 文件（CLAUDE.md / Cursor Rules）永远比"让 AI 自己记"更可控、可 diff、可版本管理
-3. **AI 写 + 人审批 = 当前最稳的自动 Memory 形态**——Cursor 1.2 加 user approval、Devin 默认走 suggestion 流，是被反复 prompt injection 教训后的共识
+1. **Cache 和 Memory 概念正交但实现耦合**——Cache 跳过 prefill（省钱），Memory 决定 prompt 内容（涨能力），但记忆变更会导致 cache miss
+2. **写 Memory 就是写 System Prompt**——markdown 文件（CLAUDE.md / Cursor Rules）永远比"让 AI 自己记"更可控、可 diff、可版本管理——但记忆量超过数百条时需引入结构化存储
+3. **自主 Agent 需要自动化写入门控和冲突解决**——对有人在环路的产品，"AI 写 + 人审批"是最稳形态；对自主 Agent，需自动化 admission control + 冲突解决
 
 ---
 
