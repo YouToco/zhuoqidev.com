@@ -38,7 +38,7 @@ CKS 认证 · 容器安全 · API 安全 · AI 安全（Prompt Injection / Jailb
 
 ## 代表作
 
-**[大模型为什么没有记忆](/projects/llm-memory-research/)** — 用 Exa / Tavily / Context7 / WebSearch 四源交叉验证，覆盖 Anthropic / OpenAI / Google / Cursor 官方文档，Karpathy / LeCun / Raschka 等研究者原文，以及 MemGPT / Titans / Mamba-2 / Mem0 等关键论文。67 条一手资料的交叉验证调研。
+**[大模型为什么没有记忆](/posts/llm-memory-research/)** — 用 Exa / Tavily / Context7 / WebSearch 四源交叉验证，覆盖 Anthropic / OpenAI / Google / Cursor 官方文档，Karpathy / LeCun / Raschka 等研究者原文，以及 MemGPT / Titans / Mamba-2 / Mem0 等关键论文。67 条一手资料的交叉验证调研。
 
 ---
 
