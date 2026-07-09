@@ -38,7 +38,7 @@ CKS Certified · Container Security · API Security · AI Security (Prompt Injec
 
 ## Featured Work
 
-**[Why LLMs Have No Memory](/en/projects/llm-memory-research/)** — A cross-validated research report covering 67 primary sources: Anthropic, OpenAI, Google, and Cursor official docs; original papers by Karpathy, LeCun, and Raschka; key architectures including MemGPT, Titans, Mamba-2, and Mem0.
+**[Why LLMs Have No Memory](/en/posts/llm-memory-research/)** — A cross-validated research report covering 67 primary sources: Anthropic, OpenAI, Google, and Cursor official docs; original papers by Karpathy, LeCun, and Raschka; key architectures including MemGPT, Titans, Mamba-2, and Mem0.
 
 ---
 
