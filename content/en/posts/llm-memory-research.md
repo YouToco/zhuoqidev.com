@@ -1,5 +1,5 @@
 ---
-title: "ChatGPT Has Memory? Aren't Agent Tools Like Cursor, Codex & Claude Code?"
+title: "Why LLMs Can't Remember You — Cursor / Claude Code / Codex Memory Mechanisms Dissected"
 description: "Cross-validated using Exa / Tavily / Context7 / WebSearch, covering Anthropic / OpenAI / Google / Cursor official docs, Karpathy / LeCun / Raschka papers, and key works like MemGPT / Titans / Mamba-2 / Mem0."
 date: 2026-05-04
 lastmod: 2026-07-09
@@ -8,14 +8,13 @@ categories: ["Research"]
 showToc: true
 ---
 
-Yes, ChatGPT has Memory. Claude has Memory. Cursor, Codex, and Claude Code all have their own "memory" systems. But **not a single one actually modifies model weights** — every "memory" feature works by injecting structured text back into the system prompt. This report cross-validates that conclusion with **67+ primary sources**, tearing down the architecture of Agent memory systems from first principles to product implementation.
+Cursor has Rules + Memories. Claude Code has CLAUDE.md + MEMORY.md. Codex has AGENTS.md + Memories. These Agent tools all have their own "memory" systems. But **not a single one actually modifies model weights** — every "memory" feature works by injecting structured text back into the system prompt. This report cross-validates that conclusion with **67+ primary sources**, tearing down the architecture of Agent memory systems from first principles to product implementation.
 
 ## Why 67 Sources
 
 Because every Agent builder runs into the same walls:
 
-- ChatGPT clearly has Memory — so why say "LLMs have no memory"?
-- How do Agent tools like Cursor, Codex, and Claude Code actually implement "memory"?
+- Cursor, Claude Code, and Codex all have "memory" — but how do they actually implement it?
 - Why does the AI forget user preferences after 10 turns?
 - Why can't Prompt Caching replace Memory?
 - Mem0 vs Zep vs Letta vs LangGraph Store — which one?
@@ -26,7 +25,7 @@ The answers exist in Anthropic/OpenAI/Google docs, Karpathy interviews, and arXi
 
 ## One-Liner
 
-"LLMs have no memory" is not an oversight — it is the equilibrium solution under four stacked constraints: **Transformer O(n²) attention + KV cache VRAM + weight entanglement (catastrophic forgetting) + GDPR compliance**. The "Memory" features in ChatGPT / Claude / Cursor / Codex / Claude Code all work by **injecting structured text back into the system prompt** — model weights never change. Prompt Caching is a performance optimization, not memory. The mainstream paradigm for the next 1–3 years is the **"stateless LLM kernel + stateful Agent memory layer"** hybrid architecture.
+"LLMs have no memory" is not an oversight — it is the equilibrium solution under four stacked constraints: **Transformer O(n²) attention + KV cache VRAM + weight entanglement (catastrophic forgetting) + GDPR compliance**. The "Memory" features in Cursor / Claude Code / Codex and other Agent tools all work by **injecting structured text back into the system prompt** — model weights never change. Prompt Caching is a performance optimization, not memory. The mainstream paradigm for the next 1–3 years is the **"stateless LLM kernel + stateful Agent memory layer"** hybrid architecture.
 
 | Compute Complexity | 100M ctx Cost | Cache Price | Mainstream TTL |
 |---|---|---|---|
@@ -62,7 +61,7 @@ The attack surface of persistent memory extends far beyond prompt injection. Res
 
 | Attack Type | Method | Typical Success Rate | Source |
 |---|---|---|---|
-| **Prompt Injection** | Attackers use Google Docs / images to invoke `to=bio` and write malicious instructions | — | Embrace The Red, 2024 |
+| **Prompt Injection** | External documents / images trigger the model to invoke memory write tools | — | Embrace The Red, 2024 |
 | **Environmental Injection Poisoning (eTAMP)** | Merely browsing tampered product pages poisons agent memory, effective cross-site | GPT-5-mini 32.5% | arXiv 2604.02623 (preprint) |
 | **Sleeper Memory Poisoning** | Manipulating external documents causes agent to store false memories, activatable across multiple subsequent conversations | Write rate 99.8%, trigger rate 60-89% | arXiv 2605.15338 (preprint) |
 | **Self-Reinforcing Injection (Zombie)** | Accumulates ~240 payload copies in RAG memory, resistant to truncation and summarization | — | arXiv 2602.15654 (preprint) |
@@ -81,18 +80,17 @@ MPBench (arXiv 2606.04329, preprint) identifies 9 structural vulnerability point
 
 ## 2. Product Memory Strategies Compared (with Cache vs Memory Disambiguation)
 
-15 mainstream products, **not a single one actually modifies model weights**. This section simultaneously disambiguates three commonly conflated concepts:
+14 mainstream products, **not a single one actually modifies model weights**. This section simultaneously disambiguates three commonly conflated concepts:
 
 - **Cache** (KV / Prompt Caching): Caches K, V projection tensors from attention layers; prefix byte-level match → skip prefill. Lifetime: 5min–24h. Fundamentally a compute optimization, not "remembering" anything.
 - **Memory** (Product Layer): Text stored in external databases / vector stores / markdown files, prepended to the system prompt on each call. User-controlled.
 - **True Model Memory** (In-Weights): Changing model weights themselves. Hit by catastrophic forgetting + GDPR right-to-be-forgotten + interpretability. Industry-wide avoidance.
 
-### 15-Product Comparison
+### 14-Product Comparison
 
 | Product | Strategy | Type | Weight Δ? |
 |---|---|---|---|
-| **ChatGPT Memory** | 4-layer: metadata + bio + ~40 summaries + sliding window | Memory | No |
-| **OpenAI Codex** | AGENTS.md project instructions + sandboxed task isolation | Memory | No |
+| **OpenAI Codex** | AGENTS.md 3-tier cascade + Memories (generated after thread idle → `~/.codex/memories/`, cross-session persistent, off by default) + sandboxed isolation | Memory | No |
 | _OpenAI Prompt Caching_ | ≥1024 tokens auto KV cache, 5min–24h TTL | Cache | No |
 | _Anthropic Prompt Caching_ | Explicit `cache_control` ≤4 breakpoints, byte-level match | Cache | No |
 | _Gemini Context Caching_ | Implicit 90% discount + Explicit 60min TTL | Cache | No |
@@ -110,7 +108,7 @@ MPBench (arXiv 2606.04329, preprint) identifies 9 structural vulnerability point
 
 {{< alert icon="bomb" >}}
 
-**Key reverse-engineering evidence**: Manthan Gupta confirmed through three experiments: ask ChatGPT about a specific topic discussed a year ago, and it **has absolutely no idea**. ChatGPT Memory does not use RAG. It stores only: session metadata + dozens of bio entries + **user message summaries** of the last ~40 chats (not ChatGPT's own replies) + the current sliding window. Cursor's official docs are even more blunt: *"Large language models don't retain memory between completions. Rules provide persistent, reusable context at the prompt level."*
+**Key evidence**: Cursor's official docs state it plainly: *"Large language models don't retain memory between completions. Rules provide persistent, reusable context at the prompt level."* Claude Code works the same way — CLAUDE.md and MEMORY.md are markdown files injected back into the prompt at each inference; weights never change. Codex's AGENTS.md + Memories follow the identical pattern: text files → injected into prompt → model reads them.
 
 {{< /alert >}}
 
@@ -338,7 +336,7 @@ Based on Anthropic, Letta, Karpathy, LeCun sources. 2026 mainstream configuratio
 
 6. **Autonomous Agents need automated write gating and conflict resolution**: For products with humans in the loop (Cursor, Devin), "AI writes + human approves" is the steadiest pattern. But for autonomous Agents, you need automated admission control (lightweight model for triage classification) + conflict resolution (ADD-only / bi-temporal / memory evolution). Core principle: **every write is a tax on all future reads** — better to store fewer high-quality facts than flood with low-value noise.
 
-7. **Visible, editable, exportable = trust**: Anthropic's "natural language synthesis" differentiation vs ChatGPT's opaque synthesis — two sides proving the same point.
+7. **Visible, editable, exportable = trust**: Claude Memory's natural language synthesis, Cursor Memories' user approval mechanism, Codex Memories' local file storage — transparency determines user trust.
 
 8. **Privacy mode conflicts with Cache**: OpenAI Extended cache loses ZDR eligibility; Cursor privacy mode stores no plaintext. Offer "performance vs. privacy" as two user-selectable modes.
 
@@ -357,8 +355,10 @@ All primary sources from 2024–2026. 50+ curated entries covering vendor docs, 
 **OpenAI**
 - [OpenAI Prompt Caching guide](https://developers.openai.com/docs/guides/prompt-caching) — KV cache mechanics + TTL + retention policy
 - [OpenAI Prompt Caching 201 cookbook](https://developers.openai.com/cookbook/examples/prompt_caching_201/) — Extended cache and ZDR relationship
-- [Manthan Gupta · I Reverse Engineered ChatGPT's Memory](https://manthanguptaa.in/posts/chatgpt_memory/) — 4-layer structure reverse engineering
-- [Embrace The Red · ChatGPT Hacking Memories](https://embracethered.com/blog/posts/2024/chatgpt-hacking-memories/) — bio tool and prompt injection attack surface
+- [OpenAI Codex](https://openai.com/index/introducing-codex/) — AGENTS.md + Memories cross-session persistence
+- [Codex Memories docs](https://developers.openai.com/codex/memories) — memory generation mechanism + privacy controls
+- [Codex AGENTS.md guide](https://developers.openai.com/codex/guides/agents-md) — 3-tier cascading project instructions
+- [Embrace The Red · Hacking Memories](https://embracethered.com/blog/posts/2024/chatgpt-hacking-memories/) — persistent memory prompt injection attack surface
 
 **Anthropic**
 - [Anthropic Prompt Caching docs](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching) — cache_control / 5min vs 1h / 4 breakpoints
@@ -373,7 +373,6 @@ All primary sources from 2024–2026. 50+ curated entries covering vendor docs, 
 
 **Cursor / Codex / Windsurf / Devin / Replit**
 - [Cursor Rules](https://cursor.com/docs/context/memories) + [Codebase Indexing](https://cursor.com/docs/context/codebase-indexing) + [1.0 changelog](https://www.cursor.com/changelog/1-0) + [1.2 changelog](https://cursor.com/en/changelog/1-2)
-- [OpenAI Codex](https://openai.com/index/introducing-codex/) — AGENTS.md project instructions + sandboxed isolation
 - [Windsurf Cascade Memories](https://docs.windsurf.com/windsurf/cascade/memories) — 5-layer context assembly
 - [Devin Knowledge](https://cognitionai.mintlify.app/product-guides/knowledge) — human-written + AI + DeepWiki + VM Snapshots
 - [Replit Checkpoints](https://docs.replit.com/core-concepts/agent/checkpoints-and-rollbacks) — VM + DB + AI chat snapshot

@@ -1,6 +1,6 @@
 ---
-title: "ChatGPT 有 Memory？Agent 工具不是 Cursor、Codex、Claude Code 这样的吗"
-description: "用 Exa / Tavily / Context7 / WebSearch 四源交叉验证，覆盖 Anthropic / OpenAI / Google / Cursor 官方文档，Karpathy / LeCun / Raschka 等研究者原文，以及 MemGPT / Titans / Mamba-2 / Mem0 等关键论文。"
+title: "大模型为什么记不住你——Cursor / Claude Code / Codex 记忆机制全拆解"
+description: "用 Exa / Tavily / Context7 / WebSearch 四源交叉验证，覆盖 Anthropic / OpenAI / Google / Cursor 官方文档，Karpathy / LeCun / Raschka 原文，以及 MemGPT / Titans / Mamba-2 / Mem0 等关键论文的调研。"
 date: 2026-05-04
 lastmod: 2026-07-09
 tags: ["AI Agent", "LLM", "Memory", "记忆系统", "调研报告", "上下文工程"]
@@ -8,14 +8,13 @@ categories: ["调研报告"]
 showToc: true
 ---
 
-是的，ChatGPT 有 Memory，Claude 有 Memory，Cursor / Codex / Claude Code 这些 Agent 工具也都有各自的"记忆"系统。但**没有一个真的修改了模型权重**——所有"记忆"本质都是把结构化文本塞回 system prompt。这篇调研用 **67+ 条一手资料**交叉验证了这个结论，从架构约束到产品实现，彻底拆解 Agent 记忆系统的真相。
+Cursor 有 Rules + Memories，Claude Code 有 CLAUDE.md + MEMORY.md，Codex 有 AGENTS.md + Memories——这些 Agent 工具都有各自的"记忆"系统。但**没有一个真的修改了模型权重**——所有"记忆"本质都是把结构化文本塞回 system prompt。这篇调研用 **67+ 条一手资料**交叉验证了这个结论，从架构约束到产品实现，彻底拆解 Agent 记忆系统的真相。
 
 ## 为什么这个问题值得花 67 条资料去研究
 
 因为每个做 Agent 的人都会撞到这堵墙：
 
-- ChatGPT 明明有 Memory，为什么还说"大模型没有记忆"？
-- Cursor、Codex、Claude Code 这些 Agent 工具的"记忆"到底是怎么实现的？
+- Cursor、Claude Code、Codex 都有"记忆"功能，但它们到底是怎么实现的？
 - 为什么我让 AI 记住用户偏好，它过 10 轮就忘了？
 - 为什么 Prompt Caching 不能替代 Memory？
 - Mem0、Zep、Letta、LangGraph Store——到底选哪个？
@@ -26,7 +25,7 @@ showToc: true
 
 ## 一句话结论
 
-所谓「大模型没有记忆」不是疏忽，而是 **Transformer O(n²) 注意力 + KV cache 显存 + 权重纠缠（灾难性遗忘）+ GDPR 合规** 四重约束的均衡解。ChatGPT / Claude / Cursor / Codex / Claude Code 的 "Memory" 本质都是**把结构化文本塞回 system prompt**，模型权重永远不动。Prompt Caching 只是性能优化，不是记忆。未来 1–3 年的主流是 **「无状态 LLM 内核 + 有状态 Agent 记忆层」** 混合架构。
+所谓「大模型没有记忆」不是疏忽，而是 **Transformer O(n²) 注意力 + KV cache 显存 + 权重纠缠（灾难性遗忘）+ GDPR 合规** 四重约束的均衡解。Cursor / Claude Code / Codex 等 Agent 工具的 "Memory" 本质都是**把结构化文本塞回 system prompt**，模型权重永远不动。Prompt Caching 只是性能优化，不是记忆。未来 1–3 年的主流是 **「无状态 LLM 内核 + 有状态 Agent 记忆层」** 混合架构。
 
 | 计算复杂度 | 100M ctx 成本 | Cache 价格 | 主流 TTL |
 |---|---|---|---|
@@ -62,7 +61,7 @@ GDPR 第 17 条和 PDPA 要求数据控制者"不得无故拖延"地删除个人
 
 | 攻击类型 | 攻击方式 | 典型成功率 | 来源 |
 |---|---|---|---|
-| **Prompt Injection** | 通过 Google Doc / 图片让模型调用 `to=bio` 写入恶意指令 | — | Embrace The Red, 2024 |
+| **Prompt Injection** | 通过外部文档 / 图片触发模型调用记忆写入工具 | — | Embrace The Red, 2024 |
 | **环境注入投毒 (eTAMP)** | 仅通过浏览被篡改的产品页面污染 agent 记忆，跨站点生效 | GPT-5-mini 32.5% | arXiv 2604.02623 (预印本) |
 | **潜伏式投毒 (Sleeper)** | 操纵外部文档使 agent 存储虚假记忆，可在多个后续对话中激活 | 写入率 99.8%，触发率 60-89% | arXiv 2605.15338 (预印本) |
 | **自我强化注入 (Zombie)** | 在 RAG 记忆中累积约 240 个载荷副本，抗截断和摘要 | — | arXiv 2602.15654 (预印本) |
@@ -81,18 +80,17 @@ MPBench (arXiv 2606.04329, 预印本) 识别了 9 个结构性脆弱点：模型
 
 ## 2. 主流产品的"记忆"策略对比（含 Cache vs Memory 辨析）
 
-15 个主流产品，**没有任何一个真的修改了模型权重**。在这节我们同时辨析三个常被混为一谈的概念：
+14 个主流产品，**没有任何一个真的修改了模型权重**。在这节我们同时辨析三个常被混为一谈的概念：
 
 - **Cache**（KV / Prompt Caching）：缓存 attention 层的 K、V 投影张量，前缀逐 byte 匹配命中后跳过 prefill。生命周期 5min–24h。本质是算力优化，不是"记住"任何东西。
 - **Memory**（产品层）：文本存储在外部数据库 / 向量库 / markdown 文件里，每次调用拼到 system prompt 头部。用户可控。
 - **真模型记忆**（权重内）：改变模型权重本身。受灾难性遗忘、GDPR 被遗忘权、可解释性三重打击，业界普遍回避。
 
-### 15 产品对比
+### 14 产品对比
 
 | 产品 | 策略 | 本质 | 权重变? |
 |---|---|---|---|
-| **ChatGPT Memory** | 4 层: 元数据 + bio + ~40 条摘要 + 滑窗 | Memory | No |
-| **OpenAI Codex** | AGENTS.md 项目指令 + 沙盒任务隔离 | Memory | No |
+| **OpenAI Codex** | AGENTS.md 三层级联 + Memories（线程空闲后生成 `~/.codex/memories/`，跨会话持久，默认关闭）+ 沙盒隔离 | Memory | No |
 | _OpenAI Prompt Caching_ | ≥1024 token 自动 KV 缓存, 5min–24h TTL | Cache | No |
 | _Anthropic Prompt Caching_ | 显式 `cache_control` ≤4 断点, 逐 byte 匹配 | Cache | No |
 | _Gemini Context Caching_ | Implicit 90% 折扣 + Explicit 60min TTL | Cache | No |
@@ -110,7 +108,7 @@ MPBench (arXiv 2606.04329, 预印本) 识别了 9 个结构性脆弱点：模型
 
 {{< alert icon="bomb" >}}
 
-**关键反向工程证据**：Manthan Gupta 三次实验证实：问 ChatGPT 一年前讨论过的具体话题，它**根本不知道**。ChatGPT Memory 没有用 RAG，存的只有：会话元数据 + 几十条 bio 条目 + 最近 ~40 个聊天的**用户消息摘要**（不存 ChatGPT 自己的回复）+ 当前滑窗。Cursor 官方文档第一句更直白：*"Large language models don't retain memory between completions. Rules provide persistent, reusable context at the prompt level."*
+**关键证据**：Cursor 官方文档开门见山：*"Large language models don't retain memory between completions. Rules provide persistent, reusable context at the prompt level."* Claude Code 同理——CLAUDE.md 和 MEMORY.md 都是 markdown 文件，每次推理时拼回 prompt，权重从不改变。Codex 的 AGENTS.md + Memories 也是同一模式：文本文件 → 注入 prompt → 模型读取。
 
 {{< /alert >}}
 
@@ -338,7 +336,7 @@ Anthropic 在 2026-03 把默认 cache TTL 从 1h **静默降到 5min**，导致 
 
 6. **自主 Agent 需要自动化写入门控和冲突解决**：对有人在环路的产品（Cursor、Devin），"AI 写 + 人审批"是最稳形态。但对自主 Agent，需要自动化的 admission control（轻量模型做 triage 分类）+ 冲突解决（ADD-only / bi-temporal / memory evolution）。核心原则：**每次写入都是对未来所有读取的税收**——宁可少存高质量 fact，不要多存低价值噪声。
 
-7. **可视、可编辑、可导出 = trust**：Anthropic 的 "natural language synthesis" 差异化和 ChatGPT 不透明合成，正反两面证明了这点。
+7. **可视、可编辑、可导出 = trust**：Claude Memory 的 natural language synthesis、Cursor Memories 的用户审批机制、Codex Memories 的本地文件存储——透明度决定用户信任。
 
 8. **隐私模式与 Cache 有矛盾**：OpenAI Extended cache 失去 ZDR 资格、Cursor 隐私模式不存原文——把"性能 vs 隐私"作为两档让用户选。
 
@@ -357,8 +355,10 @@ Anthropic 在 2026-03 把默认 cache TTL 从 1h **静默降到 5min**，导致 
 **OpenAI**
 - [OpenAI Prompt Caching guide](https://developers.openai.com/docs/guides/prompt-caching) — KV cache 工作原理 + TTL + retention policy
 - [OpenAI Prompt Caching 201 cookbook](https://developers.openai.com/cookbook/examples/prompt_caching_201/) — Extended cache 与 ZDR 的关系
-- [Manthan Gupta · I Reverse Engineered ChatGPT's Memory](https://manthanguptaa.in/posts/chatgpt_memory/) — 4 层结构反向工程
-- [Embrace The Red · ChatGPT Hacking Memories](https://embracethered.com/blog/posts/2024/chatgpt-hacking-memories/) — bio 工具与 prompt injection 攻击面
+- [OpenAI Codex](https://openai.com/index/introducing-codex/) — AGENTS.md + Memories 跨会话持久
+- [Codex Memories docs](https://developers.openai.com/codex/memories) — 记忆生成机制 + 隐私控制
+- [Codex AGENTS.md guide](https://developers.openai.com/codex/guides/agents-md) — 三层级联项目指令
+- [Embrace The Red · Hacking Memories](https://embracethered.com/blog/posts/2024/chatgpt-hacking-memories/) — persistent memory prompt injection 攻击面
 
 **Anthropic**
 - [Anthropic Prompt Caching docs](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching) — cache_control / 5min vs 1h / 4 breakpoints
@@ -373,7 +373,6 @@ Anthropic 在 2026-03 把默认 cache TTL 从 1h **静默降到 5min**，导致 
 
 **Cursor / Codex / Windsurf / Devin / Replit**
 - [Cursor Rules](https://cursor.com/docs/context/memories) + [Codebase Indexing](https://cursor.com/docs/context/codebase-indexing) + [1.0 changelog](https://www.cursor.com/changelog/1-0) + [1.2 changelog](https://cursor.com/en/changelog/1-2)
-- [OpenAI Codex](https://openai.com/index/introducing-codex/) — AGENTS.md 项目指令 + 沙盒隔离
 - [Windsurf Cascade Memories](https://docs.windsurf.com/windsurf/cascade/memories) — 5 层 context 拼接
 - [Devin Knowledge](https://cognitionai.mintlify.app/product-guides/knowledge) — 人写 + AI + DeepWiki + VM Snapshots
 - [Replit Checkpoints](https://docs.replit.com/core-concepts/agent/checkpoints-and-rollbacks) — VM + DB + AI 对话快照
