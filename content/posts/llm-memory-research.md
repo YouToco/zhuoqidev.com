@@ -1,5 +1,5 @@
 ---
-title: "大模型为什么没有记忆——67 条一手资料的交叉验证调研"
+title: "ChatGPT 有 Memory？Agent 工具不是 Cursor、Codex、Claude Code 这样的吗"
 description: "用 Exa / Tavily / Context7 / WebSearch 四源交叉验证，覆盖 Anthropic / OpenAI / Google / Cursor 官方文档，Karpathy / LeCun / Raschka 等研究者原文，以及 MemGPT / Titans / Mamba-2 / Mem0 等关键论文。"
 date: 2026-05-04
 lastmod: 2026-07-09
@@ -8,24 +8,25 @@ categories: ["调研报告"]
 showToc: true
 ---
 
-这不是一篇"AI 科普"——这是一次用 Exa / Tavily / Context7 / WebSearch 四源交叉验证，覆盖 **67+ 条一手资料** 的硬核调研。如果你在给 Agent 系统设计记忆层，或者想搞清楚 ChatGPT Memory / Claude Memory / Cursor Rules 到底是怎么回事，这篇是你要看的东西。
+是的，ChatGPT 有 Memory，Claude 有 Memory，Cursor / Codex / Claude Code 这些 Agent 工具也都有各自的"记忆"系统。但**没有一个真的修改了模型权重**——所有"记忆"本质都是把结构化文本塞回 system prompt。这篇调研用 **67+ 条一手资料**交叉验证了这个结论，从架构约束到产品实现，彻底拆解 Agent 记忆系统的真相。
 
 ## 为什么这个问题值得花 67 条资料去研究
 
 因为每个做 Agent 的人都会撞到这堵墙：
 
+- ChatGPT 明明有 Memory，为什么还说"大模型没有记忆"？
+- Cursor、Codex、Claude Code 这些 Agent 工具的"记忆"到底是怎么实现的？
 - 为什么我让 AI 记住用户偏好，它过 10 轮就忘了？
 - 为什么 Prompt Caching 不能替代 Memory？
-- 为什么所有产品都说有"记忆"，但没有一个改模型权重？
 - Mem0、Zep、Letta、LangGraph Store——到底选哪个？
 
-这些问题在 Anthropic/OpenAI/Google 的官方文档、Karpathy 的公开访谈、以及 arXiv 论文里都有答案——但分散在 67 个不同的地方。这篇调研把它们串起来了。
+答案在 Anthropic / OpenAI / Google 的官方文档、Karpathy 的公开访谈、以及 arXiv 论文里——但分散在 67 个不同的地方。这篇调研把它们串起来了。
 
 ---
 
 ## 一句话结论
 
-所谓「大模型没有记忆」不是疏忽，而是 **Transformer O(n²) 注意力 + KV cache 显存 + 权重纠缠（灾难性遗忘）+ GDPR 合规** 四重约束的均衡解。ChatGPT / Claude / Cursor 的 "Memory" 本质都是**把结构化文本塞回 system prompt**，模型权重永远不动。Prompt Caching 只是性能优化，不是记忆。未来 1–3 年的主流是 **「无状态 LLM 内核 + 有状态 Agent 记忆层」** 混合架构。
+所谓「大模型没有记忆」不是疏忽，而是 **Transformer O(n²) 注意力 + KV cache 显存 + 权重纠缠（灾难性遗忘）+ GDPR 合规** 四重约束的均衡解。ChatGPT / Claude / Cursor / Codex / Claude Code 的 "Memory" 本质都是**把结构化文本塞回 system prompt**，模型权重永远不动。Prompt Caching 只是性能优化，不是记忆。未来 1–3 年的主流是 **「无状态 LLM 内核 + 有状态 Agent 记忆层」** 混合架构。
 
 | 计算复杂度 | 100M ctx 成本 | Cache 价格 | 主流 TTL |
 |---|---|---|---|
@@ -80,17 +81,18 @@ MPBench (arXiv 2606.04329, 预印本) 识别了 9 个结构性脆弱点：模型
 
 ## 2. 主流产品的"记忆"策略对比（含 Cache vs Memory 辨析）
 
-14 个主流产品，**没有任何一个真的修改了模型权重**。在这节我们同时辨析三个常被混为一谈的概念：
+15 个主流产品，**没有任何一个真的修改了模型权重**。在这节我们同时辨析三个常被混为一谈的概念：
 
 - **Cache**（KV / Prompt Caching）：缓存 attention 层的 K、V 投影张量，前缀逐 byte 匹配命中后跳过 prefill。生命周期 5min–24h。本质是算力优化，不是"记住"任何东西。
 - **Memory**（产品层）：文本存储在外部数据库 / 向量库 / markdown 文件里，每次调用拼到 system prompt 头部。用户可控。
 - **真模型记忆**（权重内）：改变模型权重本身。受灾难性遗忘、GDPR 被遗忘权、可解释性三重打击，业界普遍回避。
 
-### 14 产品对比
+### 15 产品对比
 
 | 产品 | 策略 | 本质 | 权重变? |
 |---|---|---|---|
 | **ChatGPT Memory** | 4 层: 元数据 + bio + ~40 条摘要 + 滑窗 | Memory | No |
+| **OpenAI Codex** | AGENTS.md 项目指令 + 沙盒任务隔离 | Memory | No |
 | _OpenAI Prompt Caching_ | ≥1024 token 自动 KV 缓存, 5min–24h TTL | Cache | No |
 | _Anthropic Prompt Caching_ | 显式 `cache_control` ≤4 断点, 逐 byte 匹配 | Cache | No |
 | _Gemini Context Caching_ | Implicit 90% 折扣 + Explicit 60min TTL | Cache | No |
@@ -369,8 +371,9 @@ Anthropic 在 2026-03 把默认 cache TTL 从 1h **静默降到 5min**，导致 
 - [Gemini API Context Caching](https://ai.google.dev/gemini-api/docs/caching) — implicit vs explicit、TTL、storage 计费
 - [Vertex AI Context caching overview](https://cloud.google.com/vertex-ai/generative-ai/docs/context-cache/context-cache-overview) — 90% 折扣 + 跨租户隔离
 
-**Cursor / Windsurf / Devin / Replit**
+**Cursor / Codex / Windsurf / Devin / Replit**
 - [Cursor Rules](https://cursor.com/docs/context/memories) + [Codebase Indexing](https://cursor.com/docs/context/codebase-indexing) + [1.0 changelog](https://www.cursor.com/changelog/1-0) + [1.2 changelog](https://cursor.com/en/changelog/1-2)
+- [OpenAI Codex](https://openai.com/index/introducing-codex/) — AGENTS.md 项目指令 + 沙盒隔离
 - [Windsurf Cascade Memories](https://docs.windsurf.com/windsurf/cascade/memories) — 5 层 context 拼接
 - [Devin Knowledge](https://cognitionai.mintlify.app/product-guides/knowledge) — 人写 + AI + DeepWiki + VM Snapshots
 - [Replit Checkpoints](https://docs.replit.com/core-concepts/agent/checkpoints-and-rollbacks) — VM + DB + AI 对话快照

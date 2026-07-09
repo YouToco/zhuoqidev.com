@@ -1,5 +1,5 @@
 ---
-title: "Why LLMs Have No Memory — A Cross-Validated Research Report with 67 Primary Sources"
+title: "ChatGPT Has Memory? Aren't Agent Tools Like Cursor, Codex & Claude Code?"
 description: "Cross-validated using Exa / Tavily / Context7 / WebSearch, covering Anthropic / OpenAI / Google / Cursor official docs, Karpathy / LeCun / Raschka papers, and key works like MemGPT / Titans / Mamba-2 / Mem0."
 date: 2026-05-04
 lastmod: 2026-07-09
@@ -8,15 +8,16 @@ categories: ["Research"]
 showToc: true
 ---
 
-This is not pop-science AI writing. This is a cross-validated research sprint backed by **67+ primary sources** — vendor docs, arXiv papers, and researcher interviews — on a question every Agent builder hits: *why don't LLMs remember anything?*
+Yes, ChatGPT has Memory. Claude has Memory. Cursor, Codex, and Claude Code all have their own "memory" systems. But **not a single one actually modifies model weights** — every "memory" feature works by injecting structured text back into the system prompt. This report cross-validates that conclusion with **67+ primary sources**, tearing down the architecture of Agent memory systems from first principles to product implementation.
 
 ## Why 67 Sources
 
 Because every Agent builder runs into the same walls:
 
+- ChatGPT clearly has Memory — so why say "LLMs have no memory"?
+- How do Agent tools like Cursor, Codex, and Claude Code actually implement "memory"?
 - Why does the AI forget user preferences after 10 turns?
 - Why can't Prompt Caching replace Memory?
-- Why does every product claim "memory" but none touches model weights?
 - Mem0 vs Zep vs Letta vs LangGraph Store — which one?
 
 The answers exist in Anthropic/OpenAI/Google docs, Karpathy interviews, and arXiv papers — scattered across 67 places. This report connects them.
@@ -25,7 +26,7 @@ The answers exist in Anthropic/OpenAI/Google docs, Karpathy interviews, and arXi
 
 ## One-Liner
 
-"LLMs have no memory" is not an oversight — it is the equilibrium solution under four stacked constraints: **Transformer O(n²) attention + KV cache VRAM + weight entanglement (catastrophic forgetting) + GDPR compliance**. The "Memory" features in ChatGPT / Claude / Cursor all work by **injecting structured text back into the system prompt** — model weights never change. Prompt Caching is a performance optimization, not memory. The mainstream paradigm for the next 1–3 years is the **"stateless LLM kernel + stateful Agent memory layer"** hybrid architecture.
+"LLMs have no memory" is not an oversight — it is the equilibrium solution under four stacked constraints: **Transformer O(n²) attention + KV cache VRAM + weight entanglement (catastrophic forgetting) + GDPR compliance**. The "Memory" features in ChatGPT / Claude / Cursor / Codex / Claude Code all work by **injecting structured text back into the system prompt** — model weights never change. Prompt Caching is a performance optimization, not memory. The mainstream paradigm for the next 1–3 years is the **"stateless LLM kernel + stateful Agent memory layer"** hybrid architecture.
 
 | Compute Complexity | 100M ctx Cost | Cache Price | Mainstream TTL |
 |---|---|---|---|
@@ -80,17 +81,18 @@ MPBench (arXiv 2606.04329, preprint) identifies 9 structural vulnerability point
 
 ## 2. Product Memory Strategies Compared (with Cache vs Memory Disambiguation)
 
-14 mainstream products, **not a single one actually modifies model weights**. This section simultaneously disambiguates three commonly conflated concepts:
+15 mainstream products, **not a single one actually modifies model weights**. This section simultaneously disambiguates three commonly conflated concepts:
 
 - **Cache** (KV / Prompt Caching): Caches K, V projection tensors from attention layers; prefix byte-level match → skip prefill. Lifetime: 5min–24h. Fundamentally a compute optimization, not "remembering" anything.
 - **Memory** (Product Layer): Text stored in external databases / vector stores / markdown files, prepended to the system prompt on each call. User-controlled.
 - **True Model Memory** (In-Weights): Changing model weights themselves. Hit by catastrophic forgetting + GDPR right-to-be-forgotten + interpretability. Industry-wide avoidance.
 
-### 14-Product Comparison
+### 15-Product Comparison
 
 | Product | Strategy | Type | Weight Δ? |
 |---|---|---|---|
 | **ChatGPT Memory** | 4-layer: metadata + bio + ~40 summaries + sliding window | Memory | No |
+| **OpenAI Codex** | AGENTS.md project instructions + sandboxed task isolation | Memory | No |
 | _OpenAI Prompt Caching_ | ≥1024 tokens auto KV cache, 5min–24h TTL | Cache | No |
 | _Anthropic Prompt Caching_ | Explicit `cache_control` ≤4 breakpoints, byte-level match | Cache | No |
 | _Gemini Context Caching_ | Implicit 90% discount + Explicit 60min TTL | Cache | No |
@@ -369,8 +371,9 @@ All primary sources from 2024–2026. 50+ curated entries covering vendor docs, 
 - [Gemini API Context Caching](https://ai.google.dev/gemini-api/docs/caching) — implicit vs explicit, TTL, storage billing
 - [Vertex AI Context caching overview](https://cloud.google.com/vertex-ai/generative-ai/docs/context-cache/context-cache-overview) — 90% discount + cross-tenant isolation
 
-**Cursor / Windsurf / Devin / Replit**
+**Cursor / Codex / Windsurf / Devin / Replit**
 - [Cursor Rules](https://cursor.com/docs/context/memories) + [Codebase Indexing](https://cursor.com/docs/context/codebase-indexing) + [1.0 changelog](https://www.cursor.com/changelog/1-0) + [1.2 changelog](https://cursor.com/en/changelog/1-2)
+- [OpenAI Codex](https://openai.com/index/introducing-codex/) — AGENTS.md project instructions + sandboxed isolation
 - [Windsurf Cascade Memories](https://docs.windsurf.com/windsurf/cascade/memories) — 5-layer context assembly
 - [Devin Knowledge](https://cognitionai.mintlify.app/product-guides/knowledge) — human-written + AI + DeepWiki + VM Snapshots
 - [Replit Checkpoints](https://docs.replit.com/core-concepts/agent/checkpoints-and-rollbacks) — VM + DB + AI chat snapshot
