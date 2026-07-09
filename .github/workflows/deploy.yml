@@ -56,12 +56,6 @@ jobs:
           key: hugo-public-${{ github.sha }}
           fail-on-cache-miss: true
 
-      - name: Check Cloudflare Account Info
-        run: |
-          curl -s -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
-            "https://api.cloudflare.com/client/v4/accounts/${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" \
-            | python3 -c "import sys,json; d=json.load(sys.stdin)['result']; print(f\"Account: {d['name']}\nID: {d['id']}\nType: {d.get('type','N/A')}\")"
-
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
