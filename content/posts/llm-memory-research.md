@@ -39,7 +39,7 @@ Cursor 有 Rules + Memories，Claude Code 有 CLAUDE.md + MEMORY.md，Codex 有 
 
 ### 架构约束 · O(n²) 注意力
 
-自注意力关于序列长度 n 的计算复杂度是 `O(n²)`，KV cache 显存随 n 线性增长但系数巨大——4096 token 单序列就要约 2 GB 显存，32 并发就 64 GB，比模型权重本身还大。Llama 3.1 在 100M token 上下文中，仅 KV cache 就需要 638 块 H100（约 ¥40,000/小时）。
+自注意力关于序列长度 n 的计算复杂度是 `O(n²)`，KV cache 显存随 n 线性增长但系数巨大——以 Llama 3.1 405B 为例，4096 token 单序列 KV cache 就要约 2 GB 显存，32 并发就 64 GB，比模型权重本身还大。Llama 3.1 在 100M token 上下文中，仅 KV cache 就需要 638 块 H100（约 ¥40,000/小时）。
 
 → Liu et al. "Lost in the Middle" (TACL 2024) 实证：长上下文不仅算得慢，模型对中段信息的利用呈 U 形曲线，比闭卷还差。
 
@@ -118,7 +118,7 @@ MPBench (arXiv 2606.04329, 预印本) 识别了 9 个结构性脆弱点：模型
 
 | 存储方案 | 优势 | 天花板 | 适用场景 |
 |---|---|---|---|
-| **向量库** (Pinecone / Qdrant / Chroma) | 零冷启动、亚毫秒语义检索、通用内容类型 | 无关系推理、无时序模型、~5 万条后 top-k 质量退化 (Oxagen) | 早期原型、个人助手、记忆量 < 5万 |
+| **向量库** (Pinecone / Qdrant / Chroma) | 零冷启动、亚毫秒语义检索、通用内容类型 | 无关系推理、无时序模型、规模增大后 top-k 质量退化 | 早期原型、个人助手、记忆量 < 5万 |
 | **知识图谱** (Neo4j / Graphiti-Zep) | 多跳推理原生、实体消歧、时序正确性 (+18.5%, Zep 论文) | 冷启动成本高、LLM 抽取开销大 | 实体关系密集型领域、需审计路径 |
 | **关系数据库** | 精确查询、事务一致性、结构化状态 | 无语义检索、无关系遍历 | 精确事务查询（配置项、profile） |
 | **Markdown 文件** | 人可读、可 diff、可版本控制 | 无实体解析、无多跳推理、无时序推理 | 项目规则、小规模偏好（< 数百条） |
@@ -158,7 +158,7 @@ Agent 记忆不是一个桶——**CoALA 论文** (Sumers, Yao, Narasimhan, Grif
 
 **Procedural memory 是生产环境中实现最不充分的一层**。大多数"记忆"产品只有 episodic + semantic，缺乏 procedural。Voyager 在 Minecraft 中的 skill library 证明了 procedural memory 的复利效应：解锁独特物品多 3.3×，达到里程碑快 15.3×——procedural memory compounds，semantic memory does not。
 
-→ CoALA (arXiv 2309.02427) · Generative Agents (arXiv 2304.03442, UIST 2023) · MemGPT (arXiv 2310.08560, ICLR 2024) · Voyager (arXiv 2305.16291) · Foundation Agent Memory Survey (arXiv 2602.06052, 预印本)
+→ CoALA (arXiv 2309.02427) · Generative Agents (arXiv 2304.03442, UIST 2023) · MemGPT (arXiv 2310.08560, COLM 2024) · Voyager (arXiv 2305.16291) · Foundation Agent Memory Survey (arXiv 2602.06052, 预印本)
 
 #### 写入策略与冲突解决
 
@@ -271,11 +271,11 @@ Mem0 在 LoCoMo 上比 OpenAI Memory 高 26%——但 LoCoMo 只是冰山一角�
 
 | Benchmark | 规模 | 侧重维度 | 关键发现 |
 |---|---|---|---|
-| **LoCoMo** (ACL 2024) | 10 对话, ~9K tok | 5 类 QA（单跳/多跳/时序/常识/对抗） | Backboard 90.0% > 人类 87.9% |
+| **LoCoMo** (ACL 2024) | 10 对话, ~9K tok | 5 类 QA（单跳/多跳/时序/常识/对抗） | Backboard 90.1% > 人类 87.9% |
 | **LoCoMo-Refined** (2026) | 1,382 问 | 更严格 LLM 裁判（一致率 86% vs 原版 44%） | 各系统得分下降 15-22 pp |
-| **LoCoMo-Plus** (ACL 2026) | — | **认知记忆**（cue-trigger 语义断连） | 所有方法均大幅下降，认知记忆仍是开放问题 |
+| **LoCoMo-Plus** (arXiv 2602.10715, 预印本) | — | **认知记忆**（cue-trigger 语义断连） | 所有方法均大幅下降，认知记忆仍是开放问题 |
 | **LongMemEval V1** (ICLR 2025) | 500 问, 115K-1.5M tok | 信息抽取/多 session 推理/时序/弃权 | 商业系统仅 30-70%；Zep 71.2% vs GPT-4o 60.2% |
-| **LongMemEval V2** (2026) | 451 问, 115M tok | Web Agent 记忆，引入 LAFS（延迟-准确率前沿） | 最佳 RAG 48.5%, AgentRunbook 74.9% |
+| **LongMemEval V2** (2026) | 451 问, 115M tok | Web Agent 记忆，引入 LAFS（延迟-准确率前沿） | 最佳 RAG 48.5%, AgentRunbook 74.9% (Small-split) |
 | **MemBench** (ACL 2025 Findings) | 100K+ tok | 事实性+反思性，双场景（参与/观察） | 4 维指标：准确率/召回率/容量/延迟 |
 | **MemoryAgentBench** (2025) | 2,071 问, 103K-1.44M | 精确检索/测试时学习/长程理解/**选择性遗忘** | 增量多轮交互（vs 一次性给全部上下文） |
 
@@ -388,12 +388,12 @@ Anthropic 在 2026-03 把默认 cache TTL 从 1h **静默降到 5min**，导致 
 - [Mamba-2 / SSD (ICML 2024)](https://proceedings.mlr.press/v235/dao24a.html) + [RWKV-7 Goose](https://arxiv.org/abs/2503.14456) + [KV-Direct](https://www.arxiv.org/pdf/2603.19664)
 
 **Memory Layer / Agent 记忆（高权威）**
-- [CoALA (arXiv 2309.02427)](https://arxiv.org/abs/2309.02427) — Agent 记忆四分类框架，Griffiths h-index 99
+- [CoALA (arXiv 2309.02427)](https://arxiv.org/abs/2309.02427) — Agent 记忆四分类框架
 - [Generative Agents (UIST 2023)](https://arxiv.org/abs/2304.03442) — Memory stream + reflection + 三信号检索
-- [MemGPT (ICLR 2024)](https://arxiv.org/abs/2310.08560) — OS 虚拟内存分层模型
+- [MemGPT (COLM 2024)](https://arxiv.org/abs/2310.08560) — OS 虚拟内存分层模型
 - [Voyager](https://arxiv.org/abs/2305.16291) — Procedural memory (skill library) 标杆
 - [Mem0](https://arxiv.org/abs/2504.19413) · [Zep + Graphiti](https://arxiv.org/abs/2501.13956) — 商业记忆层
-- [Sleep-time Compute](https://arxiv.org/abs/2504.13171) — Stoica h-index 134，test-time 降 5×
+- [Sleep-time Compute](https://arxiv.org/abs/2504.13171) — test-time 降 5×
 
 **Continual Learning**
 - [Continual Learning of LLMs Survey](https://arxiv.org/abs/2404.16789) · [TTT (ICML 2025)](https://proceedings.mlr.press/v267/akyurek25a.html) · [Memory Survey](https://arxiv.org/abs/2505.00675)
@@ -434,7 +434,7 @@ Anthropic 在 2026-03 把默认 cache TTL 从 1h **静默降到 5min**，导致 
 - [AutoGen Memory & RAG](https://microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/memory.html)
 - [Letta Research](https://www.letta.com/research) + [Sleep-time 文档](https://docs.letta.com/guides/agents/architectures/sleeptime/)
 - [Don't Break the Cache (arXiv 2601.06007)](https://arxiv.org/abs/2601.06007v2)
-- [ctx.ist · Context Determinism Thesis](https://ctx.ist/thesis/)
+- [ctx.ist](https://ctx.ist/)
 - [Jatin Bansal — Memory Write Policies](https://jatinbansal.com/ai-engineering/memory-write-policies/) + [Retrieval Policies](https://jatinbansal.com/ai-engineering/memory-retrieval-policies/)
 - [Lance Martin — Agent Context Engineering](https://rlancemartin.github.io/2025/06/23/context_engineering/)
 - [Oxagen — Memory Architectures for AI Agents](https://www.oxagen.ai/blog/memory-architectures-for-ai-agents)

@@ -39,7 +39,7 @@ Four independent constraints stacked together — each individually survivable, 
 
 ### Architecture: O(n²) Attention
 
-Self-attention scales at `O(n²)` with respect to sequence length n. KV cache VRAM grows linearly with n but with massive coefficients — a single 4096-token sequence needs ~2 GB VRAM; 32 concurrent sessions hit 64 GB, more than the model weights themselves. Llama 3.1 at 100M context requires 638 H100 GPUs (~$5,400/hour) for KV cache alone.
+Self-attention scales at `O(n²)` with respect to sequence length n. KV cache VRAM grows linearly with n but with massive coefficients — for Llama 3.1 405B, a single 4096-token sequence's KV cache needs ~2 GB VRAM; 32 concurrent sessions hit 64 GB, more than the model weights themselves. Llama 3.1 at 100M context requires 638 H100 GPUs (~$5,400/hour) for KV cache alone.
 
 → Liu et al. "Lost in the Middle" (TACL 2024): long contexts aren't just slower — middle-section utilization follows a U-shaped curve, worse than closed-book.
 
@@ -118,7 +118,7 @@ Behind the "Type" column in the table above lies an architectural tradeoff in st
 
 | Storage | Strengths | Ceiling | Best For |
 |---|---|---|---|
-| **Vector DB** (Pinecone / Qdrant / Chroma) | Zero cold-start, sub-ms semantic retrieval, universal content types | No relational reasoning, no temporal model, top-k quality degrades beyond ~50K entries (Oxagen) | Early prototypes, personal assistants, memory count < 50K |
+| **Vector DB** (Pinecone / Qdrant / Chroma) | Zero cold-start, sub-ms semantic retrieval, universal content types | No relational reasoning, no temporal model, top-k quality degrades at scale | Early prototypes, personal assistants, memory count < 50K |
 | **Knowledge Graph** (Neo4j / Graphiti-Zep) | Native multi-hop reasoning, entity disambiguation, temporal correctness (+18.5%, Zep paper) | High cold-start cost, large LLM extraction overhead | Entity-relationship-dense domains, audit trail required |
 | **Relational DB** | Precise queries, transactional consistency, structured state | No semantic retrieval, no relational traversal | Precise transactional queries (config items, profiles) |
 | **Markdown Files** | Human-readable, diffable, version-controllable | No entity resolution, no multi-hop reasoning, no temporal reasoning | Project rules, small-scale preferences (< hundreds of entries) |
@@ -158,7 +158,7 @@ Agent memory is not a single bucket — the **CoALA paper** (Sumers, Yao, Narasi
 
 **Procedural memory is the most under-implemented layer in production**. Most "memory" products only have episodic + semantic, lacking procedural. Voyager's skill library in Minecraft demonstrated the compounding effect of procedural memory: 3.3× more unique items unlocked, 15.3× faster milestone completion — procedural memory compounds, semantic memory does not.
 
-→ CoALA (arXiv 2309.02427) · Generative Agents (arXiv 2304.03442, UIST 2023) · MemGPT (arXiv 2310.08560, ICLR 2024) · Voyager (arXiv 2305.16291) · Foundation Agent Memory Survey (arXiv 2602.06052, preprint)
+→ CoALA (arXiv 2309.02427) · Generative Agents (arXiv 2304.03442, UIST 2023) · MemGPT (arXiv 2310.08560, COLM 2024) · Voyager (arXiv 2305.16291) · Foundation Agent Memory Survey (arXiv 2602.06052, preprint)
 
 #### Write Policies and Conflict Resolution
 
@@ -271,11 +271,11 @@ Mem0 scores 26% above OpenAI Memory on LoCoMo — but LoCoMo is just the tip of 
 
 | Benchmark | Scale | Focus Dimensions | Key Findings |
 |---|---|---|---|
-| **LoCoMo** (ACL 2024) | 10 conversations, ~9K tok | 5 QA types (single-hop / multi-hop / temporal / commonsense / adversarial) | Backboard 90.0% > human 87.9% |
+| **LoCoMo** (ACL 2024) | 10 conversations, ~9K tok | 5 QA types (single-hop / multi-hop / temporal / commonsense / adversarial) | Backboard 90.1% > human 87.9% |
 | **LoCoMo-Refined** (2026) | 1,382 questions | Stricter LLM judge (agreement rate 86% vs original 44%) | All systems dropped 15-22 pp |
-| **LoCoMo-Plus** (ACL 2026) | — | **Cognitive memory** (cue-trigger semantic disconnect) | All methods dropped dramatically; cognitive memory remains an open problem |
+| **LoCoMo-Plus** (arXiv 2602.10715, preprint) | — | **Cognitive memory** (cue-trigger semantic disconnect) | All methods dropped dramatically; cognitive memory remains an open problem |
 | **LongMemEval V1** (ICLR 2025) | 500 questions, 115K-1.5M tok | Information extraction / multi-session reasoning / temporal / abstention | Commercial systems only 30-70%; Zep 71.2% vs GPT-4o 60.2% |
-| **LongMemEval V2** (2026) | 451 questions, 115M tok | Web Agent memory; introduces LAFS (Latency-Accuracy Frontier Score) | Best RAG 48.5%, AgentRunbook 74.9% |
+| **LongMemEval V2** (2026) | 451 questions, 115M tok | Web Agent memory; introduces LAFS (Latency-Accuracy Frontier Score) | Best RAG 48.5%, AgentRunbook 74.9% (Small-split) |
 | **MemBench** (ACL 2025 Findings) | 100K+ tok | Factuality + reflectivity, dual scenarios (participant / observer) | 4 metrics: accuracy / recall / capacity / latency |
 | **MemoryAgentBench** (2025) | 2,071 questions, 103K-1.44M | Precise retrieval / test-time learning / long-range understanding / **selective forgetting** | Incremental multi-turn interaction (vs one-shot full context) |
 
@@ -388,12 +388,12 @@ All primary sources from 2024–2026. 50+ curated entries covering vendor docs, 
 - [Mamba-2 / SSD (ICML 2024)](https://proceedings.mlr.press/v235/dao24a.html) + [RWKV-7 Goose](https://arxiv.org/abs/2503.14456) + [KV-Direct](https://www.arxiv.org/pdf/2603.19664)
 
 **Memory Layer / Agent Memory (High Authority)**
-- [CoALA (arXiv 2309.02427)](https://arxiv.org/abs/2309.02427) — Agent memory four-type taxonomy, Griffiths h-index 99
+- [CoALA (arXiv 2309.02427)](https://arxiv.org/abs/2309.02427) — Agent memory four-type taxonomy
 - [Generative Agents (UIST 2023)](https://arxiv.org/abs/2304.03442) — Memory stream + reflection + three-signal retrieval
-- [MemGPT (ICLR 2024)](https://arxiv.org/abs/2310.08560) — OS virtual memory tiered model
+- [MemGPT (COLM 2024)](https://arxiv.org/abs/2310.08560) — OS virtual memory tiered model
 - [Voyager](https://arxiv.org/abs/2305.16291) — Procedural memory (skill library) benchmark
 - [Mem0](https://arxiv.org/abs/2504.19413) · [Zep + Graphiti](https://arxiv.org/abs/2501.13956) — Commercial memory layers
-- [Sleep-time Compute](https://arxiv.org/abs/2504.13171) — Stoica h-index 134, test-time reduction 5×
+- [Sleep-time Compute](https://arxiv.org/abs/2504.13171) — test-time reduction 5×
 
 **Continual Learning**
 - [Continual Learning of LLMs Survey](https://arxiv.org/abs/2404.16789) · [TTT (ICML 2025)](https://proceedings.mlr.press/v267/akyurek25a.html) · [Memory Survey](https://arxiv.org/abs/2505.00675)
@@ -434,7 +434,7 @@ The following papers are all 2026 preprints. Please note "not peer-reviewed" whe
 - [AutoGen Memory & RAG](https://microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/memory.html)
 - [Letta Research](https://www.letta.com/research) + [Sleep-time docs](https://docs.letta.com/guides/agents/architectures/sleeptime/)
 - [Don't Break the Cache (arXiv 2601.06007)](https://arxiv.org/abs/2601.06007v2)
-- [ctx.ist · Context Determinism Thesis](https://ctx.ist/thesis/)
+- [ctx.ist](https://ctx.ist/)
 - [Jatin Bansal — Memory Write Policies](https://jatinbansal.com/ai-engineering/memory-write-policies/) + [Retrieval Policies](https://jatinbansal.com/ai-engineering/memory-retrieval-policies/)
 - [Lance Martin — Agent Context Engineering](https://rlancemartin.github.io/2025/06/23/context_engineering/)
 - [Oxagen — Memory Architectures for AI Agents](https://www.oxagen.ai/blog/memory-architectures-for-ai-agents)
