@@ -23,7 +23,7 @@ defaultContentLanguageInSubdir: false
 languages:
   zh:
     label: "中文"
-    languageCode: zh-CN
+    locale: zh-CN
     weight: 1
     title: "卓琪的开发笔记"
     params:
@@ -31,13 +31,13 @@ languages:
       isoCode: zh-CN
       rtl: false
       dateFormat: "2006-01-02"
-      description: "把 AI Agent 做进真实产品里。写代码，也写思考。记录 AI Agent 开发、工具工程与产品落地的实战笔记。"
-      keywords: [AI Agent, OpenClaw, Agent 架构, Prompt Engineering, 开发笔记]
+      description: "AI Agent 架构师刘卓琪的技术博客。记忆层架构、多 Agent 编排、上下文工程、RAG 管道、推理优化与 AI 安全的深度实战与调研。"
+      keywords: [AI Agent, Agent 架构师, 记忆层, 多 Agent 编排, 上下文工程, RAG, 推理优化, LLM]
       author:
         name: "Liu ZhuoQi"
         image: "avatar.jpg"
-        headline: "AI Agent 开发者 · 从 Prompt 到产品落地"
-        bio: "把 AI Agent 做进真实产品里。写代码，也写思考。记录 AI Agent 开发、工具工程与产品落地的实战笔记。"
+        headline: "AI Agent 架构师 · 从模型到生产，一个人走通"
+        bio: "AI Agent 架构师。从零设计 Agent 系统：记忆层、多 Agent 编排、上下文工程、RAG 管道与工具调用安全——CKS 认证，模型到生产一个人走通。"
         links:
           - github: "https://github.com/YouToco"
           - x-twitter: "https://x.com/busygod9527"
@@ -47,7 +47,7 @@ languages:
 
   en:
     label: "English"
-    languageCode: en
+    locale: en
     weight: 2
     title: "ZhuoQi Dev"
     params:
@@ -58,15 +58,15 @@ languages:
       author:
         name: "Liu ZhuoQi"
         image: "avatar.jpg"
-        headline: "AI Agent Developer · Building Agents That Ship"
-        bio: "Building AI agents that ship. Practical deep dives into AI agent development — from prompt chains to production."
+        headline: "AI Agent Architect · From Model to Production, Solo"
+        bio: "AI Agent Architect. Designing Agent systems from the ground up: memory layers, multi-agent orchestration, context engineering, RAG, and tool-use security — CKS certified, taking models to production solo."
         links:
           - github: "https://github.com/YouToco"
           - x-twitter: "https://x.com/busygod9527"
           - telegram: "https://t.me/happyforyou0"
           - wechat: "/images/wechat.jpg"
           - rss: "/index.xml"
-      description: "Building AI agents that ship. Notes on LLM engineering, agent architecture, and tooling."
+      description: "Liu ZhuoQi — AI Agent Architect. Deep dives on memory layers, multi-agent orchestration, context engineering, RAG, inference optimization, and AI security."
       keywords: [AI Agent, OpenClaw, Agent Architecture, Prompt Engineering, dev blog]
 
 menu:
@@ -115,8 +115,8 @@ params:
     - wechat: "/images/wechat.jpg"
     - rss: "/index.xml"
 
-  description: "把 AI Agent 做进真实产品里。写代码，也写思考。记录 AI Agent 开发、工具工程与产品落地的实战笔记。"
-  keywords: [AI Agent, OpenClaw, Agent 架构, Prompt Engineering, 开发笔记]
+  description: "AI Agent 架构师刘卓琪的技术博客。记忆层架构、多 Agent 编排、上下文工程、RAG 管道、推理优化与 AI 安全的深度实战与调研。"
+  keywords: [AI Agent, Agent 架构师, 记忆层, 多 Agent 编排, 上下文工程, RAG, 推理优化, LLM]
   icp: "湘ICP备2026017384号"
   gongan: "湘公网安备43090302000353号"
   gonganCode: "43090302000353"

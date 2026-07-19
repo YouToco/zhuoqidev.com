@@ -4,7 +4,7 @@ description: "用 Exa / Tavily / Context7 / WebSearch 四源交叉验证，覆�
 date: 2026-05-04
 lastmod: 2026-07-09
 tags: ["AI Agent", "LLM", "Memory", "记忆系统", "调研报告", "上下文工程"]
-categories: ["调研报告"]
+categories: ["深度调研"]
 showToc: true
 ---
 

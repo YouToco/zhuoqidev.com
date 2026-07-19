@@ -4,7 +4,7 @@ description: "Cross-validated using Exa / Tavily / Context7 / WebSearch, coverin
 date: 2026-05-04
 lastmod: 2026-07-09
 tags: ["AI Agent", "LLM", "Memory", "Research", "Context Engineering"]
-categories: ["Research"]
+categories: ["Deep Dives"]
 showToc: true
 ---
 

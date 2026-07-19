@@ -3,7 +3,7 @@ title: "OpenClaw 生产踩坑：当最先进的记忆系统遇到最静默的失
 description: "从部署到排障，记录 OpenClaw 从启动失败、飞书消息静默吞回复到 production 稳定的全链路实战经验——compaction safeguard、五层排查法、model-harness-fit 与记忆系统对比。"
 date: 2026-05-27
 tags: ["OpenClaw", "AI Agent", "飞书", "记忆系统", "Compaction", "排障"]
-categories: ["AI Agent 实战"]
+categories: ["AI Agent 工程"]
 series: ["OpenClaw 生产实战"]
 series_order: 1
 seriesOpened: true

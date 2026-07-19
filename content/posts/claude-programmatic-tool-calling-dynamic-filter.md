@@ -3,7 +3,7 @@ title: "Claude 工具调用范式转移：Programmatic Tool Calling 与 Dynamic 
 description: "Anthropic 在 Claude 平台推出的 Programmatic Tool Calling 和 Dynamic Filtering 不仅是功能增强，更代表了一种 Agent 架构范式的转移——从自然语言编排转向代码编排，从全量上下文注入转向按需过滤。本文综合多篇非 AI 撰写的深度技术文章，从架构原理、性能数据到生产实践，全面解读这场 Outer Loop 的进化。"
 date: 2026-06-13
 tags: ["Claude", "AI Agent", "Agent 架构", "工具调用", "上下文工程", "Programmatic Tool Calling", "Dynamic Filtering", "代码执行"]
-categories: ["AI Agent 实战"]
+categories: ["AI Agent 工程"]
 series: ["Agent 架构深度"]
 series_order: 1
 seriesOpened: true

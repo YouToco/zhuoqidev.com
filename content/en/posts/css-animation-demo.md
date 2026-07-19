@@ -3,7 +3,7 @@ title: "Embedding CSS Animation Demos in Hugo Articles"
 description: "Use custom shortcodes to run live CSS animations directly in Hugo blog posts — no CodePen account needed."
 date: 2026-05-04
 tags: ["Hugo", "CSS", "Animation", "Shortcode"]
-categories: ["Dev Log"]
+categories: ["Tinkering"]
 showToc: true
 ---
 

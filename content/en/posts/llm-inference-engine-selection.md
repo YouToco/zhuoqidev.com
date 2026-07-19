@@ -3,7 +3,7 @@ title: "How to Choose an LLM Inference Engine — A 2026 Map from Local Single-G
 description: "Aliyun's four-engine table — Ollama / vLLM / SGLang / HF Pipeline — is no longer enough in 2026. This piece re-maps inference engines into three tiers (Local → High-Performance Serving → Distributed/Disaggregated), covering 8 mainstream engines plus three new trends — PD disaggregation, speculative decoding, and FP4 quantization — with a decision matrix and a decision tree."
 date: 2026-07-19
 tags: ["LLM", "Inference Engine", "vLLM", "SGLang", "Model Serving", "Inference Optimization", "Selection Guide", "Research"]
-categories: ["Research"]
+categories: ["Deep Dives"]
 showToc: true
 ---
 

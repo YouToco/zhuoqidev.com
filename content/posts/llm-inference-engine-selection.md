@@ -3,7 +3,7 @@ title: "LLM 推理引擎怎么选——2026 年从本地单机到 PD 分离的�
 description: "阿里云那张 Ollama / vLLM / SGLang / HF Pipeline 四引擎表在 2026 年已经不够用了。这篇把推理引擎按「本地 → 高性能服务 → 分布式分离」三层重新梳理，覆盖 8 个主流引擎和 PD 分离 / 投机解码 / FP4 量化三大新趋势，附决策矩阵和决策树。"
 date: 2026-07-19
 tags: ["LLM", "推理引擎", "vLLM", "SGLang", "模型部署", "推理优化", "选型指南", "调研报告"]
-categories: ["调研报告"]
+categories: ["深度调研"]
 showToc: true
 ---
 

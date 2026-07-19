@@ -3,7 +3,7 @@ title: "生产环境 Agent 实践：为什么我们从 Celery 迁移到 Temporal
 description: 'Agent 流水线不是普通的异步任务——它有状态、会卡住、需要重放排障、单条失败不能拖垮整批。Celery 每一条都踩坑后才明白 Temporal 不是"另一个任务队列"，而是在解决不同层级的问题。'
 date: 2026-05-16
 tags: ["Agent 工程", "Temporal", "Celery", "工作流引擎", "生产实践", "后端架构", "Python"]
-categories: ["Agent 架构"]
+categories: ["AI Agent 工程"]
 showToc: true
 ---
 

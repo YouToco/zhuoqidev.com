@@ -38,7 +38,13 @@ CKS 认证 · 容器安全 · API 安全 · AI 安全（Prompt Injection / Jailb
 
 ## 代表作
 
-**[大模型为什么没有记忆](/posts/llm-memory-research/)** — 用 Exa / Tavily / Context7 / WebSearch 四源交叉验证，覆盖 Anthropic / OpenAI / Google / Cursor 官方文档，Karpathy / LeCun / Raschka 等研究者原文，以及 MemGPT / Titans / Mamba-2 / Mem0 等关键论文。67 条一手资料的交叉验证调研。
+**[大模型为什么记不住你——记忆机制全拆解](/posts/llm-memory-research/)** — 67 条一手资料交叉验证，覆盖 Anthropic / OpenAI / Google / Cursor 官方文档与 Karpathy / LeCun / Raschka 原文，从架构约束到产品实现彻底拆解 Agent 记忆系统。
+
+**[LLM 推理引擎怎么选——2026 全景选型地图](/posts/llm-inference-engine-selection/)** — vLLM / SGLang / TensorRT-LLM 等 8 大引擎，叠加 PD 分离 / 投机解码 / FP4 量化三大新趋势，官方博客 / GitHub / arXiv 多源核验。
+
+**[为什么我们从 Celery 迁移到 Temporal](/posts/why-temporal-not-celery/)** — 生产环境 Agent 流水线的工作流引擎选型，来自逐条踩坑的一线实践，而非文档对比。
+
+**[一个 Agent 记忆选型框架](/posts/memory-choice-framework/)** — RAG / LLM Wiki / 纯文本三条记忆路线的成本、延迟、精度与可维护性权衡，附决策树。
 
 ---
 

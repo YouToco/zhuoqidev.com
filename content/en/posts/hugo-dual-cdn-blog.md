@@ -2,8 +2,9 @@
 title: "Building a Personal Site with Hugo and Dual-Stack CDN"
 description: "How I set up Hugo + Blowfish with Alibaba Cloud OSS/CDN for China and Cloudflare Pages for international visitors — ICP filing, geo-DNS routing, and GitHub Actions dual-stack deployment."
 date: 2026-05-04
+aliases: ["/en/posts/hello-world/"]
 tags: ["Hugo", "Alibaba Cloud", "Cloudflare", "CDN", "ICP Filing"]
-categories: ["Dev Log"]
+categories: ["Tinkering"]
 showToc: true
 ShowReadingTime: true
 ---

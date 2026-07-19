@@ -3,7 +3,7 @@ title: "ChatGPT Business 48 个月优惠的源头究竟在哪——一次羊毛�
 description: "追踪 codestonegb、thealloynetwork 等优惠码从 Stripe 合作伙伴泄露到中文社区的完整链路，揭示 OpenAI 不公开的秘密促销体系。"
 date: 2026-05-14
 tags: ["ChatGPT", "OpenAI", "Stripe", "优惠码", "信息溯源", "OSINT"]
-categories: ["调查"]
+categories: ["折腾记录"]
 showToc: true
 ---
 

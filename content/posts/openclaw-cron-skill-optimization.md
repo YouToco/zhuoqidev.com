@@ -3,7 +3,7 @@ title: "OpenClaw 实战：一行路径省掉 84% 的工具调用——Cron Job �
 description: "OpenClaw 的 daily-ai-news 定时任务连续超时。根因不是模型不够强、不是 prompt 太长、不是上游 API 挂了——是 SKILL.md 里少写了一行绝对路径，导致 Agent 每次执行花 15 次 exec 调用搜索一个 skill 的位置。消息数从 54 膨胀到 165，工具调用结果从 204KB 暴涨到 1.1MB。这篇记录完整的排障过程和修复方法。"
 date: 2026-06-20
 tags: ["OpenClaw", "AI Agent", "Cron Job", "SKILL.md", "Prompt Engineering", "性能优化"]
-categories: ["AI Agent 实战"]
+categories: ["AI Agent 工程"]
 series: ["OpenClaw 生产实战"]
 series_order: 3
 seriesOpened: true

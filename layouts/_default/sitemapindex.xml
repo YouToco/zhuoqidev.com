@@ -31,9 +31,9 @@
     <priority>{{ $priority }}</priority>
     {{- if .IsTranslated }}
       {{- range .Translations }}
-    <xhtml:link rel="alternate" hreflang="{{ .Language.LanguageCode }}" href="{{ .Permalink }}"/>
+    <xhtml:link rel="alternate" hreflang="{{ .Language.Locale }}" href="{{ .Permalink }}"/>
       {{- end }}
-    <xhtml:link rel="alternate" hreflang="{{ .Language.LanguageCode }}" href="{{ $link }}"/>
+    <xhtml:link rel="alternate" hreflang="{{ .Language.Locale }}" href="{{ $link }}"/>
     {{- end }}
   </url>
       {{- end -}}

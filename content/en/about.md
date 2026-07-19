@@ -38,7 +38,13 @@ CKS Certified · Container Security · API Security · AI Security (Prompt Injec
 
 ## Featured Work
 
-**[Why LLMs Have No Memory](/en/posts/llm-memory-research/)** — A cross-validated research report covering 67 primary sources: Anthropic, OpenAI, Google, and Cursor official docs; original papers by Karpathy, LeCun, and Raschka; key architectures including MemGPT, Titans, Mamba-2, and Mem0.
+**[Why LLMs Can't Remember You — Memory Mechanisms Dissected](/en/posts/llm-memory-research/)** — 67 primary sources cross-validated across Anthropic / OpenAI / Google / Cursor docs and Karpathy / LeCun / Raschka papers, tearing down Agent memory systems from architectural constraints to product implementation.
+
+**[How to Choose an LLM Inference Engine — A 2026 Map](/en/posts/llm-inference-engine-selection/)** — 8 engines from vLLM / SGLang / TensorRT-LLM, plus PD disaggregation / speculative decoding / FP4 quantization, cross-checked against official blogs, GitHub, and arXiv.
+
+**[Why We Migrated from Celery to Temporal](/en/posts/why-temporal-not-celery/)** — Workflow-engine selection for a production Agent pipeline, drawn from hitting each pitfall in the field rather than comparing docs.
+
+**[An Agent Memory Selection Framework](/en/posts/memory-choice-framework/)** — Cost, latency, precision, and maintainability trade-offs across RAG / LLM Wiki / plain-text memory, with a decision tree.
 
 ---
 

@@ -3,8 +3,8 @@ title: "OpenClaw in Production: When the Most Advanced Memory System Meets the Q
 description: "A full-chain production battle log: from startup failures and Feishu message silent drops to production stability — compaction safeguard, five-layer debugging, model-harness fit, and memory system comparison."
 date: 2026-05-27
 tags: ["OpenClaw", "AI Agent", "Feishu", "Memory System", "Compaction", "Debugging"]
-categories: ["AI Agent in Practice"]
-series: ["OpenClaw Production"]
+categories: ["Agent Engineering"]
+series: ["OpenClaw Production Notes"]
 series_order: 1
 seriesOpened: true
 summary: "A full-chain production battle log: from startup failures and Feishu message silent drops to production stability — compaction safeguard, five-layer debugging, model-harness fit, and memory system comparison."

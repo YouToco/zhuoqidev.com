@@ -3,7 +3,7 @@ title: "Where Do ChatGPT Business Promo Codes Actually Come From? An OSINT Trace
 description: "Tracing promo codes like codestonegb and thealloynetwork from Stripe partner leaks to Chinese tech communities, revealing OpenAI's invisible promotional infrastructure."
 date: 2026-05-14
 tags: ["ChatGPT", "OpenAI", "Stripe", "Promo Codes", "OSINT", "Reverse Engineering"]
-categories: ["Investigation"]
+categories: ["Tinkering"]
 showToc: true
 ---
 
