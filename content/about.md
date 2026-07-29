@@ -3,10 +3,10 @@ title: "关于我"
 date: 2026-05-04
 layout: "about"
 url: "/about/"
-summary: "AI Agent 架构师刘卓琪的个人介绍 —— 全栈 AI 工程能力 + 安全 + 云基础设施"
+summary: "AI 应用开发工程师（Agent 方向）刘卓琪的个人介绍 —— 全栈 AI 工程能力 + 安全 + 云基础设施"
 ---
 
-我是**刘卓琪**，AI Agent 架构师。帮企业把 AI 从 Demo 做成产品。
+我是**刘卓琪**，AI 应用开发工程师（Agent 方向）。帮企业把 AI 从 Demo 做成产品。
 
 我做的事情不是调 API 套壳——而是**从零设计 Agent 系统架构**：记忆层设计、多 Agent 编排、上下文工程、RAG 管道、工具调用协议、评估体系。能写 Java / Python / Go 后端，前端 React / Vue / Angular / Svelte 全栈通吃，还持有 **CKS（Certified Kubernetes Security Specialist）** 认证，基础设施从 OpenStack 到 Ceph 都摸过。简单说——从模型到生产，一个人能走通。
 
@@ -14,7 +14,7 @@ summary: "AI Agent 架构师刘卓琪的个人介绍 —— 全栈 AI 工程能�
 
 ## 为什么选我
 
-- **Agent 架构师视角**，不是 Prompt 工程师。我关注的是：记忆层怎么设计（Mem0 / Zep / Letta）、多 Agent 之间怎么通信和编排、上下文窗口怎么利用才不浪费 token、工具调用的安全边界在哪。
+- **Agent 工程化视角**，不只做 Prompt 调优。我关注的是：记忆层怎么设计（Mem0 / Zep / Letta）、多 Agent 之间怎么通信和编排、上下文窗口怎么利用才不浪费 token、工具调用的安全边界在哪。
 - **安全基因**。CKS 认证 + 多年基础设施安全经验。我知道 prompt injection 的攻击面在哪，知道怎么给 Agent 的工具调用做权限隔离，知道怎么在合规约束下设计数据流。
 - **全栈落地能力**。能写 Java 微服务，也能写 Python Agent runtime，还能用 Go 写高性能中间件。前端 React / Vue / Angular / Svelte 都能上手。
 

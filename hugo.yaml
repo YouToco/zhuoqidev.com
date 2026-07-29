@@ -31,13 +31,13 @@ languages:
       isoCode: zh-CN
       rtl: false
       dateFormat: "2006-01-02"
-      description: "AI Agent 架构师刘卓琪的技术博客。记忆层架构、多 Agent 编排、上下文工程、RAG 管道、推理优化与 AI 安全的深度实战与调研。"
-      keywords: [AI Agent, Agent 架构师, 记忆层, 多 Agent 编排, 上下文工程, RAG, 推理优化, LLM]
+      description: "AI 应用开发工程师刘卓琪的技术博客。记录 Agent 产品开发、后端工程、上下文工程、RAG、工具调用与 AI 安全的实战与调研。"
+      keywords: [AI 应用开发, AI Agent, Agent 工程, Go, Python, Temporal, RAG, LLM]
       author:
         name: "Liu ZhuoQi"
         image: "avatar.jpg"
-        headline: "AI Agent 架构师 · 从模型到生产，一个人走通"
-        bio: "AI Agent 架构师。从零设计 Agent 系统：记忆层、多 Agent 编排、上下文工程、RAG 管道与工具调用安全——CKS 认证，模型到生产一个人走通。"
+        headline: "AI 应用开发工程师（Agent 方向）"
+        bio: "AI 应用开发工程师（Agent 方向）。使用 Go、Python 与 React 将 Agent 能力做进真实产品，记录从开发、测试到生产交付的实践。"
         links:
           - github: "https://github.com/YouToco"
           - x-twitter: "https://x.com/busygod9527"
@@ -58,16 +58,16 @@ languages:
       author:
         name: "Liu ZhuoQi"
         image: "avatar.jpg"
-        headline: "AI Agent Architect · From Model to Production, Solo"
-        bio: "AI Agent Architect. Designing Agent systems from the ground up: memory layers, multi-agent orchestration, context engineering, RAG, and tool-use security — CKS certified, taking models to production solo."
+        headline: "AI Application Engineer · Agent Systems"
+        bio: "AI application engineer focused on Agent systems. Building production products with Go, Python, and React, from implementation and testing through deployment."
         links:
           - github: "https://github.com/YouToco"
           - x-twitter: "https://x.com/busygod9527"
           - telegram: "https://t.me/happyforyou0"
           - wechat: "/images/wechat.jpg"
           - rss: "/index.xml"
-      description: "Liu ZhuoQi — AI Agent Architect. Deep dives on memory layers, multi-agent orchestration, context engineering, RAG, inference optimization, and AI security."
-      keywords: [AI Agent, OpenClaw, Agent Architecture, Prompt Engineering, dev blog]
+      description: "Liu ZhuoQi — AI application engineer focused on production Agent systems, backend engineering, context engineering, RAG, tool use, and AI security."
+      keywords: [AI Application Engineering, AI Agent, Go, Python, Temporal, RAG, LLM]
 
 menu:
   main:
@@ -106,8 +106,8 @@ params:
   author:
     name: "Liu ZhuoQi"
     image: "avatar.jpg"
-    headline: "AI Agent 开发者 · 从 Prompt 到产品落地"
-    bio: "把 AI Agent 做进真实产品里。写代码，也写思考。记录 AI Agent 开发、工具工程与产品落地的实战笔记。"
+    headline: "AI 应用开发工程师（Agent 方向）"
+    bio: "使用 Go、Python 与 React 将 Agent 能力做进真实产品，记录从开发、测试到生产交付的实践。"
     links:
     - github: "https://github.com/YouToco"
     - x-twitter: "https://x.com/busygod9527"
@@ -115,8 +115,8 @@ params:
     - wechat: "/images/wechat.jpg"
     - rss: "/index.xml"
 
-  description: "AI Agent 架构师刘卓琪的技术博客。记忆层架构、多 Agent 编排、上下文工程、RAG 管道、推理优化与 AI 安全的深度实战与调研。"
-  keywords: [AI Agent, Agent 架构师, 记忆层, 多 Agent 编排, 上下文工程, RAG, 推理优化, LLM]
+  description: "AI 应用开发工程师刘卓琪的技术博客。记录 Agent 产品开发、后端工程、上下文工程、RAG、工具调用与 AI 安全的实战与调研。"
+  keywords: [AI 应用开发, AI Agent, Agent 工程, Go, Python, Temporal, RAG, LLM]
   icp: "湘ICP备2026017384号"
   gongan: "湘公网安备43090302000353号"
   gonganCode: "43090302000353"
