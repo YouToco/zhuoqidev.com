@@ -1,241 +1,192 @@
 ---
-title: "ChatGPT Business 48 个月优惠的源头究竟在哪——一次羊毛溯源调查"
-description: "追踪 codestonegb、thealloynetwork 等优惠码从 Stripe 合作伙伴泄露到中文社区的完整链路，揭示 OpenAI 不公开的秘密促销体系。"
+title: "ChatGPT Business 优惠码究竟从哪来？一次溯源与更正"
+description: "重新核对 OpenAI、合作伙伴、Stripe 与 linux.do 的一手资料：优惠并未被统一取消，公开链接、资格审核后邮件发码等机制仍在并存。"
 date: 2026-05-14
+lastmod: 2026-07-29
 tags: ["ChatGPT", "OpenAI", "Stripe", "优惠码", "信息溯源", "OSINT"]
 categories: ["折腾记录"]
 showToc: true
 ---
 
-2026 年 5 月，中文 AI 圈被一波 ChatGPT Business 优惠刷屏了。英国区 2 席位月付 £11、美国区 $20、澳洲区 AU$25，最长持续 48 个月。`codestonegb`、`thealloynetwork`、`firstfocus` 这些神秘代码在 V2EX、linux.do、各大博客之间疯狂扩散。
+> **更正说明（2026-07-29）**
+>
+> 本文初版把“公司名出现在优惠码中”“结账页由 Stripe 承载”和社区里的传播记录拼成了一条过于确定的故事：代码由 Stripe 合作伙伴网络发放，再由合作企业员工泄露。现有证据不足以支持这条因果链。
+>
+> 修订后的结论是：**这些活动更可靠的上游是 OpenAI 的合作伙伴/渠道活动；Stripe 是支付与促销码基础设施，而不是已被证实的活动发起方。公开链接、表单审核后邮件发码、合作伙伴自费返利等不同机制同时存在，也没有证据证明 OpenAI 已在全球统一取消公司级 `/p/...` 链接。**
 
-但一个关键问题没人回答：**这些码到底从哪来的？**
+2026 年 5 月，一批带有公司名称的 ChatGPT Business 优惠码在 linux.do 等社区传播。初版文章试图回答“这些码从哪里来”，但把若干合理猜测写成了事实。
 
-我花了几天做了多源溯源调查。结论比"L 站首发"复杂得多。
+这次重查只保留能够由一手页面或可复核时间戳支持的部分，并明确区分：
 
----
+- 官方事实；
+- 合作伙伴自己的声明；
+- 社区用户的观察；
+- 无法验证的推断。
 
-## 优惠码不是 OpenAI 公开发布的
+## 先给结论
 
-先把最重要的事实摆出来：**OpenAI 官方从未在任何公开渠道发布过这些优惠码。**
+1. **合作伙伴渠道是真实存在的。** OpenAI 已公开建立 [OpenAI Partner Network](https://openai.com/business/partners/)，允许合作伙伴与 OpenAI 联合销售、构建和交付解决方案。CodeStone 也在 4 月宣布加入 OpenAI SMB Channel Partner Programme；First Focus 在 3 月宣布签署 OpenAI Services Partner Agreement。
+2. **“Stripe 是源头”没有证据。** Stripe 确实支持订阅促销码、指定客户、首次购买、到期日和最大兑换次数等能力，但这只能说明结账系统如何执行优惠，不能说明谁策划、出资或发放了活动。
+3. **“公开出现＝员工泄露”不成立。** OpenAI 自己有公开的 [Dropbox × ChatGPT Business 优惠页](https://openai.com/business/partners/dropbox/)。Think Technologies 也在公司 LinkedIn 内容中公开传播 `chatgpt.com/p/THINK26`。至少一部分链接显然是有意公开营销，而非泄露。
+4. **发放方式正在分化，而不是被统一替换。** AI Build 当前采用“填写工作邮箱和团队规模—审核资格—邮件发码”的流程；与此同时，公开 `/p/...` 链接仍然存在。
+5. **linux.do 证明了不同阶段发生过不同变化。** 4 月底的首月试用停止、6 月 4 日的控制台“Stripe 长链接”生成方式失效，与合作伙伴促销链接是否存在，是三个不同问题。
 
-查遍 OpenAI 官方信息出口：
-- `openai.com/index/`（官方博客）——只发产品发布公告，从不写 Promo Code
-- `help.openai.com`（帮助中心）——有促销机制的通用 FAQ，但**从不列出具体码**
-- `openai.com/pricing`（定价页）——标准价格，无优惠入口
-- 官方 X 账号 `@OpenAI`——没有相关推文
+所以，对读者提醒“英国现在改为审核后邮件发码”，我认为**就 AI Build 这个渠道而言是对的**；但把它扩展成“OpenAI 已取消所有公司级共享链接，全部改为个人码”，目前并不成立。AI Build 的落地页本身也没有写“每个码仅绑定一人”或“OpenAI 已全局取消公开链接”。
 
-OpenAI 的促销分发机制在官方文档里写得很清楚：**通过电子邮件定向发给"符合资格的用户"，或在产品内弹窗触发。** 资格由 OpenAI 决定，不是所有人可见。
+## 旧文错在哪里
 
-那这些码怎么泄露出来的？
+| 初版说法 | 复核结果 | 更正 |
+|---|---|---|
+| “真正源头是 Stripe 企业合作伙伴网络” | 无一手证据 | 更可靠的表述是“OpenAI 合作伙伴/渠道活动”；Stripe 只被证实为支付技术层 |
+| “合作企业员工把内部码泄露出来” | 无法验证，且有公开营销反例 | 只能说公开社区进行了二次传播，不能推断首次发布者身份与授权状态 |
+| “每个码都按固定配额关门，与日期无关” | Stripe 同时支持到期日、兑换上限、客户与首次购买限制 | 单凭“无法使用”无法判断具体失效原因 |
+| “每个码都代表 OpenAI 的合作补贴” | 被 First Focus 当前条款直接反驳 | 有的优惠可能由合作伙伴自行出资，必须逐活动判断 |
+| “英国 IP + 对应码即可” | 过度简化且会误导跨区尝试 | 资格、账单国家、付款方式、税费和账号状态均可能参与校验 |
+| “蹲到就立刻上车” | 不负责任 | 应先确认受众、续费价、席位数和结账页最终金额 |
 
----
+## 能把“源头”追到哪一层
 
-## 真正源头：Stripe 合作伙伴网络
+### 1. 可以确认：OpenAI 有正式合作伙伴渠道
 
-OpenAI 从 2023 年起使用 **Stripe Billing + Stripe Checkout** 处理 ChatGPT 付费订阅。这套系统支持 Promo Code 机制——Stripe 允许为特定合作伙伴生成专属优惠码，通过 URL 参数 `?promoCode=XXX` 传递给支付网关。
+[OpenAI Partner Network](https://openai.com/business/partners/) 的公开说明包含联合销售、技术支持、交付和合作伙伴门户。这足以证明 OpenAI 存在正式 B2B 渠道体系。
 
-每个码背后都是一家 Stripe 合作企业：
+带公司名的代码也与部分公司的公开身份相吻合：
 
-| 优惠码 | 区 | 关联企业 |
-|--------|------|---------|
-| `codestonegb` | 英国 | CodeStone (IT 服务商) |
-| `thealloynetwork` | 美国 | The Alloy Network |
-| `firstfocus` | 澳 | First Focus IT |
-| `THINKTECHNOLOGIESUS` | 美国 | Think Technologies |
-| `monicaius` | 美国 | Monica AI |
-| `datroaiuk` | 英国 | Datro AI |
-| `geccogb` | 英国 | GECC |
+- [CodeStone 的公告](https://www.codestone.com/news/codestone-is-now-an-official-openai-partner/)称其加入了 OpenAI SMB Channel Partner Programme，并把关系描述为正式的商业与技术合作；
+- [First Focus 的公告](https://www.firstfocus.com.au/insights/first-focus-becomes-an-openai-services-partner/)称其已签署 OpenAI Services Partner Agreement，面向澳大利亚与新西兰帮助企业采用 ChatGPT Business；
+- [AI Build 当前落地页](https://www.ai-build.ltd/chatgpt-business/get-offer)自称英国 OpenAI SMB Channel Partner，并说明由其团队审核英国、爱尔兰企业的资格。
 
-这些企业通过 Stripe 拿到专属码后，本应内部使用。但总有人会"手抖"——某个员工把链接发到了公开社区，然后就像野火一样扩散。
+这支持“代码与合作伙伴活动有关”，但仍然**不能单靠代码字符串**证明某次公开传播是获授权的，更不能证明是某位员工泄露。
 
-**所以真正的源头是 Stripe 企业合作伙伴的员工，而不是任何一个社区。**
+### 2. 可以确认：Stripe 能执行优惠，但不能据此认定它发起优惠
 
----
+[Stripe 官方文档](https://docs.stripe.com/billing/subscriptions/coupons)说明，商家可以创建面向客户的 promotion code，并设置：
 
-## 各码的实际首现渠道
+- 指定客户；
+- 首次购买资格；
+- 到期时间；
+- 最大兑换次数；
+- 最低订单金额。
 
-追踪每个码的最早出现时间戳，发现**不存在单一源头**：
+[Stripe Payment Links 文档](https://docs.stripe.com/payment-links/promotions)还说明，链接可以预填促销码。
 
-| 优惠码 | 最早时间 | 首发渠道 |
-|--------|---------|---------|
-| `alongsideus` / `monicaius` | 5月1日 | 邮莓生活 (mailberry.com.cn) |
-| `THINKTECHNOLOGIESUS` | 5月8日 | **linux.do**（topic/2092962，现已不可访问） |
-| `codestonegb` | 5月9日 | X + linux.do 同步出现 |
-| `firstfocus` | 5月10日 | **OzBargain** (澳洲 deal 社区) |
-| `thealloynetwork` | 5月10日 | linux.do 福利羊毛版块 |
-| `datroaiuk` | 5月12日 | 数字居民论坛 (shuzijumin.com) |
-| `geccogb` | 5月10日 | **OzBargain** |
+这能解释为什么社区用户会看到 Stripe 托管的结账页，也能解释同一个代码为何可能因账号、时间或次数而失效。但 Stripe 提供工具，不等于 Stripe 决定了 OpenAI 的渠道名单、优惠预算或传播方式。旧文把“基础设施”误写成“商业源头”，这是最关键的错误。
 
-**5 月 8 日是真正的首发节点。** 通过浏览器直接访问 linux.do 交叉验证，最早记载 `THINKTECHNOLOGIESUS` 的帖子是 topic/2092962，标题为"[5/8 US新优惠,20刀！！！] ChatGPT Team/Business 买一送一持续48个月！"，发在福利羊毛板块。该帖现已不可访问（被删除或设为私有），但在 topic/2141860（5月9日由 leon8 发布）的第16楼，用户 cyfer 的回复中保留了原文引用。**5 月 9 日凌晨是信息大规模扩散的引爆点**——钛刻科技教程记录当时"在 X 和 L 站都看到了"，说明 X (Twitter) 与 L 站的转帖几乎同步出现。
+### 3. 可以确认：公开链接不必然是泄露
 
-也就是说：
-- **linux.do** 是中文圈核心集散地，且在本次事件中**确认是 THINKTECHNOLOGIESUS 的最早公开来源**（5月8日，早于 X）
-- **X (Twitter)** 上的日语/英语博主在 5 月 9 日凌晨与 L 站转帖基本同步扩散
-- **OzBargain** 是澳洲/英国区码的首发渠道
-- **数字居民论坛** 偶尔爆冷门新码
+OpenAI 官方的 [Dropbox 合作伙伴页面](https://openai.com/business/partners/dropbox/)明确公开了一个限时 ChatGPT Business 活动：符合资格的 Dropbox 和 ChatGPT 用户可通过促销链接兑换两个 Business 席位及 50 美元 credits，免费使用 30 天。
 
----
+Think Technologies 的[公司 LinkedIn 帖文](https://www.linkedin.com/posts/think-technologies_chatgpt-activity-7464703850562785281-TvQV)也公开宣传 ChatGPT Business “买一送一”，并直接给出 `chatgpt.com/p/THINK26`。
 
-## 时间线：各码泄露的精确节奏
+截至 2026 年 7 月 29 日，直接访问：
+
+```text
+https://chatgpt.com/p/THINK26
+```
+
+仍会跳转到：
+
+```text
+https://chatgpt.com/?promoCode=THINK26
+```
+
+这说明 `/p/{slug}` 至少仍是有效的跳转格式。它**不保证登录后的账号一定符合资格，也不保证活动尚有名额**，但足以反驳“这类链接格式已被 OpenAI 全局撤销”的说法。
+
+## linux.do 时间线：到底取消了什么
+
+社区记录很有价值，但它记录的是用户当时“看见了什么”，不是 OpenAI 的正式政策。把几条时间线并排后，变化会清楚很多：
+
+| 日期 | 可复核记录 | 能说明什么 |
+|---|---|---|
+| 4 月 29 日 | linux.do 用户报告 Team/Business 首月免费试用不再出现 | 一类旧试用活动停止；不等于后来合作伙伴促销也停止 |
+| 5 月 8–10 日 | 大量品牌化 48 个月代码传播；5 月 9 日帖子保留了 `THINKTECHNOLOGIESUS` 的引用 | 社区在这一阶段集中扩散合作伙伴代码 |
+| 6 月 4 日 | 用户报告通过浏览器 Console 生成“Stripe 长链接”的方法失效 | 一种非标准结账链接生成方式被改变或限制 |
+| 6 月 11–14 日 | 仍有新优惠讨论，用户对“长链接”是否还能生成意见不一 | 代码、优惠资格和长链接工具并不是同一个状态 |
+| 6 月 30 日–7 月 1 日 | `penguinaius` 公开链接被分享，多名用户报告兑换结果 | 6 月 4 日之后，公开 `?promoCode=` 形式仍在传播并被报告可用 |
+| 7 月 | Think 公开宣传 `/p/THINK26`；AI Build 则改用审核后邮件发码 | 公开链接与定向发码并存 |
+
+相关社区原始记录：
+
+- [4 月 29 日：首月试用停止](https://linux.do/t/topic/2079203)
+- [5 月 9 日：48 个月优惠讨论与旧帖引用](https://linux.do/t/topic/2141860?page=2)
+- [6 月 4 日：Console 生成 Stripe 长链接失效](https://linux.do/t/topic/2302827)
+- [6 月 11 日：新代码与长链接状态讨论](https://linux.do/t/topic/2380243)
+- [6 月 30 日：公开 `penguinaius` 链接及用户回报](https://linux.do/t/topic/2502020)
+
+因此，“取消了”必须带宾语：**可以说某一批旧码失效了、某个合作伙伴改成审核后发码了，或某种长链接生成办法失效了；不能把它们合并成 OpenAI 的一项全球政策。**
+
+## 当前发放机制并不只有一种
 
 {{< mermaid >}}
-gantt
-    title       ChatGPT Business 优惠码泄露时间线
-    dateFormat  YYYY-MM-DD
-    axisFormat  %m-%d
-    tickInterval 2day
-
-    section 前奏期
-    Team免费试用接口关闭        :done,   crit,   a1, 2026-04-28, 1d
-    80aj转载2月免费版            :done,           a2, 2026-04-30, 1d
-
-    section 第一批码
-    alongsideus / monicaius     :active,         b1, 2026-05-01, 1d
-    码(邮莓生活首发)            :                 b1a, 2026-05-01, 1d
-
-    section 爆发期
-    THINKTECHNOLOGIESUS(L站首发):done,   crit,   c0, 2026-05-08, 1d
-    codestonegb (X+L站同时)     :done,   crit,   c2, 2026-05-09, 1d
-    X+L站大规模扩散             :done,   crit,   c1, 2026-05-09, 1d
-
-    section 扩散期
-    firstfocus (OzBargain首发)  :done,           d1, 2026-05-10, 1d
-    thealloynetwork (L站首发)   :done,           d2, 2026-05-10, 1d
-    geccogb (OzBargain)         :done,           d3, 2026-05-10, 1d
-    xwuxl.com教程发布           :done,           d4, 2026-05-10, 1d
-
-    section 长尾期
-    L站价格对比帖               :done,           e1, 2026-05-11, 1d
-    V2EX大规模扩散              :done,           e2, 2026-05-11, 1d
-    datroaiuk (数字居民论坛)    :done,           e3, 2026-05-12, 1d
-{{< /mermaid >}}
-
-**4月28日 GPT Team 免费试用接口被关 → 4月30日 中文圈开始注意到 US IP 2月免费版 → 5月1日 第一批 Stripe 企业码流出 → 5月8日 THINKTECHNOLOGIESUS 在 linux.do 首发 → 5月9日凌晨 X+L站大规模扩散引爆 → 5月10-12日 各区域码密集出现。**
-
----
-
-## 完整传播链路
-
-{{< mermaid >}}
-flowchart TD
-    A["🏢 Stripe 企业合作伙伴<br/>（码的真正诞生点）"]
-    
-    A --> B["💬 企业员工泄露<br/>TG / Discord 私聊"]
-    A --> C["🐦 X (Twitter)<br/>日英博主分享"]
-    A --> D["🦘 OzBargain<br/>澳洲 deal 社区"]
-    
-    B --> E["🐧 linux.do<br/>中文圈信息集散地"]
+flowchart LR
+    A["OpenAI / 合作伙伴活动条款"] --> B["公开促销页或 /p/ 链接"]
+    A --> C["资格表单与邮件发码"]
+    A --> D["合作伙伴自费返利"]
+    B --> E["ChatGPT 账号与资格校验"]
     C --> E
-    D --> E
-    
-    E --> F["📰 80aj.com / Toy<br/>4.30 首发2月免费版"]
-    E --> G["🌐 V2EX<br/>5.11 大规模传播"]
-    E --> H["📝 博客转载<br/>xwuxl.com / mailberry"]
-    
-    F --> I["📱 B站 / 知乎 / 公众号<br/>5.11-12 末梢扩散"]
-    G --> I
-    H --> I
-
-    style A fill:#c44020,stroke:#a03018,color:#fff
-    style E fill:#2563eb,stroke:#1d4ed8,color:#fff
-    style I fill:#6b7280,stroke:#4b5563,color:#fff
+    E --> F["支付与订阅系统"]
+    D --> G["合作伙伴服务 credits / 账单调整"]
+    H["社区转载"] --> B
 {{< /mermaid >}}
 
-**关键特征：不是链式传播，而是多源并行泄露。**
+目前至少能看到四种模式：
 
----
+1. **OpenAI 官方公开活动。** Dropbox 页面公开提供兑换入口，并在 FAQ 中列明新客户或取消至少 90 天的旧客户等资格。
+2. **合作伙伴公开链接。** Think Technologies 公开传播 `/p/THINK26`。
+3. **合作伙伴先审核再邮件发码。** AI Build 要求提交工作邮箱和团队规模，并称通常在一个工作日内发码。
+4. **合作伙伴自费返利。** [First Focus 当前活动](https://www.firstfocus.com.au/services/core/chatgpt/)明确写明：客户直接向 OpenAI 购买许可证，前六个月最高 50% 的返利由 First Focus 出资，以服务 credits 或账单调整交付，并非 OpenAI 折扣。
 
-## 各区域实际到手价对比
+第四种模式尤其重要：它证明“优惠”甚至不一定是 ChatGPT 结账页里的 promotion code，更不能一概解释为 OpenAI 或 Stripe 在补贴。
 
-同一套餐（2 席位月付），不同区域码的到手价差异可达 40%：
+## 价格、期限和“失效原因”应怎样写
 
-{{< chart >}}
-type: 'bar',
-data: {
-  labels: ['英国 codestonegb', '英国 datroaiuk', '澳洲 firstfocus', '美国 thealloynetwork', '美国 THINKTECHNOLOGIESUS'],
-  datasets: [{
-    label: '月付折合人民币 (元)',
-    data: [102, 102, 120, 145, 145],
-    backgroundColor: ['#c44020', '#c44020', '#2563eb', '#059669', '#059669'],
-    borderRadius: 6,
-  }]
-},
-options: {
-  indexAxis: 'x',
-  plugins: {
-    legend: { display: false }
-  },
-  scales: {
-    y: {
-      beginAtZero: true,
-      title: { display: true, text: '人民币 / 月' }
-    }
-  }
-}
-{{< /chart >}}
+旧文保存的 £11、AU$25、US$20 与 48 个月，是特定时间、地区和账号下的社区观察，不应继续作为可购买的当前报价。
 
-| 区域 | 原价 (2席位) | 优惠后 | 折合 CNY | 优惠幅度 |
-|------|------------|--------|---------|---------|
-| 英国 | £36 | **£11** | ~¥102 | 减 £25 (69%) |
-| 澳洲 | AU$70 | **AU$25** | ~¥120 | 减 AU$45 (64%) |
-| 美国 | US$50 | **US$20** | ~¥145 | 减 US$30 (60%) |
+OpenAI 当前[官方计费说明](https://help.openai.com/en/articles/8792536-managing-billing-and-seats-in-chatgpt-business)给出的美国自助 Business 基准价是：
 
-> 英国区码到手价最低，比美区便宜约 30%。但需要英国 IP + 对应码。
+- 月付：每用户每月 25 美元；
+- 年付：每用户每月 20 美元，按年计费；
+- 标准 ChatGPT 席位至少购买 2 个；
+- 实际价格会随地区和本地货币变化。
 
----
+一个优惠码显示“无法使用”，可能来自多种原因：
 
-## 为什么 linux.do 被误认为源头
+- 活动已到期或被停用；
+- 达到最大兑换次数；
+- 仅限指定客户或首次购买；
+- 账号、地区或账单资料不符合资格；
+- 活动只适用于新建 Business workspace；
+- 结账流程或产品配置发生变化。
 
-1. L 站**整理和归纳能力最强**——散落在各平台的零碎信息被集中到一个帖子里，附带 Console 脚本和支付教程
-2. 80aj.com 等博客在转载时明确写了"据 linux.do 用户爆料"，强化了"L 站是源头"的印象
-3. L 站的**时效性标签很清晰**，发布时间戳容易追溯，而 X 上的碎片信息容易淹没
-4. 中文用户的信息获取路径天然以 L 站为中心
+除非拿到该活动的后台配置或正式条款，否则无法仅凭报错断言“肯定是配额用完”。结账前应以发行方最新条款和 ChatGPT 最终结账页为准，同时核对续费价格、税费、席位数和取消条件。
 
-但实际调查发现更复杂的图景：**美国码 THINKTECHNOLOGIESUS 确认是 L 站首发（5月8日 topic/2092962），早于 X 上的大规模扩散（5月9日凌晨）。但澳洲区码首发在 OzBargain，部分英国码首发在数字居民论坛和 X。** 没有"唯一源头"，但 L 站在本次事件中的首发地位比此前认知的更强。
+## 修订后的传播判断
 
----
+linux.do 确实是 2026 年 5 月中文圈的重要集散地：它保存了代码、截图、时间戳和用户回报，也让信息迅速扩散。但现有证据最多支持：
 
-## 想第一时间追到这类优惠，该蹲哪里
+> 合作伙伴相关活动通过公开营销、定向发放或不明渠道进入社区，再被论坛和博客放大。
 
-按优先级排序：
+它不支持：
 
-| 优先级 | 渠道 | 擅长方向 | 备注 |
-|--------|------|---------|------|
-| **P0** | **linux.do 福利羊毛** | 全球码汇总 + 脚本 | 本次 THINKTECHNOLOGIESUS 确认首发，但需登录才能访问该板块 |
-| **P0** | **X (Twitter)** | 日/英/美区新码 | 搜 `ChatGPT promo code`，与泄露几乎同步，无需登录 |
-| **P0** | **L 站 Telegram 频道** | 热门帖推送 | `t.me/linux_do_channel`，比刷论坛更即时 |
-| **P0** | **OzBargain** | 澳洲/英国区码 | `ozbargain.com.au` 搜 ChatGPT |
-| **P1** | **数字居民论坛** | 偶尔有冷门码 | shuzijumin.com |
-| **P1** | **TG / Discord 私群** | Stripe 企业员工泄露第一落点 | 不可控，靠人脉 |
-| **P2** | **V2EX** | 中文扩散 | 比 L 站慢半天到一天 |
-| **P3** | 各类博客 | 教程整理 | 系统但时效性最差 |
+> Stripe 把代码发给企业，企业员工泄露，linux.do 再转发。
 
-**一句话：多平台同时蹲，不要押注单一信息源。**
+前一句是证据范围内的描述；后一句仍是一个未经证实的故事。
 
----
+## 给以后调查同类活动的检查清单
 
-## 这波活动到底什么时候结束的
+1. 先找 OpenAI 或活动发行方的原始页面，不把论坛截图当正式条款。
+2. 区分 `/p/...` 短链接、`?promoCode=...`、Stripe Checkout Session 和合作伙伴返利。
+3. 记录页面更新时间、适用国家、账号资格、席位数、优惠期和续费价。
+4. 把“某个码失效”“某种结账技巧失效”和“整个渠道被取消”分开。
+5. 不通过跨区伪装、控制台脚本或来路不明的支付工具绕过资格与风控。
+6. 对缺少一手证据的“首发”“泄露者”“资金来源”明确标注为未知。
 
-THINKTECHNOLOGIESUS 的生命周期短得离谱：**5 月 8 日首发，5 月 9 日封车，前后不到 48 小时。** 5 月 9 日当天就有 L 站用户发帖「4年team活動剛開始但是好像剛結束了」——不管是资格号还是普通号，都显示"无法使用此优惠"。
+## 最终结论
 
-到 5 月 14 日，L 站还有人在问「team优惠码没了吗？」——确认全线拉闸。有用户形容这是**"4小时快闪活动"**，虽然有点夸张，但确实反映了一个事实：每一个 Stripe 合作伙伴码都有**固定配额**，名额抢完了就关，跟到期日无关。
+原文抓对了一个大方向：这些品牌化代码与 B2B 合作伙伴渠道有关，linux.do 则是中文社区的高效传播节点。
 
-其他区域码也差不多：
-- **英国区** codestonegb / datroaiuk：比美国码多撑了两三天，随后也陆续提示"无法使用"
-- **澳洲区** firstfocus：同理，配额耗尽即停
-- **后续还有没有**：L 站用户的共识是"肯定还会有，48 一样的"——OpenAI 的 SMB 合作计划还在跑，新的合作伙伴码随时可能冒出来
+但更准确的表述应当是：
 
-规律很清楚：**不是按时间到期，是按配额关门。** 所以蹲到了就立刻下手，别想着"先收藏回头再搞"。
+**ChatGPT Business 优惠来自多种 OpenAI 或合作伙伴活动；Stripe 提供了其中一部分支付与促销码能力，却不是已被证实的活动源头。部分合作伙伴转向资格审核后邮件发码，但公开优惠页和 `/p/...` 链接截至 2026 年 7 月仍然存在。每个活动的受众、资金来源、失效条件和续费规则都必须逐项核对。**
 
----
-
-## 更高维度的认知
-
-这波 ChatGPT Business 优惠的本质是：
-
-**OpenAI 通过 Stripe Partner Network 对 B 端客户进行定向补贴，用 B 端渠道间接获客。** 这不是面向消费者的促销，而是企业级销售的副产品。每个码都是真金白银的企业合作成本，所以**随时可能被收回**——没有公告，没有预警。
-
-理解这一点，你就不会把这类优惠当成"可以一直薅的羊毛"，而是**精准狙击，快速上车，及时下车。**
-
-*信息截止 2026-05-14，多源交叉验证。*
+*本文复核截至 2026-07-29。OpenAI 与合作伙伴可以随时改变活动，最终以发行方最新条款和结账页为准。*
