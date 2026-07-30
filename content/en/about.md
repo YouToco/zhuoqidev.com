@@ -3,40 +3,69 @@ title: "About"
 date: 2026-05-04
 layout: "about"
 url: "/en/about/"
-summary: "AI Application Engineer Liu ZhuoQi — Agent systems, full-stack engineering, security, and cloud infrastructure"
+summary: "AI Application Engineer Liu ZhuoQi — AI applications, Agent engineering, and product delivery"
+lead: "Focused on AI applications, Agent engineering, and production delivery."
 ---
 
-I'm **Liu ZhuoQi**, an AI Application Engineer focused on Agent systems. I turn AI from demo to production.
+I'm **Liu ZhuoQi**, an AI Application Engineer focused on Agent systems. I mainly build AI applications, Agent workflows, and production delivery systems.
 
-I don't wrap APIs. I design **Agent systems from the ground up**: memory layer architecture, multi-agent orchestration, context engineering, RAG pipelines, tool-use protocols, and evaluation frameworks. I write backends in Java, Python, and Go; frontend? React, Vue, Angular, Svelte — pick your stack; and I hold a **CKS (Certified Kubernetes Security Specialist)** certification. Infrastructure? I've run OpenStack and Ceph clusters in production. Short version — I can take a model all the way to production, solo.
+I served as technical lead and led development for **AISEO, Help Center, and UMS**. I have also deployed and integrated SGLang / vLLM services for a video-understanding Agent. I am currently building Vane independently.
 
----
+> My proficiency varies across technologies. I care more about owning development, testing, troubleshooting, and deployment outcomes than presenting every framework I have used as an area of mastery.
 
-## Why Me
+## Projects & Responsibilities
 
-- **Agent engineering mindset**, beyond prompt tuning. I think about memory layer design (Mem0 / Zep / Letta), inter-agent communication patterns, context window economics, and the security boundaries of tool calling.
-- **Security-first engineering**. CKS certified with years of infrastructure security experience. I know where prompt injection hits, how to sandbox agent tool calls, and how to design data flows under GDPR and compliance constraints.
-- **Full-stack delivery**. Java microservices, Python agent runtimes, Go middleware — I write all three. Frontend? React, Vue, Angular, Svelte — I adapt to your stack.
+{{< about-grid type="projects" >}}
+{{< about-project role="Technical Lead" category="AI Application" title="AISEO" tags="Python|FastAPI|Temporal" >}}
+Built a multi-stage Agent content pipeline with Python / FastAPI / Temporal, covering RAG, multi-model routing, token costs, and multi-CMS publishing.
+{{< /about-project >}}
 
----
+{{< about-project role="Technical Lead" category="Knowledge Platform" title="Help Center" tags="Java 21|Quarkus 3|React" >}}
+Developed a multi-site knowledge platform with Java / Quarkus / React, integrating RAG retrieval, vector storage, and local embeddings.
+{{< /about-project >}}
 
-## Expertise
+{{< about-project role="Technical Lead" category="Unified Platform" title="UMS" tags="Go|Gin|Casdoor" >}}
+Built a multi-product management platform with Go / Gin / Casdoor for shared authentication, permissions, subscription plans, and entitlement sync.
+{{< /about-project >}}
 
-**Agent & AI Engineering**
-Multi-Agent Orchestration · Memory Layer Architecture (Mem0 / Zep / Letta / MemGPT) · RAG Pipeline Design & Optimization · Context Engineering & Cache Strategy · MCP & Tool-Use Protocols · Prompt Injection Defense · Agent Evaluation · LLM Deployment & Inference Optimization
+{{< about-project role="Independent" category="Agent Product" title="Vane" href="/en/projects/vane/" tags="Go|Temporal|React" >}}
+Building with Go / PostgreSQL / Temporal and React / TypeScript, covering workflows, a Feishu Agent, and production deployment.
+{{< /about-project >}}
+{{< /about-grid >}}
 
-**Backend & Infrastructure**
-Java / Spring Boot · Python / FastAPI · Go · Node.js · PostgreSQL · Redis · RabbitMQ / Kafka · Docker / Kubernetes (CKS) · OpenStack · Ceph · GitHub Actions CI/CD
+## Capabilities & Technologies
 
-**Frontend**
-React · Vue · Angular · Svelte · Next.js · Nuxt · Astro · TypeScript · Tailwind CSS · UnoCSS
+{{< about-grid type="capabilities" >}}
+{{< about-capability title="AI Applications & Agents" >}}
+Multi-stage Agent Workflows · RAG · Tool Use · Multi-Model Routing · Feedback Loops · Agent Evaluation
+{{< /about-capability >}}
 
-**Security**
-CKS Certified · Container Security · API Security · AI Security (Prompt Injection / Jailbreak / Data Exfiltration) · GDPR & Data Compliance
+{{< about-capability title="Model Serving" >}}
+SGLang · vLLM · Multimodal Video Understanding · GPU Integration and Benchmarking
+{{< /about-capability >}}
 
----
+{{< about-capability title="Backend & Workflows" >}}
+Python / FastAPI · Java / Quarkus · Go / Gin · Temporal · PostgreSQL · Redis
+{{< /about-capability >}}
 
-## Featured Work
+{{< about-capability title="Frontend" >}}
+React · Vue 3 · TypeScript · Vite
+{{< /about-capability >}}
+
+{{< about-capability title="Engineering Delivery" wide="true" >}}
+Linux · Docker · Kubernetes · Jenkins · GitHub Actions · Ansible · Prometheus / Grafana
+{{< /about-capability >}}
+{{< /about-grid >}}
+
+## Professional Certifications
+
+{{< about-grid type="certifications" label="Professional certifications" >}}
+{{< about-cert code="CKA" name="Certified Kubernetes Administrator" >}}
+{{< about-cert code="CKS" name="Certified Kubernetes Security Specialist" >}}
+{{< about-cert code="RHCE" name="Red Hat Certified Engineer" >}}
+{{< /about-grid >}}
+
+## Technical Writing
 
 **[Why LLMs Can't Remember You — Memory Mechanisms Dissected](/en/posts/llm-memory-research/)** — 67 primary sources cross-validated across Anthropic / OpenAI / Google / Cursor docs and Karpathy / LeCun / Raschka papers, tearing down Agent memory systems from architectural constraints to product implementation.
 
@@ -56,4 +85,4 @@ CKS Certified · Container Security · API Security · AI Security (Prompt Injec
 
 - **WeChat**: [View QR Code](/images/wechat.jpg)
 
-If you need Agent system integration, architecture design, or security auditing — reach out via any channel above.
+If you're working on AI applications, Agent engineering, or the infrastructure around them, feel free to reach out through any channel above.

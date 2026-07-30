@@ -74,6 +74,9 @@ menu:
     - name: "文章"
       url: /posts/
       weight: 10
+    - name: "作品"
+      url: /projects/
+      weight: 20
     - name: "标签"
       url: /tags/
       weight: 30
@@ -83,6 +86,9 @@ menu:
     - name: "Posts"
       url: /en/posts/
       weight: 110
+    - name: "Projects"
+      url: /en/projects/
+      weight: 120
     - name: "Tags"
       url: /en/tags/
       weight: 130

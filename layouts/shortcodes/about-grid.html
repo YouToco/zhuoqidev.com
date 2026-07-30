@@ -1,0 +1,5 @@
+{{- $type := .Get "type" -}}
+{{- $class := cond (eq $type "projects") "about-project-grid" (cond (eq $type "certifications") "about-cert-grid" "about-capability-grid") -}}
+<div class="{{ $class }}"{{ if eq $type "certifications" }} aria-label="{{ .Get "label" }}"{{ end }}>
+  {{- .Inner -}}
+</div>

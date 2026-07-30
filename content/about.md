@@ -3,40 +3,69 @@ title: "关于我"
 date: 2026-05-04
 layout: "about"
 url: "/about/"
-summary: "AI 应用开发工程师（Agent 方向）刘卓琪的个人介绍 —— 全栈 AI 工程能力 + 安全 + 云基础设施"
+summary: "AI 应用开发工程师（Agent 方向）刘卓琪的个人介绍 —— AI 应用、Agent 工程与产品交付实践"
+lead: "专注 AI 应用、Agent 工程与生产交付。"
 ---
 
-我是**刘卓琪**，AI 应用开发工程师（Agent 方向）。帮企业把 AI 从 Demo 做成产品。
+我是**刘卓琪**，AI 应用开发工程师（Agent 方向）。主要做 AI 应用、Agent 工作流与生产交付。
 
-我做的事情不是调 API 套壳——而是**从零设计 Agent 系统架构**：记忆层设计、多 Agent 编排、上下文工程、RAG 管道、工具调用协议、评估体系。能写 Java / Python / Go 后端，前端 React / Vue / Angular / Svelte 全栈通吃，还持有 **CKS（Certified Kubernetes Security Specialist）** 认证，基础设施从 OpenStack 到 Ceph 都摸过。简单说——从模型到生产，一个人能走通。
+我担任过 **AISEO、Help Center 和 UMS** 的技术负责人并主导开发，也为视频理解 Agent 部署和接入过 SGLang / vLLM 推理服务。目前在独立开发见微 Vane。
 
----
+> 不同技术的熟练度并不相同。我更看重能否对开发、测试、排障和上线结果负责，而不是把使用过的框架都写成“精通”。
 
-## 为什么选我
+## 项目与职责
 
-- **Agent 工程化视角**，不只做 Prompt 调优。我关注的是：记忆层怎么设计（Mem0 / Zep / Letta）、多 Agent 之间怎么通信和编排、上下文窗口怎么利用才不浪费 token、工具调用的安全边界在哪。
-- **安全基因**。CKS 认证 + 多年基础设施安全经验。我知道 prompt injection 的攻击面在哪，知道怎么给 Agent 的工具调用做权限隔离，知道怎么在合规约束下设计数据流。
-- **全栈落地能力**。能写 Java 微服务，也能写 Python Agent runtime，还能用 Go 写高性能中间件。前端 React / Vue / Angular / Svelte 都能上手。
+{{< about-grid type="projects" >}}
+{{< about-project role="技术负责人" category="AI 应用" title="AISEO" tags="Python|FastAPI|Temporal" >}}
+使用 Python / FastAPI / Temporal 构建多阶段 Agent 内容流水线，覆盖 RAG、多模型路由、Token 成本与多 CMS 发布。
+{{< /about-project >}}
 
----
+{{< about-project role="技术负责人" category="知识平台" title="Help Center" tags="Java 21|Quarkus 3|React" >}}
+使用 Java / Quarkus / React 开发多站点知识平台，接入 RAG 检索、向量存储与本地 Embedding。
+{{< /about-project >}}
 
-## 专业能力
+{{< about-project role="技术负责人" category="统一管理平台" title="UMS" tags="Go|Gin|Casdoor" >}}
+使用 Go / Gin / Casdoor 开发多产品统一管理平台，负责统一认证、权限、订阅套餐与权益同步。
+{{< /about-project >}}
 
-**Agent & AI 工程**
-Multi-Agent 编排 · 记忆层架构（Mem0 / Zep / Letta / MemGPT） · RAG 管道设计与优化 · 上下文工程与 Cache 策略 · MCP 协议与工具调用 · Prompt Injection 防护 · Agent 评估体系 · LLM 部署与推理优化
+{{< about-project role="独立开发" category="Agent 产品" title="见微 Vane" href="/projects/vane/" tags="Go|Temporal|React" >}}
+使用 Go / PostgreSQL / Temporal 与 React / TypeScript 开发，持续推进工作流、飞书 Agent 与生产部署。
+{{< /about-project >}}
+{{< /about-grid >}}
 
-**后端与基础设施**
-Java / Spring Boot · Python / FastAPI · Go · Node.js · PostgreSQL · Redis · RabbitMQ / Kafka · Docker / Kubernetes（CKS） · OpenStack · Ceph · GitHub Actions CI/CD
+## 能力与技术
 
-**前端**
-React · Vue · Angular · Svelte · Next.js · Nuxt · Astro · TypeScript · Tailwind CSS · UnoCSS
+{{< about-grid type="capabilities" >}}
+{{< about-capability title="AI 应用与 Agent" >}}
+多阶段 Agent 工作流 · RAG · 工具调用 · 多模型路由 · 反馈闭环 · Agent 评测
+{{< /about-capability >}}
 
-**安全**
-CKS 认证 · 容器安全 · API 安全 · AI 安全（Prompt Injection / Jailbreak / 数据泄露防护） · GDPR / 数据合规
+{{< about-capability title="模型服务" >}}
+SGLang · vLLM · 多模态视频理解 · GPU 环境联调与压测
+{{< /about-capability >}}
 
----
+{{< about-capability title="后端与工作流" >}}
+Python / FastAPI · Java / Quarkus · Go / Gin · Temporal · PostgreSQL · Redis
+{{< /about-capability >}}
 
-## 代表作
+{{< about-capability title="前端" >}}
+React · Vue 3 · TypeScript · Vite
+{{< /about-capability >}}
+
+{{< about-capability title="工程交付" wide="true" >}}
+Linux · Docker · Kubernetes · Jenkins · GitHub Actions · Ansible · Prometheus / Grafana
+{{< /about-capability >}}
+{{< /about-grid >}}
+
+## 专业认证
+
+{{< about-grid type="certifications" label="专业认证" >}}
+{{< about-cert code="CKA" name="Certified Kubernetes Administrator" >}}
+{{< about-cert code="CKS" name="Certified Kubernetes Security Specialist" >}}
+{{< about-cert code="RHCE" name="Red Hat Certified Engineer" >}}
+{{< /about-grid >}}
+
+## 技术文章
 
 **[大模型为什么记不住你——记忆机制全拆解](/posts/llm-memory-research/)** — 67 条一手资料交叉验证，覆盖 Anthropic / OpenAI / Google / Cursor 官方文档与 Karpathy / LeCun / Raschka 原文，从架构约束到产品实现彻底拆解 Agent 记忆系统。
 
@@ -56,4 +85,4 @@ CKS 认证 · 容器安全 · API 安全 · AI 安全（Prompt Injection / Jailb
 
 - **微信**: [查看二维码](/images/wechat.jpg)
 
-有 Agent 系统集成、架构设计或安全审计的需求，通过以上方式联系我。
+如果你也在做 AI 应用、Agent 工程或相关基础设施，欢迎通过以上方式联系我。

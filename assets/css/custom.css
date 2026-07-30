@@ -1,0 +1,249 @@
+/* About page */
+.about-page {
+  margin: 4.5rem auto 0;
+  max-width: 68rem;
+  padding-bottom: 4rem;
+}
+
+.about-page__header {
+  max-width: 48rem;
+  padding-bottom: 2rem;
+}
+
+.about-page__eyebrow {
+  color: rgb(var(--color-primary-600));
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  margin: 0 0 0.75rem;
+  text-transform: uppercase;
+}
+
+.about-page__header h1 {
+  color: rgb(var(--color-neutral-900));
+  font-size: clamp(2.25rem, 6vw, 4rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  margin: 0;
+}
+
+.about-page__summary {
+  color: rgb(var(--color-neutral-600));
+  font-size: 1.05rem;
+  line-height: 1.75;
+  margin: 1rem 0 0;
+}
+
+.about-content {
+  color: rgb(var(--color-neutral-700));
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.about-content > h2 {
+  border-top: 1px solid rgb(var(--color-neutral-200));
+  color: rgb(var(--color-neutral-900));
+  font-size: 1.5rem;
+  font-weight: 750;
+  letter-spacing: -0.025em;
+  margin: 3.5rem 0 1.25rem;
+  padding-top: 2rem;
+}
+
+.about-content > blockquote {
+  border-left: 3px solid rgb(var(--color-primary-500));
+  color: rgb(var(--color-neutral-600));
+  font-size: 0.95rem;
+  font-style: normal;
+  margin: 1.25rem 0;
+  max-width: 48rem;
+  padding-left: 1rem;
+}
+
+.about-content > blockquote p {
+  margin: 0;
+}
+
+.about-project-grid,
+.about-capability-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.about-project-card,
+.about-capability-card {
+  background: rgb(var(--color-neutral-50));
+  border: 1px solid rgb(var(--color-neutral-200));
+  border-radius: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 1.25rem;
+}
+
+.about-project-card h3,
+.about-capability-card h3 {
+  color: rgb(var(--color-neutral-900));
+  font-size: 1.12rem;
+  font-weight: 750;
+  letter-spacing: -0.015em;
+  margin: 0.65rem 0 0.45rem;
+}
+
+.about-project-card p,
+.about-capability-card p {
+  color: rgb(var(--color-neutral-600));
+  font-size: 0.9rem;
+  line-height: 1.65;
+  margin: 0;
+}
+
+.about-card__topline {
+  color: rgb(var(--color-neutral-500));
+  display: flex;
+  font-size: 0.72rem;
+  font-weight: 650;
+  justify-content: space-between;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.about-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: auto;
+  padding-top: 1rem;
+}
+
+.about-tags span {
+  background: rgb(var(--color-neutral-200));
+  border-radius: 999px;
+  color: rgb(var(--color-neutral-700));
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.4rem 0.6rem;
+}
+
+.about-capability-card {
+  min-height: 8.5rem;
+}
+
+.about-capability-card h3 {
+  margin-top: 0;
+}
+
+.about-capability-card--wide {
+  grid-column: 1 / -1;
+  min-height: 0;
+}
+
+.about-cert-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.about-cert {
+  border: 1px solid rgb(var(--color-neutral-200));
+  border-radius: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem;
+}
+
+.about-cert strong {
+  color: rgb(var(--color-primary-600));
+  font-size: 1.05rem;
+}
+
+.about-cert span {
+  color: rgb(var(--color-neutral-500));
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.about-content > p,
+.about-content > ul {
+  max-width: 48rem;
+}
+
+.about-content a {
+  text-underline-offset: 0.2em;
+}
+
+.dark .about-page__header h1,
+.dark .about-content > h2,
+.dark .about-project-card h3,
+.dark .about-capability-card h3 {
+  color: rgb(var(--color-neutral-100));
+}
+
+.dark .about-page__summary,
+.dark .about-content,
+.dark .about-content > blockquote,
+.dark .about-project-card p,
+.dark .about-capability-card p {
+  color: rgb(var(--color-neutral-300));
+}
+
+.dark .about-content > h2,
+.dark .about-project-card,
+.dark .about-capability-card,
+.dark .about-cert {
+  border-color: rgb(var(--color-neutral-600));
+}
+
+.dark .about-project-card,
+.dark .about-capability-card {
+  background: rgb(var(--color-neutral-800));
+}
+
+.dark .about-tags span {
+  background: rgb(var(--color-neutral-700));
+  color: rgb(var(--color-neutral-200));
+}
+
+.dark .about-cert span {
+  color: rgb(var(--color-neutral-300));
+}
+
+@media (max-width: 640px) {
+  .about-page {
+    margin-top: 2.5rem;
+  }
+
+  .about-page__header {
+    padding-bottom: 1.5rem;
+  }
+
+  .about-page__header h1 {
+    font-size: 2.5rem;
+  }
+
+  .about-page__summary {
+    font-size: 0.95rem;
+  }
+
+  .about-content > h2 {
+    margin-top: 2.75rem;
+  }
+
+  .about-project-grid,
+  .about-capability-grid,
+  .about-cert-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .about-capability-card--wide {
+    grid-column: auto;
+  }
+
+  .about-capability-card {
+    min-height: 0;
+  }
+}
