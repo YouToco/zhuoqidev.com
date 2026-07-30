@@ -1,446 +1,744 @@
 ---
-title: "Why LLMs Can't Remember You — Cursor / Claude Code / Codex Memory Mechanisms Dissected"
-description: "Cross-validated using Exa / Tavily / Context7 / WebSearch, covering Anthropic / OpenAI / Google / Cursor official docs, Karpathy / LeCun / Raschka papers, and key works like MemGPT / Titans / Mamba-2 / Mem0."
+title: "How Agents Remember You: Human Memory Science and a Code Audit of Six Open-Source Systems"
+description: "From Ebbinghaus, H.M., working memory, and engrams to Mem0, Letta, Graphiti, LangMem, Cognee, and MemoryOS: a history of memory paradigms and a code-level comparison of what open-source agent memory systems actually implement."
 date: 2026-05-04
-lastmod: 2026-07-09
-tags: ["AI Agent", "LLM", "Memory", "Research", "Context Engineering"]
+lastmod: 2026-07-30
+tags: ["AI Agent", "LLM", "Memory", "Memory Systems", "Cognitive Science", "Open-Source Architecture"]
 categories: ["Deep Dives"]
 showToc: true
 ---
 
-Cursor has Rules + Memories. Claude Code has CLAUDE.md + MEMORY.md. Codex has AGENTS.md + Memories. These Agent tools all have their own "memory" systems. But **not a single one actually modifies model weights** — every "memory" feature works by injecting structured text back into the system prompt. This report cross-validates that conclusion with **67+ primary sources**, tearing down the architecture of Agent memory systems from first principles to product implementation.
+Almost every agent project now claims to provide “long-term memory.”
 
-## Why 67 Sources
+For one project, that means embedding chat history. For another, it means maintaining a user profile. A third lets the model edit Markdown files. A fourth builds a bitemporal knowledge graph. All four use the word *memory*, but they are not the same system and should not be placed on one undifferentiated leaderboard.
 
-Because every Agent builder runs into the same walls:
+![From biological memory traces to an agent memory stack](/images/posts/llm-memory-research/agent-memory-cover-v3-4k.png)
 
-- Cursor, Claude Code, and Codex all have "memory" — but how do they actually implement it?
-- Why does the AI forget user preferences after 10 turns?
-- Why can't Prompt Caching replace Memory?
-- Mem0 vs Zep vs Letta vs LangGraph Store — which one?
+To decide whether a system genuinely remembers, I would rather ask three questions:
 
-The answers exist in Anthropic/OpenAI/Google docs, Karpathy interviews, and arXiv papers — scattered across 67 places. This report connects them.
+1. **After an experience, which state in the system actually changes?**
+2. **Where does that state live, who may modify it, and when does it expire?**
+3. **Before the next action, how is it brought back accurately and with the right permissions?**
 
----
+This article starts from those questions. The first half places the history of human memory science beside the evolution of agent memory. The second half reads the code behind Mem0, Letta, Graphiti, LangMem, Cognee, and MemoryOS, comparing their claims, actual data paths, system boundaries, and memory paradigms.
 
-## One-Liner
+> **The short version:** mainstream agents have not acquired a single, brain-like “memory organ.” What works in engineering is a lifecycle: **experience → write gate → representation → storage → retrieval → context assembly → action and feedback → consolidation / revision / forgetting**. Open-source projects differ mainly in which parts of this loop they choose to own.
 
-"LLMs have no memory" is not an oversight — it is the equilibrium solution under four stacked constraints: **Transformer O(n²) attention + KV cache VRAM + weight entanglement (catastrophic forgetting) + GDPR compliance**. The "Memory" features in Cursor / Claude Code / Codex and other Agent tools all work by **injecting structured text back into the system prompt** — model weights never change. Prompt Caching is a performance optimization, not memory. The mainstream paradigm for the next 1–3 years is the **"stateless LLM kernel + stateful Agent memory layer"** hybrid architecture.
+The first diagram is not the component architecture of a particular product. It is the **shared coordinate system** for the rest of the article. Its question is not merely “where is data stored?” but “how does a past experience alter a future action?” First follow the seven-step loop in the center from experience to action. Then use the three carriers on the left to distinguish the current task, cross-session memory, and real-world state. The cards on the right explain each transformation, while the bottom row shows consolidation, revision, and forgetting over the system’s lifetime. This prevents databases, context, caches, and source-of-truth state from all being mislabeled as “memory.”
 
-| Compute Complexity | 100M ctx Cost | Cache Price | Mainstream TTL |
-|---|---|---|---|
-| **O(n²)** | **638×H100** | **0.1×** | **5min–24h** |
+![A scientific systems map of Agent memory: seven loop stages, three carriers, and three governance outcomes](/images/posts/llm-memory-research/memory-loop-systems-map-v3-en-4k.png)
 
----
-
-## 1. Why LLMs Are Designed to Be Stateless
-
-Four independent constraints stacked together — each individually survivable, but combined they leave "stateless" as the only viable engineering solution. This conclusion is cross-validated across 67 primary sources.
-
-### Architecture: O(n²) Attention
-
-Self-attention scales at `O(n²)` with respect to sequence length n. KV cache VRAM grows linearly with n but with massive coefficients — for Llama 3.1 405B, a single 4096-token sequence's KV cache needs ~2 GB VRAM; 32 concurrent sessions hit 64 GB, more than the model weights themselves. Llama 3.1 at 100M context requires 638 H100 GPUs (~$5,400/hour) for KV cache alone.
-
-→ Liu et al. "Lost in the Middle" (TACL 2024): long contexts aren't just slower — middle-section utilization follows a U-shaped curve, worse than closed-book.
-
-### Training: Catastrophic Forgetting
-
-LLM knowledge is entangled across billions of weights. No isolated "French module" or "user preference register" exists for independent writes. Every fine-tune reshapes the entire parameter landscape, overwriting old capabilities. Even LoRA suffers from catastrophic forgetting in continual learning scenarios (arXiv 2404.16789).
-
-→ Industry standard: offline retraining at weekly/daily cadence. No one does per-request online weight updates.
-
-### Compliance: Right to Be Forgotten
-
-GDPR Article 17 and PDPA require data controllers to delete personal data "without undue delay." Once personal data is baked into billions of weights, the right to be forgotten becomes nearly impossible to execute precisely — you cannot "subtract" a user's influence from the model. Both Anthropic and OpenAI explicitly state Memory data lives externally, not in weights. This is a legal hard constraint, not a technical preference.
-
-→ RAG / Memory Layer beats fine-tuning because of compliance, not technical superiority.
-
-### Security: Persistent Memory = Persistent Attack Surface
-
-The attack surface of persistent memory extends far beyond prompt injection. Research from 2025–2026 reveals a complete threat hierarchy:
-
-| Attack Type | Method | Typical Success Rate | Source |
-|---|---|---|---|
-| **Prompt Injection** | External documents / images trigger the model to invoke memory write tools | — | Embrace The Red, 2024 |
-| **Environmental Injection Poisoning (eTAMP)** | Merely browsing tampered product pages poisons agent memory, effective cross-site | GPT-5-mini 32.5% | arXiv 2604.02623 (preprint) |
-| **Sleeper Memory Poisoning** | Manipulating external documents causes agent to store false memories, activatable across multiple subsequent conversations | Write rate 99.8%, trigger rate 60-89% | arXiv 2605.15338 (preprint) |
-| **Self-Reinforcing Injection (Zombie)** | Accumulates ~240 payload copies in RAG memory, resistant to truncation and summarization | — | arXiv 2602.15654 (preprint) |
-
-This is precisely why Cursor 1.0→1.2 added mandatory user approval for Memories, and why Anthropic specifically tested sycophancy / harmful conversation before releasing Memory.
-
-MPBench (arXiv 2606.04329, preprint) identifies 9 structural vulnerability points: model layer (cannot distinguish trusted/untrusted sources), system prompt layer (bypassable via semantic imitation), architecture layer (no validation on write paths, no isolation for shared multi-source context). SMSR (arXiv 2606.12703, single-author preprint) proposes a claim worth monitoring but pending verification: **defenses that operate only at retrieval time, without write-time provenance, cannot provide effective security guarantees against adaptive attackers** — security must begin at write time.
-
-{{< alert icon="circle-question" >}}
-
-**Karpathy's canonical analogy**: **Weights = ROM** (static, burned in at training); **context window = RAM** (directly addressable during inference); **KV cache = working memory** (formed at test-time); **external vector / KG store = disk** (persistent, requires retrieval). "Knowledge in the weights is a hazy recollection of training-time internet documents; content in the context window is directly accessible" — Andrej Karpathy, Dwarkesh Patel Interview (2025-10).
-
-{{< /alert >}}
+*Figure 1. This establishes the article’s working definition of a memory system. The central loop shows the online behavior path, the left column separates working memory, long-term memory, and world state, and the bottom row shows lifecycle governance. A database owns only step four; without write decisions, retrieval, context assembly, conflict handling, and feedback, more storage is merely more logging.*
 
 ---
 
-## 2. Product Memory Strategies Compared (with Cache vs Memory Disambiguation)
+## 1. Separate the Five Things Most Often Called “Memory”
 
-14 mainstream products, **not a single one actually modifies model weights**. This section simultaneously disambiguates three commonly conflated concepts:
+An LLM system contains at least five physically distinct state carriers. They differ in location, write speed, lifetime, governance, and retrieval semantics.
 
-- **Cache** (KV / Prompt Caching): Caches K, V projection tensors from attention layers; prefix byte-level match → skip prefill. Lifetime: 5min–24h. Fundamentally a compute optimization, not "remembering" anything.
-- **Memory** (Product Layer): Text stored in external databases / vector stores / markdown files, prepended to the system prompt on each call. User-controlled.
-- **True Model Memory** (In-Weights): Changing model weights themselves. Hit by catastrophic forgetting + GDPR right-to-be-forgotten + interpretability. Industry-wide avoidance.
+This diagram exists to **disambiguate the vocabulary**. Read across to compare the five carriers, then down through writer, lifetime, strengths, and limitations. The goal is not to pick one universal winner. It is to prevent architectural category errors: treating a compute cache as durable memory, treating context as persistence, or copying real business state into a natural-language recollection that can go stale.
 
-### 14-Product Comparison
+![Model weights, context, KV cache, external memory, and world state compared](/images/posts/llm-memory-research/memory-carriers-v4-en-4k.png)
 
-| Product | Strategy | Type | Weight Δ? |
-|---|---|---|---|
-| **OpenAI Codex** | AGENTS.md 3-tier cascade + Memories (generated after thread idle → `~/.codex/memories/`, cross-session persistent, off by default) + sandboxed isolation | Memory | No |
-| _OpenAI Prompt Caching_ | ≥1024 tokens auto KV cache, 5min–24h TTL | Cache | No |
-| _Anthropic Prompt Caching_ | Explicit `cache_control` ≤4 breakpoints, byte-level match | Cache | No |
-| _Gemini Context Caching_ | Implicit 90% discount + Explicit 60min TTL | Cache | No |
-| **Claude.ai Projects** | Project instructions + files + history, full prompt injection | Memory | No |
-| **Claude Memory** (2025-10) | Project-isolated, 24h synthesis, visible/editable/exportable | Memory | No |
-| **Claude Code** | CLAUDE.md + model-written MEMORY.md (200 lines) | Memory | No |
-| **Cursor Rules / AGENTS.md** | Static markdown, 4 trigger modes, Team > Project > User | Memory | No |
-| **Cursor Memories** (1.0+) | AI generates candidates → user approves → writes | Memory | No |
-| _Cursor Codebase Index_ | Merkle tree + encryption + Turbopuffer vector DB | RAG | No |
-| **Windsurf Cascade** | global + workspace rules + auto Memories + RAG | Memory | No |
-| **Devin Knowledge** | Human-written + AI suggestions + DeepWiki + VM Snapshots | Memory+RAG | No |
-| _Replit Checkpoints_ | VM snapshot = files + DB + chat + Agent memory | Snapshot | No |
+*Figure 2. This answers where state actually lives. Five different things share the word memory, and one of the most dangerous design mistakes is treating two of them as interchangeable.*
 
-> *Italic* = Cache/RAG/Snapshot; **Bold** = Memory. No product modifies weights.
+### 1.1 Parametric memory: model weights
 
-{{< alert icon="bomb" >}}
+Pretraining and fine-tuning write statistical regularities into parameters. This layer has enormous capacity and strong generalization, but writes are slow, precise deletion is difficult, and provenance is weak: the system usually cannot answer which experience produced a particular piece of knowledge.
 
-**Key evidence**: Cursor's official docs state it plainly: *"Large language models don't retain memory between completions. Rules provide persistent, reusable context at the prompt level."* Claude Code works the same way — CLAUDE.md and MEMORY.md are markdown files injected back into the prompt at each inference; weights never change. Codex's AGENTS.md + Memories follow the identical pattern: text files → injected into prompt → model reads them.
+Weights are appropriate for language ability, general world knowledge, and stable skills. They are a poor fit for per-user updates after every conversation. Continually fine-tuning user preferences into weights is not only expensive; it also creates catastrophic-forgetting, tenant-isolation, deletion, and audit problems.
 
-{{< /alert >}}
+### 1.2 Working memory: the context window
 
-### Storage Selection: Vector DB vs Knowledge Graph vs Relational DB vs Files
+The current system prompt, conversation, tool results, scratchpad, and retrieved passages all live here. The model can attend to them directly, making context the strongest workspace available at inference time.
 
-Behind the "Type" column in the table above lies an architectural tradeoff in storage selection. Different storage backends determine the capability ceiling of a memory system:
+But context does not persist across calls by itself. A longer window is only a larger desk for the current call. It does not automatically decide what deserves to survive, nor does it build a stable user model.
 
-| Storage | Strengths | Ceiling | Best For |
-|---|---|---|---|
-| **Vector DB** (Pinecone / Qdrant / Chroma) | Zero cold-start, sub-ms semantic retrieval, universal content types | No relational reasoning, no temporal model, top-k quality degrades at scale | Early prototypes, personal assistants, memory count < 50K |
-| **Knowledge Graph** (Neo4j / Graphiti-Zep) | Native multi-hop reasoning, entity disambiguation, temporal correctness (+18.5%, Zep paper) | High cold-start cost, large LLM extraction overhead | Entity-relationship-dense domains, audit trail required |
-| **Relational DB** | Precise queries, transactional consistency, structured state | No semantic retrieval, no relational traversal | Precise transactional queries (config items, profiles) |
-| **Markdown Files** | Human-readable, diffable, version-controllable | No entity resolution, no multi-hop reasoning, no temporal reasoning | Project rules, small-scale preferences (< hundreds of entries) |
+### 1.3 Compute cache: KV cache and prompt cache
 
-**Production consensus is hybrid**: start with vector DB → add graph at bottleneck → scale with hybrid (vector + graph + relational, linked via normalized IDs). In Letta's "Is a Filesystem All You Need?" experiment, the plain agent file approach scored 74.0% (higher than Mem0-Graph at 68.5%), but once memory volume exceeds small scale, the domain grows complex, or entity relationships become necessary, the file approach hits its ceiling.
+The KV cache stores attention keys and values that have already been computed. Prompt caching reuses prefill work for an identical prefix. Both reduce repeated computation, but neither decides what information matters or produces editable, retrievable memory records.
 
-→ Oxagen — Memory Architectures for AI Agents · Atlan — Vector Database vs Knowledge Graph · arXiv 2501.13956 (Zep paper)
+Therefore:
+
+- A cache hit may mean nothing was “remembered”; the service merely avoided recomputation.
+- Cache expiry does not imply that long-term memory was lost.
+- Updating a memory inside the prompt prefix may itself cause a cache miss.
+
+**Caching is a performance mechanism. Memory is a state-governance mechanism.**
+
+### 1.4 External long-term memory: files, SQL, vectors, and graphs
+
+This is where most agent memory engineering happens today. External stores can isolate users, preserve provenance, support deletion, and retrieve state into the next context.
+
+But “put it in a vector database” is not equivalent to “build a memory system.” Vector search provides approximate similarity. It does not inherently solve factual conflict, temporal truth, importance, authorization, bad writes, or forgetting.
+
+### 1.5 Environmental memory: Git, CRM, calendars, and real world state
+
+Much information should never be copied into a natural-language memory record. Whether code was deployed, an invoice was paid, or a meeting was rescheduled should normally be queried from its source of truth.
+
+A reliable agent distinguishes:
+
+- **What should be recalled:** preferences, prior decisions, successful experience.
+- **What should be queried:** orders, permissions, inventory, calendars, code state.
+- **What should be recomputed:** prices, aggregates, and derived metrics.
+
+This is why “embed everything” often produces a system with plenty of information but unreliable facts.
 
 ---
 
-## 3. Future Paradigm: The Four-Layer Hybrid Stack
+## 2. How Human Memory Became a Systems Problem
 
-Bottom-up: the base layer is forever stateless; the three layers above are different abstractions for "giving it memory." L4 (Agent memory layer) is the short-term mainstream; L2 (in-architecture memory) is the highest-value research leap worth betting on.
+Comparing a vector database to the hippocampus or context to working memory can be pedagogically useful. It is not structural equivalence. The most important lesson from more than a century of memory research is precisely that **memory is neither one location nor an immutable file written once.**
 
-### L4 · Agent Memory Layer
+The historical diagram is not background decoration. It explains why this article rejects the model “memory = storage.” You do not need to memorize every date. Follow the three conceptual shifts at the bottom: from one warehouse, to separable systems, to a dynamic process reconstructed during retrieval. The later discussion of episodes, facts, procedures, consolidation, and revision follows directly from that progression.
 
-{{< badge >}}Most Commercially Mature{{< /badge >}}
+![A history of human memory science, from the forgetting curve to engrams](/images/posts/llm-memory-research/human-memory-history-v4-en-4k.png)
 
-Treats the LLM as a stateless CPU; "memory" lives in external databases + Agent runtime, with retrieval results concatenated back into the prompt on each inference. Representatives: `Letta` (MemGPT) · `Mem0` · `Zep + Graphiti` · `LangGraph Store` · `AutoGen Memory`.
+*Figure 3. This explains the origin of the article’s memory paradigm. Research gradually replaced the idea of one storage location with multiple systems that jointly encode, consolidate, retrieve, and reconstruct.*
 
-- ✅ Auditable · Deletable · Model-agnostic
-- ⚠️ Retrieval quality determines the ceiling · Write contamination accumulates
-- Mem0 scores 26% above OpenAI Memory on LoCoMo; 91% lower p95 latency; 90% fewer tokens
+### 1885: Ebbinghaus made memory measurable
 
-#### Memory Type Taxonomy (CoALA Framework)
+Hermann Ebbinghaus repeatedly learned nonsense syllables and used the *savings method* to measure forgetting. Even when direct recall failed, relearning was faster. Memory moved from philosophical speculation to an experimental object that could be plotted and compared across intervals and repetitions.
 
-Agent memory is not a single bucket — the **CoALA paper** (Sumers, Yao, Narasimhan, Griffiths, 2023), grounded in Tulving's cognitive science taxonomy, divides Agent memory into four minimally complete types. A 2026 survey (arXiv 2602.06052) further extends this to five atomic cognitive memory systems.
+Many current agent-memory evaluations use a rougher measure than Ebbinghaus: final question accuracy. A useful evaluation should also ask:
 
-| Type | Definition | Storage Strategy | Retrieval Strategy | Representative Implementation |
-|---|---|---|---|---|
-| **Working** | Temporary scratchpad for current task (reasoning traces, intermediate results); vanishes on context refresh | The prompt itself (in-context) | Implicit — model reads the prompt | LangGraph State, Letta core blocks |
-| **Episodic** | Temporally indexed records of past events/interactions — "what happened" | Append-only, vector DB + temporal index | Recency × Importance × Relevance three-signal weighted | Letta recall memory, Generative Agents memory stream |
-| **Semantic** | Factual knowledge distilled from experience, decoupled from specific events — "how the world is" | KV store / vector DB / knowledge graph, with distillation gate controlling writes | Key-based fast lookup or vector similarity | Mem0 facts, CLAUDE.md, Letta archival |
-| **Procedural** | Reusable skills, action sequences, and execution strategies — "how to do something" | Independent index, key=task description embedding, value=successfully executed code/prompt | Retrieve top-K by description embedding when new task arrives | Voyager skill library, Claude Code Skills |
+- How soon after writing is a memory available?
+- Does repeated successful retrieval stabilize it?
+- When a fact is superseded, does the old version still reappear?
+- When evidence is insufficient, can the system abstain?
 
-**The most common design mistake is serving four different needs with a single piece of infrastructure** — this is the root cause of "my agent forgot" complaints, even when the data technically still exists somewhere in the context.
+Primary source: [Ebbinghaus, *Memory: A Contribution to Experimental Psychology* (1885/1913)](https://psychclassics.yorku.ca/Ebbinghaus/)
 
-**Procedural memory is the most under-implemented layer in production**. Most "memory" products only have episodic + semantic, lacking procedural. Voyager's skill library in Minecraft demonstrated the compounding effect of procedural memory: 3.3× more unique items unlocked, 15.3× faster milestone completion — procedural memory compounds, semantic memory does not.
+### 1900: memory requires consolidation
 
-→ CoALA (arXiv 2309.02427) · Generative Agents (arXiv 2304.03442, UIST 2023) · MemGPT (arXiv 2310.08560, COLM 2024) · Voyager (arXiv 2305.16291) · Foundation Agent Memory Survey (arXiv 2602.06052, preprint)
+Georg Elias Müller and Alfons Pilzecker found that material learned immediately after a new item increased interference. They proposed that memory traces require time to stabilize, helping establish *consolidation* as a central concept.
 
-#### Write Policies and Conflict Resolution
+For agents, the lesson is not simply “run a nightly cron job.” It is to separate:
 
-Memory is not just a "read" problem — **when to write and how to handle conflicts** are the engineering decisions most prone to pitfalls in Agent memory systems.
+- **Raw experience:** complete, traceable, and preferably append-only.
+- **Consolidated products:** profiles, facts, rules, and summaries that may be revised or overturned.
 
-**5 orthogonal dimensions of write decisions** (Jatin Bansal): (a) whether to write (admission control gating) → (b) write form (raw episode vs distilled fact) → (c) which tier to write to → (d) write timing (synchronous / end-of-session / background async) → (e) how to handle conflicts. The core metaphor is **WAL + Checkpoint**: log-style writes preserve complete history, checkpoint-style writes produce merged snapshots — mature systems use both.
+If only the second layer survives, one faulty model summary can rewrite history. If only raw events survive, retrieval drowns in low-value detail.
 
-**Three conflict resolution approaches**:
+Primary source: [Müller & Pilzecker, *Experimentelle Beiträge zur Lehre vom Gedächtniss* (1900)](https://books.google.com/books?id=5RdCAQAAMAAJ)
 
-| Approach | Representative | Mechanism | Best For |
+### 1949: Hebb located persistence in changing connections
+
+Donald Hebb proposed cell assemblies and changes in connection efficiency driven by co-activation. The familiar phrase “fire together, wire together” is not a verbatim quotation, but it captures the direction: experience leaves a trace through network plasticity.
+
+This helps distinguish three changes in an agent system:
+
+- Putting an experience into context changes **activation state**.
+- Writing it to persistent storage changes **system state**.
+- Updating model weights changes **parameters**, a slower and less governable process.
+
+### 1957: H.M. showed that memory is not one faculty
+
+Scoville and Milner reported that patient H.M. developed severe anterograde amnesia after bilateral medial temporal-lobe surgery, while short-term retention and some forms of skill learning were not impaired in the same way. The case broke the intuition that memory was a single capacity.
+
+The architectural lesson remains powerful: do not make one collection carry current task state, historical episodes, user facts, and executable skills at the same time.
+
+Primary paper: [Scoville & Milner, “Loss of Recent Memory after Bilateral Hippocampal Lesions” (1957)](https://pmc.ncbi.nlm.nih.gov/articles/PMC497229/)
+
+### The 1970s: episodic, semantic, procedural, and working memory diverged
+
+Endel Tulving distinguished:
+
+- **Episodic memory:** what happened to me, where, and when.
+- **Semantic memory:** what I know independent of a particular episode.
+
+Baddeley and Hitch replaced a single short-term store with a multicomponent working-memory model. In parallel, the separation between skill learning and declarative knowledge helped establish procedural memory as another category.
+
+This classification remains more useful for agent architecture than “short-term versus long-term”:
+
+| Human category | Agent analogue | Typical storage | Typical read path |
 |---|---|---|---|
-| **ADD-only + retrieval ranking** | Mem0 v3 | Contradictory memories are all preserved; extraction captures transitions ("User changed from A to B"); conflicts are resolved at retrieval time via recency + relevance ranking | Small-scale / personal assistants |
-| **Bi-temporal edge invalidation** | Zep / Graphiti | Each edge carries 4 timestamps (valid_at / invalid_at / created_at / expired_at); contradictions mark old edges as expired; supports point-in-time queries | Enterprise / complex interactions |
-| **Memory evolution** | A-MEM (arXiv 2502.12110, preprint) | New memory triggers keywords/tags updates on neighboring old memories, simulating "new knowledge reshaping old understanding"; token cost only ~1.2K (vs MemGPT ~17K) | Self-organizing knowledge networks |
+| Working memory | Current goal, plan, intermediate state, tool output | Context / graph state / scratchpad | Direct injection at every step |
+| Episodic memory | Conversations, actions, failures, observations | Event log + temporal index | Joint retrieval by time, entity, and similarity |
+| Semantic memory | Preferences, stable facts, concepts, relations | Profile / KV / vector / knowledge graph | Exact key, semantic, or graph query |
+| Procedural memory | Prompts, rules, skills, successful trajectories | Files / version control / skill registry | Task routing or explicit mounting |
 
-{{< alert icon="bomb" >}}
+**Short-term versus long-term describes lifetime. Episodic, semantic, and procedural describes content and function.** These dimensions are not substitutes.
 
-**Mem0 v2→v3 lesson**: v2 used "Latest Truth Wins" — LLM judges conflicts then executes UPDATE to overwrite old values. But in practice, **LLMs hallucinate during UPDATE**, substituting new values back to old ones (Mem0 PR #4903). v3 completely pivoted to ADD-only architecture; temporal reasoning improved +29.6% on LoCoMo.
+Primary sources: [Tulving, “Episodic and Semantic Memory” (1972)](https://cir.nii.ac.jp/crid/1574231874408386176?lang=en); [Baddeley & Hitch, “Working Memory” (1974)](https://doi.org/10.1016/S0079-7421%2808%2960452-1)
 
-{{< /alert >}}
+### 1971–2012: from spatial representation to manipulable engrams
 
-→ Jatin Bansal — Memory Write Policies · Mem0 v2→v3 migration docs · Zep — Beyond Static Graphs · A-MEM (arXiv 2502.12110)
+O'Keefe discovered hippocampal place cells. Later work on grid cells and related systems exposed neural mechanisms of spatial representation. In 2012, Liu, Ramirez, Tonegawa, and colleagues used optogenetics to reactivate hippocampal cells tagged during fear-memory formation and elicited behavior associated with memory recall.
 
-#### Memory Lifecycle Management
+This did not reveal one address containing an entire memory. Modern engram research points instead to distributed, reactivatable cell assemblies whose content still depends on cross-region networks and retrieval conditions.
 
-The ⚠️ "write contamination accumulates" warning in L4 cannot be solved with a single warning — production systems need a complete decay → compaction → GC pipeline.
+Sources: [2014 Nobel Prize scientific background](https://www.nobelprize.org/prizes/medicine/2014/advanced-information/); [Liu et al., “Optogenetic stimulation of a hippocampal engram activates fear memory recall” (2012)](https://pmc.ncbi.nlm.nih.gov/articles/PMC3331914/)
 
-**Decay**: Nearly all production systems converge on exponential decay `S(t) = S₀ × e^(-λt)`, with half-lives tiered by memory type — conversation context 7–14 days, factual knowledge 60–90 days, identity information 6–12 months. Each successful retrieval resets `last_read_at`, exempting frequently-used memories from decay (analogous to OS LRU policy).
+### 2000: retrieval is not read-only
 
-**Compaction**: TypeGraph provides a three-step process — (1) HDBSCAN clustering detects fragmented memories → (2) LLM generates merged summaries (resolving contradictions, removing redundancy) → (3) original fragments are archived (not deleted, preserving audit capability), merged memory inserted. The "reflection" mechanism in Generative Agents is essentially episodic → semantic distillation-style compaction.
+Experiments by Nader, Schafe, and LeDoux showed that a consolidated fear memory becomes plastic after reactivation and again requires protein synthesis to stabilize. This result helped launch modern research on reconsolidation.
 
-**Garbage Collection (GC)**: Decay threshold eviction (score < 0.01), TTL expiry, supersede chains (when new facts replace old facts, old memories are demoted to weight 0.1).
+For agent systems, the useful analogy is that **every recall can become an update.**
 
-**Sleep-time Compute**: Moves the above processes from test-time to background execution. Lin et al. (arXiv 2504.13171) demonstrate that sleep-time can reduce the test-time computation needed to reach the same accuracy by approximately **5×**. Letta implements a primary + sleep-time dual-agent architecture — primary handles user interactions (read-only on shared memory), sleep-time agent performs consolidation / pre-compute / GC in the background (exclusive write access to shared memory), triggered every N steps. Claude Code's auto-dream triggers a four-stage consolidation cycle after 24h of activity + 5 new sessions.
+If a user says, “I no longer drink coffee,” the system should not leave two contradictory preferences beside each other in a vector store. At minimum it should represent:
 
-→ Sleep-time Compute (arXiv 2504.13171) · Letta Sleep-time docs · TypeGraph — Agent Memory Decay & Consolidation
+```text
+old_fact: user likes coffee
+validity: 2025-03 → 2026-07
 
-#### Retrieval Quality Engineering
-
-"Retrieval quality determines the ceiling" — how exactly do you raise it? Nearly all production systems converge on a **three-signal weighted scoring formula**:
-
-```
-composite_score = w_semantic × similarity + w_recency × recency + w_importance × importance
+new_fact: user avoids coffee
+source: conversation/event/...
+relation: new_fact supersedes old_fact
 ```
 
-Default weights vary by scenario — customer service agent: importance 0.4; research agent: relevance 0.6; personal assistant: recency 0.4. **Normalization is critical**: cosine similarity typically clusters in a narrow 0.5–0.8 band; without per-batch min-max normalization, the signal with the largest dynamic range drowns out the others.
+Primary paper: [Nader, Schafe & LeDoux, “Fear memories require protein synthesis in the amygdala for reconsolidation after retrieval” (2000)](https://pubmed.ncbi.nlm.nih.gov/10963596/)
 
-**Four levers for improving retrieval quality**:
+### Four principles worth borrowing from memory science
 
-1. **Contextual Retrieval** (Anthropic 2024.9) — Prepend an LLM-generated 50-100 token contextual summary to each chunk before embedding; retrieval failure rate reduced by up to **49%**, reaching 67% when combined with reranking
-2. **Hybrid Search** (Dense + Sparse) — Parallel embedding ANN + BM25 lexical search, merged via Reciprocal Rank Fusion
-3. **Cross-encoder Reranking** — First ANN recall top-50 (fast but coarse), then precision-rank to top-10 (accurate but slow)
-4. **Late Chunking** (Jina AI, arXiv 2409.04701) — Embed the full document first then split, so each chunk retains document-level context
+1. **Memory is a collection of systems, not one vector store.**
+2. **Consolidation transforms events into stable representations; it is not merely text compression.**
+3. **Retrieval is reconstructive, so provenance and versions must survive.**
+4. **Forgetting is not only failure; it also reduces interference, controls cost, and protects privacy.**
 
-→ Anthropic — Contextual Retrieval · ChangeGamer — RAG Retrieval for Agents · Jatin Bansal — Memory Retrieval Policies
-
-### L3 · Ultra-Long Context
-
-{{< badge >}}Commercialized{{< /badge >}}
-
-Stuffs memory into ultra-long context windows. Representatives: Gemini 2M (needle recall >99%) · Magic LTM-2-Mini 100M tokens.
-
-- ✅ Best in-session carrier
-- ⚠️ Lost-in-the-middle still unsolved · 100M ctx single user = 638×H100
-
-**L3 and L4 are complementary, not competitive**: ultra-long context handles within-session immediate associations; Agent memory layer handles cross-session / cross-year persistent memory. Combining both is the current engineering optimum.
-
-### L2 · In-Architecture Memory
-
-{{< badge >}}Highest Research Value{{< /badge >}}
-
-Embeds "persistent memory" as a differentiable module in the network — potentially the real paradigm shift. Representatives: Google `Titans` (short-term attention + long-term neural memory) · `Infini-attention` · `Mamba-2` · `RWKV-7 Goose`.
-
-- ✅ Constant VRAM · Linear time
-- ⚠️ Not yet validated at scale (needs ≥70B params / ≥10T tokens to prove viability)
-
-### L1 · Bare LLM (frozen weights)
-
-{{< badge >}}Forever Stateless{{< /badge >}}
-
-GPT / Claude / Gemini / Llama core. Each inference is a fresh process; weights unchanged. Continual learning won't become a per-user memory path short-term. LoRA is for domain/role specialization, not per-user.
-
-### Multi-Agent Shared Memory
-
-The four-layer stack above is entirely from a single-Agent perspective. When multiple Agents collaborate, **memory sharing** becomes a day-1 problem — consistency models, permission isolation, and memory ownership all require independent design.
-
-**Current framework sharing mechanisms**:
-
-| Framework | Sharing Mechanism | Consistency Model | Maturity |
-|---|---|---|---|
-| **LangGraph** | Shared State + Store (namespace-based) | Optimistic Concurrency (versioned checkpoints, retry on conflict) | High |
-| **AutoGen** | GroupChat message broadcast + Context Variables | No explicit consistency (RFC #7748 proposes eventual consistency) | Low-Medium |
-| **CrewAI** | Task output passing + Flows state | No native pub-sub | Low-Medium |
-| **Mem0** | Framework-agnostic four-dimensional scoping (user_id / agent_id / run_id / app_id) | Eventual consistency | Medium |
-
-**Frontier research (all 2026 preprints, not yet peer-reviewed)**:
-
-- **StateFuse** (arXiv 2607.05844): CRDT-based conflict-preserving memory contract. Experiments show conflict-preserving surfaces produce 0% false-confident actions (vs 40% for collapsed surfaces)
-- **MemClaw** (arXiv 2606.24535): Formalizes multi-Agent memory as a governed distributed-systems problem, identifying four failure modes — unauthorized leakage, stale propagation, contradiction persistence, provenance collapse
-
-**Maturity assessment**: This field remains in early exploration. AutoGen's cross-Agent shared memory is still at RFC stage (GitHub #7748); StateFuse / MemClaw were just published. Mem0 calls this phase the birth of **"memory engineering"** — a new engineering discipline alongside prompt engineering and context engineering. Single-Agent memory is largely solved; multi-Agent sharing is the next hard problem.
-
-→ Mem0 — Multi-Agent Memory Systems · LangGraph Stores docs · AutoGen RFC #7748
+The analogy must stop there. The hippocampus is not Redis. Vector similarity is not a complete model of associative recall. An LLM summary is not sleep-dependent consolidation. Neuroscience analogies should generate engineering questions, not replace evidence.
 
 ---
 
-## 4. Memory Evaluation: Beyond LoCoMo
+## 3. How Agent Memory Evolved
 
-Mem0 scores 26% above OpenAI Memory on LoCoMo — but LoCoMo is just the tip of the iceberg. 2024–2026 has seen multiple evaluation benchmarks emerge, covering different dimensions:
+The human-memory timeline explains why we ask these questions. The agent timeline explains why current systems have their present shape. The important feature is not the list of model names but the migration of the state boundary: from programs and network dynamics, to context, to retrieved external data, and finally to a dedicated memory layer that owns writing, time, permissions, and deletion.
 
-| Benchmark | Scale | Focus Dimensions | Key Findings |
-|---|---|---|---|
-| **LoCoMo** (ACL 2024) | 10 conversations, ~9K tok | 5 QA types (single-hop / multi-hop / temporal / commonsense / adversarial) | Backboard 90.1% > human 87.9% |
-| **LoCoMo-Refined** (2026) | 1,382 questions | Stricter LLM judge (agreement rate 86% vs original 44%) | All systems dropped 15-22 pp |
-| **LoCoMo-Plus** (arXiv 2602.10715, preprint) | — | **Cognitive memory** (cue-trigger semantic disconnect) | All methods dropped dramatically; cognitive memory remains an open problem |
-| **LongMemEval V1** (ICLR 2025) | 500 questions, 115K-1.5M tok | Information extraction / multi-session reasoning / temporal / abstention | Commercial systems only 30-70%; Zep 71.2% vs GPT-4o 60.2% |
-| **LongMemEval V2** (2026) | 451 questions, 115M tok | Web Agent memory; introduces LAFS (Latency-Accuracy Frontier Score) | Best RAG 48.5%, AgentRunbook 74.9% (Small-split) |
-| **MemBench** (ACL 2025 Findings) | 100K+ tok | Factuality + reflectivity, dual scenarios (participant / observer) | 4 metrics: accuracy / recall / capacity / latency |
-| **MemoryAgentBench** (2025) | 2,071 questions, 103K-1.44M | Precise retrieval / test-time learning / long-range understanding / **selective forgetting** | Incremental multi-turn interaction (vs one-shot full context) |
+![The evolution of agent memory from symbolic state and LSTM to memory engineering](/images/posts/llm-memory-research/agent-memory-history-v4-en-4k.png)
 
-**Evaluation dimension coverage matrix**: Factual recall (LoCoMo, LME) · Multi-hop reasoning (LoCoMo, LME) · Temporal reasoning (LoCoMo, LME) · Knowledge update (LME, MAB) · Abstention capability (LME, LoCoMo-Plus) · Cognitive memory (LoCoMo-Plus) · Capacity ceiling (MemBench) · Read/write latency (MemBench, LME-V2) · End-to-end task completion rate (LME-V2).
+*Figure 4. This locates the current engineering stage. Competition has shifted from “can state be preserved?” to “what gets written, when is it recalled, how is it revised, and who may delete it?”*
 
-→ LoCoMo (github.com/snap-research/locomo) · LongMemEval (github.com/xiaowu0162/LongMemEval) · MemBench (github.com/import-myself/Membench) · MemoryAgentBench (arXiv 2507.05257)
+### Stage 1: state lived in programs
 
----
+Early symbolic AI and cognitive architectures already had working memory, production rules, and long-term knowledge. Programmers defined both state and representation. These systems addressed how a reasoning process maintains state, not natural-language personalization.
 
-## 5. Memory Economics: Why Cache TTL Is a Hidden Pricing Dial
+### Stage 2: neural networks learned to preserve and address state
 
-This is the most underappreciated thread in the entire landscape.
+LSTM used gated recurrence to reduce long-range dependency problems. The 2014 Neural Turing Machine connected a network to a differentiable memory matrix with learned read and write heads. The goal was to learn algorithms such as copying, sorting, and associative recall end to end.
 
-In 2026-03, Anthropic **silently dropped cache TTL from 1h to 5min**, causing Claude Code users to pay 17–26% more. No announcement. No SLA commitment. This exposed a brutal truth: **cache TTL directly impacts per-user cost but appears on zero SLAs**.
+Primary paper: [Neural Turing Machines (2014)](https://arxiv.org/abs/1410.5401)
 
-| Metric | Value |
-|---|---|
-| Cost increase after Anthropic TTL change | **17–26%** |
-| Cache cost transparency | **0% (fully hidden)** |
-| 100M ctx hardware cost (single user) | **~$5.4k/hr** |
-| SLA commitments on cache TTL | **0** |
+This line of work put memory inside model architecture, but training difficulty, scale, and weak governance limited its use as a general per-user agent memory layer.
 
-Extrapolate this logic and the future "memory economics" increasingly resemble cloud storage — **tiered** (5min/1h/24h/permanent), **pricable** (micro-adjusting TTL is reverse-pricing), and **lock-in** (migration cost skyrockets once agent workflows depend on specific cache strategies).
+### Stage 3: Transformer context became a universal workspace
 
----
+Transformers allowed every token position to interact directly with every other position. Prompting became a uniform interface: rules, examples, documents, and tool results could all be supplied at inference time without modifying weights.
 
-## 6. Three-Year Paradigm Roadmap
+The cost was that every API call still began from a new context by default. “LLMs are stateless” is better stated as: **the model API makes no cross-call state guarantee on behalf of the application.**
 
-Based on Anthropic, Letta, Karpathy, LeCun sources. 2026 mainstream configuration has high confidence; 2027–2028 are inferential with explicit uncertainty.
+### Stage 4: RAG connected non-parametric memory to generation
 
-| Year | Mainstream Configuration | Potential Dark Horse | Architect Action |
-|---|---|---|---|
-| **2026** | Bare LLM + Agent Memory Layer (Mem0/Zep/Letta) + long-context caching | Titans-style architectures begin small-scale commercial use; Sleep-time Compute becomes agent standard | Build pluggable memory layer on StorageAdapter pattern; build-in provenance metadata from day-1; store four memory types separately |
-| **2027** | Reflection / Sleep-time / TTT enter mainstream Agent framework primitives | A 7B SSM/Hybrid surpasses Transformer on long-context benchmarks | Reserve sleep-time compute integration points; memory API supports batch consolidation |
-| **2028** | Top models may integrate in-arch memory module (high-risk prediction); otherwise Memory Layer remains standard | LeCun H-JEPA + LLM hybrid prototype (early signal for 5–10 year bet) | Ensure remember / recall / forget interfaces can route to model-internal APIs |
+RAG combined parametric generation with a retrievable non-parametric corpus. It was designed for knowledge-intensive tasks and updatable sources, not personal memory, but retrieve-then-generate quickly became the default read path for long-term agent memory.
 
-**Pluggable architecture references**: PlugMem (arXiv 2603.03296, preprint) proposes using knowledge units (propositions and procedures) rather than raw text as the basic unit of memory, with swappable underlying storage. MemFactory (arXiv 2603.29493, preprint) designs a four-layer decoupled architecture (Module → Agent → Environment → Trainer), each independently replaceable. Core interface abstraction: `remember()` / `recall()` / `forget()` — three semantic operations. When L2 models natively support memory, route these calls to the model's internal API instead of external storage.
+Primary paper: [Lewis et al., “Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks” (2020)](https://arxiv.org/abs/2005.11401)
 
-{{< alert icon="circle-info" >}}
+One boundary matters: **RAG is a read mechanism, not a complete memory system.** If data never enters through experience-driven writing, updating, conflict resolution, or forgetting, it is closer to an external knowledge base.
 
-**2028 caveat**: In-architecture memory (e.g., Titans) requires ≥70B params and ≥10T token training for validation — currently arXiv-only. The more likely 2028 scenario is coexistence of Agent memory layer and in-architecture memory, not the latter replacing the former.
+### Stage 5: 2023 combined writing, reflection, hierarchy, and skills
 
-{{< /alert >}}
+Several 2023 systems filled different gaps:
 
----
+- **Generative Agents:** an event stream, recency/relevance/importance retrieval, and reflection that consolidates episodes into higher-level beliefs.
+- **Voyager:** successful code becomes a reusable skill library, emphasizing procedural memory.
+- **MemGPT:** an operating-system analogy treats context as a working set and lets the agent move information between memory tiers through tools.
+- **CoALA:** a cognitive architecture connecting working, episodic, semantic, and procedural memory to an agent decision loop.
 
-## 7. Nine Practical Takeaways for Engineers
+Primary papers: [Generative Agents](https://arxiv.org/abs/2304.03442) · [Voyager](https://arxiv.org/abs/2305.16291) · [MemGPT](https://arxiv.org/abs/2310.08560) · [CoALA](https://arxiv.org/abs/2309.02427)
 
-1. **Cache and Memory are conceptually orthogonal but tightly coupled in implementation**: Cache is a compute optimization (skip prefill); Memory is a product-layer decision about what to inject into the prompt — conceptually completely orthogonal. But in engineering they are tightly coupled: any change to memory content can cause prompt prefix mismatch → cache miss → full prefill → cost spike. This is exactly why Claude Code emphasizes "cache-safe forking."
+### Stage 6: from 2024 onward, governance became the differentiator
 
-2. **Writing memory = writing system prompt**: Any project convention expressible in markdown (Cursor Rules / `CLAUDE.md` / AGENTS.md) always beats "letting the AI remember" — more controllable, diffable, version-manageable. But markdown approaches hit their ceiling when memory volume exceeds hundreds of entries, or when entity relationships or temporal reasoning are needed — at that point, structured storage (vector DB / knowledge graph) must be introduced.
+The dividing line is no longer whether a project supports vector search. It is:
 
-3. **Prefix order: static → dynamic**: Tool definitions, system prompt, project rules go first; current user input goes last. Consistent top-level advice from OpenAI, Anthropic, and Google docs.
+- Who decides to write?
+- Is memory represented as events, facts, documents, graph edges, prompts, or executable skills?
+- Are conflicts overwritten, coexisting, or invalidated over time?
+- Is provenance preserved?
+- Does consolidation happen in the background?
+- Can state be isolated by user, agent, run, and tenant?
+- Can users inspect, edit, export, and delete it?
+- Can operators observe memory failures?
 
-4. **Compaction must be cache-safe**: Don't open a new system prompt for summarization — forces the full conversation to recompute at uncached full price. Claude Code calls this "cache-safe forking."
-
-5. **TTL is a product decision, not just an engineering parameter**: The lesson from the Anthropic 1h→5min TTL incident. Expose TTL as a configurable option to users, or they will discover your hidden pricing in their bills.
-
-6. **Autonomous Agents need automated write gating and conflict resolution**: For products with humans in the loop (Cursor, Devin), "AI writes + human approves" is the steadiest pattern. But for autonomous Agents, you need automated admission control (lightweight model for triage classification) + conflict resolution (ADD-only / bi-temporal / memory evolution). Core principle: **every write is a tax on all future reads** — better to store fewer high-quality facts than flood with low-value noise.
-
-7. **Visible, editable, exportable = trust**: Claude Memory's natural language synthesis, Cursor Memories' user approval mechanism, Codex Memories' local file storage — transparency determines user trust.
-
-8. **Privacy mode conflicts with Cache**: OpenAI Extended cache loses ZDR eligibility; Cursor privacy mode stores no plaintext. Offer "performance vs. privacy" as two user-selectable modes.
-
-9. **Context engineering is the moat — but it needs methodology**: Make memory deterministic, version-controlled, and human-readable state; curation cost is one-time, benefit is compounding. Specific methodology: **Explicit token budget allocation** (reserve 10% for output → 15% system prompt → 30% conversation history → 45% retrieved content, adjust by scenario) + **Four-strategy management** (Write to scratchpad / Select via composite scoring / Compress with threshold-triggered summarization / Isolate by splitting to sub-Agent independent windows).
-
-→ Anthropic — Effective Context Engineering · Lance Martin — Agent Context Engineering Four Strategies
+Those questions define the code audit below.
 
 ---
 
-## 8. Key References
+## 4. How to Read an Open-Source “Agent Memory” Project
 
-All primary sources from 2024–2026. 50+ curated entries covering vendor docs, arXiv papers, and researcher essays.
+I did not rank projects by their home-page benchmark. Scores depend on the base model, answer prompt, judge model, retrieval budget, and data cleaning. A high memory-QA score says little about permissions, deletion, stability, cost, or whether the architecture fits production.
 
-### A. Vendor Sources
+This audit is anchored to repository states visible on 2026-07-30 and examines seven dimensions:
 
-**OpenAI**
-- [OpenAI Prompt Caching guide](https://developers.openai.com/docs/guides/prompt-caching) — KV cache mechanics + TTL + retention policy
-- [OpenAI Prompt Caching 201 cookbook](https://developers.openai.com/cookbook/examples/prompt_caching_201/) — Extended cache and ZDR relationship
-- [OpenAI Codex](https://openai.com/index/introducing-codex/) — AGENTS.md + Memories cross-session persistence
-- [Codex Memories docs](https://developers.openai.com/codex/memories) — memory generation mechanism + privacy controls
-- [Codex AGENTS.md guide](https://developers.openai.com/codex/guides/agents-md) — 3-tier cascading project instructions
-- [Embrace The Red · Hacking Memories](https://embracethered.com/blog/posts/2024/chatgpt-hacking-memories/) — persistent memory prompt injection attack surface
+1. **Write path:** trigger, gating, deduplication, and structured extraction.
+2. **Representation:** events, facts, profiles, graphs, prompts, or skills.
+3. **Storage abstraction:** files, SQL, vectors, graphs, and replaceability.
+4. **Read path:** exact search, vector search, BM25, graph traversal, reranking.
+5. **Time and conflict:** overwrite, invalidation, versioning, or bitemporal modeling.
+6. **System boundary:** library, engine, toolkit, or full runtime with API and tenancy.
+7. **Loop completeness:** consolidation, feedback, forgetting, deletion, and observability.
 
-**Anthropic**
-- [Anthropic Prompt Caching docs](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching) — cache_control / 5min vs 1h / 4 breakpoints
-- [Lessons from building Claude Code](https://claude.com/blog/lessons-from-building-claude-code-prompt-caching-is-everything) — cache-safe forking in practice
-- [Claude Code Memory docs](https://docs.anthropic.com/en/docs/claude-code/memory) — CLAUDE.md vs auto memory
-- [How does Claude's memory work](https://support.anthropic.com/en/articles/11817273-how-does-claude-s-memory-work) — RAG tool calls + 24h synthesis + project isolation
-- [Effective Context Engineering](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) — context engineering methodology
+The next diagram is a **selection map**, not a logo wall or an overall score. Read each row from left to right: public claim, observed code path, system boundary, and memory paradigm. That makes it possible to distinguish an SDK, runtime, temporal graph engine, framework toolkit, knowledge pipeline, and research implementation before committing to the detailed audit.
 
-**Google**
-- [Gemini API Context Caching](https://ai.google.dev/gemini-api/docs/caching) — implicit vs explicit, TTL, storage billing
-- [Vertex AI Context caching overview](https://cloud.google.com/vertex-ai/generative-ai/docs/context-cache/context-cache-overview) — 90% discount + cross-tenant isolation
+![System boundaries and memory paradigms across six open-source agent-memory projects](/images/posts/llm-memory-research/open-source-memory-architectures-v4-en-4k.png)
 
-**Cursor / Codex / Windsurf / Devin / Replit**
-- [Cursor Rules](https://cursor.com/docs/context/memories) + [Codebase Indexing](https://cursor.com/docs/context/codebase-indexing) + [1.0 changelog](https://www.cursor.com/changelog/1-0) + [1.2 changelog](https://cursor.com/en/changelog/1-2)
-- [Windsurf Cascade Memories](https://docs.windsurf.com/windsurf/cascade/memories) — 5-layer context assembly
-- [Devin Knowledge](https://cognitionai.mintlify.app/product-guides/knowledge) — human-written + AI + DeepWiki + VM Snapshots
-- [Replit Checkpoints](https://docs.replit.com/core-concepts/agent/checkpoints-and-rollbacks) — VM + DB + AI chat snapshot
+*Figure 5. This shortens the project-selection path rather than naming an overall winner. A full runtime is heavier; a small toolkit is easier to embed. The important question is whether the boundary matches the desired memory paradigm.*
 
-### B. Key Papers (Published / High Authority)
+### Summary: claims, code paths, and memory paradigms
 
-**Architecture / Long Context**
-- [Lost in the Middle (TACL 2024)](https://arxiv.org/abs/2307.03172) — U-shaped curve empirical evidence
-- [Gemini 1.5 Technical Report](https://arxiv.org/abs/2403.05530) — 1M-10M token benchmark
-- [Magic LTM-2-Mini](https://magic.dev/blog/100m-token-context-windows) — 100M tokens, 1000× less FLOPs than attention
-- [Titans: Learning to Memorize at Test Time](https://arxiv.org/abs/2501.00663) — Google neural memory module
-- [Infini-attention](https://arxiv.org/abs/2404.07143) — Compressive memory, 1B model 5K → 1M passkey
-- [Mamba-2 / SSD (ICML 2024)](https://proceedings.mlr.press/v235/dao24a.html) + [RWKV-7 Goose](https://arxiv.org/abs/2503.14456) + [KV-Direct](https://www.arxiv.org/pdf/2603.19664)
-
-**Memory Layer / Agent Memory (High Authority)**
-- [CoALA (arXiv 2309.02427)](https://arxiv.org/abs/2309.02427) — Agent memory four-type taxonomy
-- [Generative Agents (UIST 2023)](https://arxiv.org/abs/2304.03442) — Memory stream + reflection + three-signal retrieval
-- [MemGPT (COLM 2024)](https://arxiv.org/abs/2310.08560) — OS virtual memory tiered model
-- [Voyager](https://arxiv.org/abs/2305.16291) — Procedural memory (skill library) benchmark
-- [Mem0](https://arxiv.org/abs/2504.19413) · [Zep + Graphiti](https://arxiv.org/abs/2501.13956) — Commercial memory layers
-- [Sleep-time Compute](https://arxiv.org/abs/2504.13171) — test-time reduction 5×
-
-**Continual Learning**
-- [Continual Learning of LLMs Survey](https://arxiv.org/abs/2404.16789) · [TTT (ICML 2025)](https://proceedings.mlr.press/v267/akyurek25a.html) · [Memory Survey](https://arxiv.org/abs/2505.00675)
-
-**Evaluation Benchmarks**
-- [LoCoMo (ACL 2024)](https://github.com/snap-research/locomo) — 5-type QA memory evaluation
-- [LongMemEval (ICLR 2025)](https://github.com/xiaowu0162/LongMemEval) — 5 core capabilities + extensible history
-- [MemBench (ACL 2025 Findings)](https://github.com/import-myself/Membench) — Factuality + reflectivity dual scenarios
-- [MemoryAgentBench](https://arxiv.org/abs/2507.05257) — Incremental multi-turn interaction evaluation
-
-### C. Preprints / Frontier Exploration (Not Peer-Reviewed)
-
-The following papers are all 2026 preprints. Please note "not peer-reviewed" when citing.
-
-- [A-MEM](https://arxiv.org/abs/2502.12110) — Zettelkasten-style memory evolution
-- [Foundation Agent Memory Survey](https://arxiv.org/abs/2602.06052) — Five atomic cognitive memory types survey (60 authors)
-- [MPBench](https://arxiv.org/abs/2606.04329) — Systematic study of 9 memory poisoning vulnerability points
-- [eTAMP](https://arxiv.org/abs/2604.02623) — Environmental injection memory poisoning
-- [Sleeper Memory](https://arxiv.org/abs/2605.15338) — Sleeper-style memory poisoning
-- [Zombie Agents](https://arxiv.org/abs/2602.15654) — Self-reinforcing injection
-- [SMSR](https://arxiv.org/abs/2606.12703) — Certified defense against memory poisoning (single author)
-- [StateFuse](https://arxiv.org/abs/2607.05844) — CRDT conflict-preserving memory
-- [MemClaw](https://arxiv.org/abs/2606.24535) — Governed shared memory
-- [PlugMem](https://arxiv.org/abs/2603.03296) — Pluggable memory module
-- [MemFactory](https://arxiv.org/abs/2603.29493) — Unified memory training-inference framework
-
-### D. Paradigm Judgment (Karpathy / LeCun / Raschka)
-
-- [Andrej Karpathy · Dwarkesh Patel Interview (2025-10)](https://www.dwarkeshpatel.com/p/andrej-karpathy)
-- [Karpathy · Intro to LLMs](https://www.youtube.com/watch?v=zjkBMFhNj_g)
-- [Yann LeCun · A Path Towards AMI](https://openreview.net/pdf?id=BZ5a1r-kVsf)
-- [LeCun at NVIDIA GTC 2025](https://www.endofmiles.net/lecun-says-hes-not-so-interested-in-llms-anymore)
-- [Sebastian Raschka · Coding the KV Cache](https://sebastianraschka.com/blog/2025/coding-the-kv-cache-in-llms.html)
-
-### E. Industry Frameworks / Engineering Practice
-
-- [LangGraph Persistence & Memory](https://docs.langchain.com/oss/python/langgraph/persistence)
-- [AutoGen Memory & RAG](https://microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/memory.html)
-- [Letta Research](https://www.letta.com/research) + [Sleep-time docs](https://docs.letta.com/guides/agents/architectures/sleeptime/)
-- [Don't Break the Cache (arXiv 2601.06007)](https://arxiv.org/abs/2601.06007v2)
-- [ctx.ist](https://ctx.ist/)
-- [Jatin Bansal — Memory Write Policies](https://jatinbansal.com/ai-engineering/memory-write-policies/) + [Retrieval Policies](https://jatinbansal.com/ai-engineering/memory-retrieval-policies/)
-- [Lance Martin — Agent Context Engineering](https://rlancemartin.github.io/2025/06/23/context_engineering/)
-- [Oxagen — Memory Architectures for AI Agents](https://www.oxagen.ai/blog/memory-architectures-for-ai-agents)
-- [Mem0 — Multi-Agent Memory Systems](https://mem0.ai/blog/multi-agent-memory-systems)
-- [Microsoft — Agent Memory Safety Guide](https://learn.microsoft.com/en-us/security/zero-trust/sfi/manage-agentic-memory-safety)
+| Project | Public positioning | Observed core code path | Closest memory paradigm | Architecture type | Main boundary |
+|---|---|---|---|---|---|
+| **Mem0** | Universal memory layer, personalization, cross-session learning | History + vector recall → LLM incremental fact extraction → batch embeddings → vector store; SQLite for messages/history | Primarily semantic facts with user/agent scopes | Pluggable memory SDK | Runtime, task state, and full governance sit outside the core |
+| **Letta** | Stateful, self-improving agents with advanced memory | AgentState + memory blocks + messages/passages + context calculator + agent loop/tools | Working + episodic + semantic; model-managed | Full stateful agent runtime | Adopting it often means adopting its runtime model |
+| **Graphiti** | Real-time temporal context graph and historical truth | Episode → entity/fact extraction → bitemporal edges → semantic/BM25/graph hybrid search | Temporal semantic memory with episodic provenance | Temporal graph engine | User, session, and agent services are separate |
+| **LangMem** | Continuous learning, hot-path tools, background memory | Manage/search tools + background manager + LangGraph BaseStore + prompt optimizer | Semantic/episodic templates + procedural memory | Framework toolkit | Persistence, deployment, and permissions inherit from LangGraph or custom code |
+| **Cognee** | Turn data into AI memory and replace traditional RAG | Add → cognify pipeline → graph/vector/relational storage → search/memify | Enterprise semantic memory and knowledge graph | Knowledge pipeline / infrastructure | Personal conversation memory is not the sole center |
+| **MemoryOS** | OS-style short-, mid-, and long-term hierarchy | Short-term QA queue → mid-term segment/heat → profile and knowledge extraction → JSON/embedding retrieval | Hierarchical episodic-to-semantic consolidation | Research reference implementation | Production tenancy, transactions, and governance need additional work |
 
 ---
 
-*Research method: Three parallel sub-agents (technical principles + product API design + future paradigms), cross-validated across four sources (Exa, Tavily, Context7, WebSearch). 67+ primary URLs, 2024-Q1 to 2026-Q2. 2026-07 update: Added memory type taxonomy, write/conflict strategies, multi-Agent sharing, lifecycle management, retrieval quality engineering, storage selection, evaluation benchmark landscape, security threat model, and context engineering methodology, based on 6-way Exa deep research.*
+## 5. Six Systems: What Exists Between Marketing and Code
+
+### 5.1 Mem0: a fact-distillation and retrieval pipeline, not a brain
+
+Mem0 has a clear role: add a unified long-term memory API to an existing application. Its surface centers on `add / search / get / update / delete`, with providers for LLMs, embeddings, vector stores, and rerankers.
+
+The current OSS Python v3 write path is visible in [`mem0/memory/main.py`](https://github.com/mem0ai/mem0/blob/9c2d6222ce86bf6a73ae7ca97464a8e1a55ab3ca/mem0/memory/main.py):
+
+1. Establish scope from `user_id / agent_id / run_id`.
+2. Read recent messages from SQLite.
+3. Recall existing memories from the vector store using the current conversation.
+4. Give old memories, new messages, and recent context to an LLM for incremental extraction.
+5. Batch-embed the extracted memory texts.
+6. Write them back and record history.
+
+The core operation is not raw chat storage. It is **LLM-driven distillation of conversation into shorter retrievable facts**.
+
+**Where the claim holds:**
+
+- Low integration cost.
+- Mature provider abstraction.
+- Practical scope, metadata, history, async, and reranking interfaces.
+- A strong fit for preferences, identity facts, and previous decisions.
+
+**Where the claim can mislead:**
+
+- “Universal” does not mean optimal for every memory type.
+- The default center is semantic facts, not full working memory or a skill system.
+- LLM extraction can omit, misattribute, or overgeneralize at write time.
+- Vector similarity does not answer complex historical-truth questions by itself.
+
+**Paradigm:** an external memory layer centered on semantic memory.
+
+### 5.2 Letta: memory as the state model of an agent runtime
+
+Letta grew out of MemGPT. Its largest difference from Mem0 is not retrieval quality but system boundary.
+
+[`AgentState`](https://github.com/letta-ai/letta/blob/b76da9092518cbaa2d09042e52fdcbde69243e18/letta/schemas/agent.py), [`Memory`](https://github.com/letta-ai/letta/blob/b76da9092518cbaa2d09042e52fdcbde69243e18/letta/schemas/memory.py), [`Passage`](https://github.com/letta-ai/letta/blob/b76da9092518cbaa2d09042e52fdcbde69243e18/letta/schemas/passage.py), and [`agent_loop.py`](https://github.com/letta-ai/letta/blob/b76da9092518cbaa2d09042e52fdcbde69243e18/letta/agents/agent_loop.py) show that:
+
+- Memory blocks are part of agent state.
+- Messages, passages, tools, model configuration, and agent identity persist together.
+- A context-window calculator decides which state enters each turn.
+- The agent may modify its own memory through tools.
+- Server, API, ORM, and multi-agent groups live inside one runtime model.
+
+**Where the claim holds:**
+
+- It is genuinely a stateful agent platform, not a vector wrapper.
+- Memory, agent loop, tools, and context budgeting are integrated.
+- It fits long-running agents that actively maintain their own state.
+
+**The trade-off:**
+
+- You adopt an agent runtime, not only a memory library.
+- Model-managed writing expands the surface for prompt injection, bad writes, and permission errors.
+- A complete runtime can be more system than a narrow application needs.
+
+**Paradigm:** OS-style hierarchical and model-managed memory spanning working, episodic, and semantic state; tools, files, and skills carry more of the procedural layer.
+
+### 5.3 Graphiti: time and provenance are the product, not merely “a graph”
+
+Many knowledge-graph projects store `subject - predicate - object`. Graphiti differentiates itself through episode provenance and bitemporal relations.
+
+[`graphiti_core/edges.py`](https://github.com/getzep/graphiti/blob/2645dee20fd71797a61e1c6177a93cccd5584574/graphiti_core/edges.py) and [`graphiti.py`](https://github.com/getzep/graphiti/blob/2645dee20fd71797a61e1c6177a93cccd5584574/graphiti_core/graphiti.py) show:
+
+- Episodes preserve source input and provenance.
+- Entity nodes represent people, objects, organizations, and concepts.
+- Entity edges represent facts and relations.
+- `valid_at / invalid_at` describe when a fact is true in the world.
+- `created_at / expired_at` describe when the system learned and invalidated it.
+- Search recipes combine semantic search, BM25, graph traversal, and reranking.
+
+The model can therefore answer different questions:
+
+- What is true now?
+- What was true in March 2025?
+- When did the system learn that it changed?
+- Which episode produced this edge?
+
+**Where the claim holds:**
+
+- Time and provenance exist in the data model, not only in a prompt instruction.
+- The design is valuable for changing relations, multihop queries, and auditability.
+- Graph backends and search recipes have explicit abstractions.
+
+**Boundary:**
+
+- Open-source Graphiti is an engine, not a complete user/session/agent product.
+- Graph construction still relies on LLM extraction, so schema and model quality directly affect write correctness.
+
+**Paradigm:** temporal semantic memory with episodic provenance.
+
+### 5.4 LangMem: composable primitives rather than a memory server
+
+LangMem packages common memory operations into composable tools:
+
+- `manage_memory` and `search_memory` in the hot path.
+- A background manager for extraction, merging, and updates.
+- Profile and collection forms of semantic memory.
+- Procedural memory through prompt optimization from successful and failed trajectories.
+- Persistence through LangGraph `BaseStore`.
+
+The core implementation is visible in [`knowledge/extraction.py`](https://github.com/langchain-ai/langmem/blob/56d85939d80bb731bd5e237567148d817d7bfd16/src/langmem/knowledge/extraction.py) and [`prompts/optimization.py`](https://github.com/langchain-ai/langmem/blob/56d85939d80bb731bd5e237567148d817d7bfd16/src/langmem/prompts/optimization.py).
+
+**Where the claim holds:**
+
+- It supports both in-the-loop and background writing.
+- Procedural memory has a real prompt optimizer behind it.
+- Projects already using LangGraph get high composability.
+
+**Boundary:**
+
+- It is not an independent production database, user system, or agent server.
+- `InMemoryStore` examples disappear on restart; production needs Postgres or another durable `BaseStore`.
+- Consistency, permissions, deletion, and observability depend on the surrounding platform or custom implementation.
+
+**Paradigm:** memory primitives centered on semantic and procedural memory.
+
+### 5.5 Cognee: knowledge infrastructure rather than preference memory
+
+Cognee describes its product as converting raw data into AI memory. The mature code path resembles an ECL knowledge pipeline:
+
+```text
+add
+  → classify / chunk
+  → cognify (LLM entity and relation extraction)
+  → graph + vector + relational storage
+  → search / memify
+```
+
+[`cognify.py`](https://github.com/topoteretes/cognee/blob/88aa09b4e3289e3dbf12c0c090080920816e2fb7/cognee/api/v1/cognify/cognify.py) orchestrates the pipeline. The storage layer exposes graph and vector interfaces, while upper layers include datasets, users, roles, and ACLs.
+
+**Where the claim holds:**
+
+- Data ingestion, pipelines, and graph/vector/relational adapters are substantial.
+- It supports multiple search types, ontology work, and multi-tenant permissions.
+- It is attractive for durable knowledge built from documents, code, and enterprise data.
+
+**What to calibrate:**
+
+- Its strongest paradigm is semantic knowledge infrastructure.
+- A full cognify pipeline may be excessive for “remember that this user dislikes cilantro.”
+- It is more appropriate than a chat-memory SDK when sources are heterogeneous, relations matter, and access control is central.
+
+**Paradigm:** graph-structured semantic or organizational knowledge memory.
+
+### 5.6 MemoryOS: the clearest cognitive analogy, still a research-oriented implementation
+
+MemoryOS makes short-, mid-, and long-term tiers explicit:
+
+- Short-term memory stores recent question-answer pairs.
+- Capacity pressure migrates content into mid-term session segments.
+- Segments carry heat.
+- High heat triggers LLM updates to the user profile, user knowledge, and assistant knowledge.
+- A retriever searches mid-term pages and long-term knowledge before assembling the generation prompt.
+
+The path is readable in [`memoryos-pypi/memoryos.py`](https://github.com/BAI-LAB/MemoryOS/blob/587ed7755c7aed179965792830ff1b5ad9a6fa92/memoryos-pypi/memoryos.py).
+
+**Where the claim holds:**
+
+- Hierarchy, migration, heat, and consolidation are explicitly implemented.
+- It is useful for reproducing experiments on episodic-to-semantic consolidation.
+- The code is direct enough for researchers to modify strategies.
+
+**Code-level reality:**
+
+- The default implementation relies heavily on local JSON, SentenceTransformer, and LLM calls.
+- Similar modules remain across `memoryos-pypi`, `memoryos-playground`, `memoryos-chromadb`, and `memoryos-mcp`.
+- Transactions, concurrency, tenant isolation, unified schemas, migrations, monitoring, and fine-grained deletion require application work.
+
+That does not make the project “bad.” It means the deliverable is a research reference, not the same product category as a full platform.
+
+**Paradigm:** hierarchical episodic memory consolidated into profiles and semantic knowledge.
+
+---
+
+## 6. A Fair Comparison Uses Capability Surfaces, Not One Score
+
+| Capability | Mem0 | Letta | Graphiti | LangMem | Cognee | MemoryOS |
+|---|---|---|---|---|---|---|
+| Current task state | External runtime | **Core capability** | Not central | LangGraph | Not central | Partially covered by short-term tier |
+| Episodic events | Application may retain them; core favors distilled facts | Messages / passages | **Episodes are first-class** | Schema-based extraction | Can ingest | **Core short/mid-term layer** |
+| Semantic facts / profile | **Core capability** | Memory blocks | Entity/fact graph | **Core capability** | **Core capability** | Long-term layer |
+| Procedural memory | Agent/procedural paths exist but are not the center | Tools / files / skills | Not central | **Prompt optimizer** | Extensible through rules / memify | Not central |
+| Temporal conflict | Extraction and metadata policy | Agent/application policy | **Native bitemporal model** | Schema/manager policy | Temporal search depends on model | Profile merging and heat migration |
+| Replaceable storage | **Strong** | Platform persistence model | Replaceable graph backend | Replaceable `BaseStore` | **Strong graph/vector/relational adapters** | Multiple distributions |
+| Full agent runtime | No | **Yes** | No | No | No | Research runtime with generation |
+| Natural use | Add memory APIs to an existing app | Build a long-lived stateful agent | Add time-aware graphs for changing relations | Compose memory policy in LangGraph | Build organizational knowledge memory | Research and reproduce experiments |
+
+Bold indicates where a project concentrates complexity, not universal superiority.
+
+### Why benchmarks cannot replace architecture
+
+Benchmarks such as LoCoMo and LongMemEval are valuable, but they mostly test whether an answer uses conversation history. Production systems also face:
+
+- **Bad writes:** an LLM stores an inference as a user fact.
+- **Memory inflation:** every turn produces repeated low-value records.
+- **Stale resurrection:** an expired but semantically similar fact ranks highly.
+- **Cross-user leakage:** a scope or filter is missing.
+- **Memory poisoning:** external content persuades an agent to persist malicious instructions.
+- **Incomplete deletion:** summaries, vectors, graph edges, and caches survive source deletion.
+- **Weak explainability:** the answer cannot identify which memory influenced it.
+- **Runaway cost:** extraction, embeddings, reranking, and graph construction accumulate every turn.
+
+A system can win LoCoMo and still be unsuitable for healthcare, finance, or multi-tenant SaaS.
+
+---
+
+## 7. Choosing a Memory Paradigm
+
+### Scenario A: coding agents, personal tools, and a few hundred stable rules
+
+Start with:
+
+```text
+Markdown / JSON
+  + explicit namespaces
+  + Git history
+  + BM25 or simple full-text search
+```
+
+Files are readable, diffable, and reviewable. File memory is not an outdated vector database. For small datasets with exact terminology and rules that must load deterministically, it is often more reliable.
+
+Add embeddings only when cross-language paraphrase or thousands of records make lexical retrieval insufficient.
+
+### Scenario B: chat assistants, support, and light personalization
+
+Start with a Mem0- or LangMem-style path:
+
+```text
+conversation
+  → write gate
+  → fact / profile extraction
+  → user-scoped store
+  → semantic retrieval
+```
+
+The vector database is not the first design choice. Decide:
+
+- What must never be written?
+- Can the user inspect and delete it?
+- How do new preferences supersede old ones?
+- When uncertain, should the system preserve only the raw episode?
+
+### Scenario C: long-lived autonomy and model-managed state
+
+Use a Letta-style runtime when agent identity, memory blocks, message persistence, context budgeting, tool permissions, and the agent loop must work as one system.
+
+### Scenario D: changing facts and historical-state questions
+
+Use a Graphiti-style temporal graph when questions include:
+
+- Which contract version applied previously?
+- When did a person move from Team A to Team B?
+- Which version of a fact was known when a decision was made?
+
+Increasing top-k from 5 to 20 does not solve temporal truth.
+
+### Scenario E: enterprise documents, heterogeneous sources, relations, and permissions
+
+Use a Cognee-style knowledge pipeline, or build a graph + vector + SQL layer on an existing data platform.
+
+Here memory means continuously updated, searchable, permissioned organizational knowledge—not merely conversational recall.
+
+### Scenario F: research on hierarchy, heat, consolidation, and forgetting
+
+MemoryOS is a readable experimental baseline. A paper-oriented reference implementation should not be treated as a high-concurrency multi-tenant service without substantial engineering.
+
+---
+
+## 8. A Production-Ready Agent Memory Layer
+
+The earlier figures define concepts and compare projects. This one is the **implementation blueprint**. Read it from top to bottom: the top row is the online read/write path for one request; the middle row separates persistence by memory type; the bottom row covers source lineage, consolidation, conflict revision, and deletion. It is not a mandatory component list. Its job is to make sure a production design assigns every critical lifecycle responsibility.
+
+![A production agent-memory layer spanning writing, typed stores, retrieval, filtering, and maintenance](/images/posts/llm-memory-research/production-memory-blueprint-v4-en-4k.png)
+
+*Figure 6. This turns the article’s conclusions into an implementation checklist. Production memory is not one vector store; it is an entire layer from raw events and write gating through recall, permission filtering, context assembly, and background governance.*
+
+### 8.1 Separate raw events from derived memory
+
+```text
+event_log (immutable, auditable)
+  ├─ conversation
+  ├─ tool_result
+  ├─ user_correction
+  └─ environment_observation
+
+derived_memory (mutable, invalidatable)
+  ├─ profile_fact
+  ├─ episodic_summary
+  ├─ entity_relation
+  ├─ procedure
+  └─ policy
+```
+
+Every derived record should retain `source_event_ids`. When source data is deleted, the system can identify which summaries, embeddings, and graph edges must be rebuilt or revoked.
+
+### 8.2 Put the write gate before embedding
+
+At minimum, the gate decides:
+
+- Is this relevant to a future task?
+- Is it an explicit fact or a model inference?
+- Does it contain sensitive data?
+- Did the user authorize persistence?
+- Does it already exist?
+- Should it become an episode, fact, relation, procedure, or policy?
+
+**Every stored memory is a tax on every future retrieval.**
+
+### 8.3 Use different keys and retrieval for different memory types
+
+| Type | Recommended key | Primary retrieval |
+|---|---|---|
+| Profile fact | `tenant/user/fact_type` | Exact key + version |
+| Episode | `tenant/user/time/event_id` | Temporal filter + hybrid search |
+| Relation | Entity IDs + relation type + validity | Graph query + time |
+| Procedure | Task signature + version | Routing + semantic recall |
+| Policy | Scope + priority + version | Deterministic mounting |
+
+One embedding collection is not a substitute for schema design.
+
+### 8.4 Make time and provenance first-class fields
+
+A minimal record should include:
+
+```yaml
+id:
+tenant_id:
+subject_id:
+memory_type:
+content:
+source_event_ids:
+confidence:
+valid_from:
+valid_to:
+created_at:
+expired_at:
+supersedes:
+access_scope:
+```
+
+Use a Graphiti-style bitemporal model when facts change frequently. For simpler facts, at least retain `valid_from / valid_to / supersedes`.
+
+### 8.5 Read through candidate generation, filtering, and assembly
+
+A robust read path looks like:
+
+```text
+query
+  → scope / ACL filter
+  → exact + BM25 + vector + graph candidates
+  → recency / importance / validity rerank
+  → contradiction check
+  → token-budget packing
+  → provenance-preserving context
+```
+
+Similarity is only one signal.
+
+### 8.6 Run consolidation and forgetting in the background
+
+Background jobs can:
+
+- Cluster similar episodes.
+- Extract stable facts.
+- Update profiles.
+- Generate procedures.
+- Mark superseded facts.
+- Decay low-value material.
+- Apply TTL and user deletion.
+- Rebuild affected indexes.
+
+The online path should perform only essential fast writes rather than paying the full LLM cost on every turn.
+
+### 8.7 Evaluate task outcomes, not only memory QA
+
+Track at least:
+
+- **Write precision:** how many records were genuinely worth keeping?
+- **Stale recall rate:** how many retrieved records were no longer valid?
+- **Provenance coverage:** how many memory-influenced answers identify source events?
+- **Cross-tenant leakage:** this must be zero.
+- **Deletion completeness:** does derived state remain after deletion?
+- **Task success delta:** did memory improve actual completion?
+- **Token, latency, and cost:** what is the marginal cost of one useful memory?
+
+---
+
+## 9. Where Agent Memory Is Heading
+
+No single “most brain-like” project is likely to dominate soon. A more plausible convergence has three layers:
+
+1. **Runtime:** current task, agent identity, tool permissions, and context.
+2. **Memory service:** events, facts, relations, skills, time, provenance, and deletion.
+3. **Model:** longer context, stronger test-time learning, and possibly architectural memory modules.
+
+The stable interface will not remain `vector_db.search(text)`. It will look more like:
+
+```text
+remember(event, policy)
+recall(query, scope, time, budget)
+revise(memory, evidence)
+forget(subject, reason)
+explain(memory_id)
+```
+
+Human memory science spent more than a century moving from “where is memory stored?” to “how do multiple systems reconstruct the past during retrieval?” Agent memory engineering is undergoing the same conceptual upgrade:
+
+> **The useful question is no longer whether an agent has memory. It is what change the agent preserves, why it preserves it, when it recalls it, how it revises it, and who has the authority to make it forget.**
+
+---
+
+## Primary Sources and Pinned Code Entrypoints
+
+### Human memory science
+
+- [Ebbinghaus — *Memory: A Contribution to Experimental Psychology*](https://psychclassics.yorku.ca/Ebbinghaus/)
+- [Müller & Pilzecker — *Experimentelle Beiträge zur Lehre vom Gedächtniss*](https://books.google.com/books?id=5RdCAQAAMAAJ)
+- [Scoville & Milner — the H.M. case](https://pmc.ncbi.nlm.nih.gov/articles/PMC497229/)
+- [Baddeley & Hitch — Working Memory](https://doi.org/10.1016/S0079-7421%2808%2960452-1)
+- [2014 Nobel Prize — place cells and grid cells](https://www.nobelprize.org/prizes/medicine/2014/advanced-information/)
+- [Nader, Schafe & LeDoux — Reconsolidation](https://pubmed.ncbi.nlm.nih.gov/10963596/)
+- [Liu et al. — Optogenetic activation of a hippocampal engram](https://pmc.ncbi.nlm.nih.gov/articles/PMC3331914/)
+
+### Agent-memory papers
+
+- [Neural Turing Machines](https://arxiv.org/abs/1410.5401)
+- [Retrieval-Augmented Generation](https://arxiv.org/abs/2005.11401)
+- [Generative Agents](https://arxiv.org/abs/2304.03442)
+- [Voyager](https://arxiv.org/abs/2305.16291)
+- [CoALA](https://arxiv.org/abs/2309.02427)
+- [MemGPT](https://arxiv.org/abs/2310.08560)
+- [Lost in the Middle](https://arxiv.org/abs/2307.03172)
+
+### Pinned code-audit entrypoints
+
+- [Mem0 `memory/main.py` @ `9c2d622`](https://github.com/mem0ai/mem0/blob/9c2d6222ce86bf6a73ae7ca97464a8e1a55ab3ca/mem0/memory/main.py)
+- [Letta `schemas/memory.py` @ `b76da90`](https://github.com/letta-ai/letta/blob/b76da9092518cbaa2d09042e52fdcbde69243e18/letta/schemas/memory.py)
+- [Graphiti `graphiti_core/edges.py` @ `2645dee`](https://github.com/getzep/graphiti/blob/2645dee20fd71797a61e1c6177a93cccd5584574/graphiti_core/edges.py)
+- [LangMem `knowledge/extraction.py` @ `56d8593`](https://github.com/langchain-ai/langmem/blob/56d85939d80bb731bd5e237567148d817d7bfd16/src/langmem/knowledge/extraction.py)
+- [Cognee `cognify.py` @ `88aa09b`](https://github.com/topoteretes/cognee/blob/88aa09b4e3289e3dbf12c0c090080920816e2fb7/cognee/api/v1/cognify/cognify.py)
+- [MemoryOS `memoryos.py` @ `587ed77`](https://github.com/BAI-LAB/MemoryOS/blob/587ed7755c7aed179965792830ff1b5ad9a6fa92/memoryos-pypi/memoryos.py)
+
+---
+
+*Audit date: 2026-07-30. Open-source repositories change quickly, so architectural claims link to pinned commits. Project marketing is used only to describe self-positioning, not as evidence about implementation.*
