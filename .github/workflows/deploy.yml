@@ -35,6 +35,13 @@ jobs:
       - name: Build
         run: hugo --minify
 
+      - name: Validate llms.txt indexes
+        run: |
+          test -s public/llms.txt
+          test -s public/en/llms.txt
+          grep -q "https://zhuoqidev.com/posts/" public/llms.txt
+          grep -q "https://zhuoqidev.com/en/posts/" public/en/llms.txt
+
       - name: Cache public dir
         uses: actions/cache/save@v4
         with:
