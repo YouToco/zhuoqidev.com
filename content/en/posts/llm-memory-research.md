@@ -1,7 +1,8 @@
 ---
 title: "How Agents Remember You: Human Memory Science and a Code Audit of Six Open-Source Systems"
 description: "From Ebbinghaus, H.M., working memory, and engrams to Mem0, Letta, Graphiti, LangMem, Cognee, and MemoryOS: a history of memory paradigms and a code-level comparison of what open-source agent memory systems actually implement."
-date: 2026-05-04
+date: 2026-07-30
+publishDate: 2026-07-30
 lastmod: 2026-07-30
 tags: ["AI Agent", "LLM", "Memory", "Memory Systems", "Cognitive Science", "Open-Source Architecture"]
 categories: ["Deep Dives"]
@@ -12,7 +13,10 @@ Almost every agent project now claims to provide “long-term memory.”
 
 For one project, that means embedding chat history. For another, it means maintaining a user profile. A third lets the model edit Markdown files. A fourth builds a bitemporal knowledge graph. All four use the word *memory*, but they are not the same system and should not be placed on one undifferentiated leaderboard.
 
-![From biological memory traces to an agent memory stack](/images/posts/llm-memory-research/agent-memory-cover-v3-4k.png)
+{{< figure
+  src="/images/posts/llm-memory-research/agent-memory-cover-v3-4k.png"
+  alt="From biological memory traces to an agent memory stack"
+>}}
 
 To decide whether a system genuinely remembers, I would rather ask three questions:
 
@@ -22,13 +26,17 @@ To decide whether a system genuinely remembers, I would rather ask three questio
 
 This article starts from those questions. The first half places the history of human memory science beside the evolution of agent memory. The second half reads the code behind Mem0, Letta, Graphiti, LangMem, Cognee, and MemoryOS, comparing their claims, actual data paths, system boundaries, and memory paradigms.
 
-> **The short version:** mainstream agents have not acquired a single, brain-like “memory organ.” What works in engineering is a lifecycle: **experience → write gate → representation → storage → retrieval → context assembly → action and feedback → consolidation / revision / forgetting**. Open-source projects differ mainly in which parts of this loop they choose to own.
+{{< alert icon="lightbulb" >}}
+**The short version:** mainstream agents have not acquired a single, brain-like “memory organ.” What works in engineering is a lifecycle: **experience → write gate → representation → storage → retrieval → context assembly → action and feedback → consolidation / revision / forgetting**. Open-source projects differ mainly in which parts of this loop they choose to own.
+{{< /alert >}}
 
 The first diagram is not the component architecture of a particular product. It is the **shared coordinate system** for the rest of the article. Its question is not merely “where is data stored?” but “how does a past experience alter a future action?” First follow the seven-step loop in the center from experience to action. Then use the three carriers on the left to distinguish the current task, cross-session memory, and real-world state. The cards on the right explain each transformation, while the bottom row shows consolidation, revision, and forgetting over the system’s lifetime. This prevents databases, context, caches, and source-of-truth state from all being mislabeled as “memory.”
 
-![A scientific systems map of Agent memory: seven loop stages, three carriers, and three governance outcomes](/images/posts/llm-memory-research/memory-loop-systems-map-v3-en-4k.png)
-
-*Figure 1. This establishes the article’s working definition of a memory system. The central loop shows the online behavior path, the left column separates working memory, long-term memory, and world state, and the bottom row shows lifecycle governance. A database owns only step four; without write decisions, retrieval, context assembly, conflict handling, and feedback, more storage is merely more logging.*
+{{< figure
+  src="/images/posts/llm-memory-research/memory-loop-systems-map-v3-en-4k.png"
+  alt="A scientific systems map of Agent memory: seven loop stages, three carriers, and three governance outcomes"
+  caption="Figure 1. This establishes the article’s working definition of a memory system. The central loop shows the online behavior path, the left column separates working memory, long-term memory, and world state, and the bottom row shows lifecycle governance. A database owns only step four; without write decisions, retrieval, context assembly, conflict handling, and feedback, more storage is merely more logging."
+>}}
 
 ---
 
@@ -38,9 +46,11 @@ An LLM system contains at least five physically distinct state carriers. They di
 
 This diagram exists to **disambiguate the vocabulary**. Read across to compare the five carriers, then down through writer, lifetime, strengths, and limitations. The goal is not to pick one universal winner. It is to prevent architectural category errors: treating a compute cache as durable memory, treating context as persistence, or copying real business state into a natural-language recollection that can go stale.
 
-![Model weights, context, KV cache, external memory, and world state compared](/images/posts/llm-memory-research/memory-carriers-v4-en-4k.png)
-
-*Figure 2. This answers where state actually lives. Five different things share the word memory, and one of the most dangerous design mistakes is treating two of them as interchangeable.*
+{{< figure
+  src="/images/posts/llm-memory-research/memory-carriers-v4-en-4k.png"
+  alt="Model weights, context, KV cache, external memory, and world state compared"
+  caption="Figure 2. This answers where state actually lives. Five different things share the word memory, and one of the most dangerous design mistakes is treating two of them as interchangeable."
+>}}
 
 ### 1.1 Parametric memory: model weights
 
@@ -92,9 +102,11 @@ Comparing a vector database to the hippocampus or context to working memory can 
 
 The historical diagram is not background decoration. It explains why this article rejects the model “memory = storage.” You do not need to memorize every date. Follow the three conceptual shifts at the bottom: from one warehouse, to separable systems, to a dynamic process reconstructed during retrieval. The later discussion of episodes, facts, procedures, consolidation, and revision follows directly from that progression.
 
-![A history of human memory science, from the forgetting curve to engrams](/images/posts/llm-memory-research/human-memory-history-v4-en-4k.png)
-
-*Figure 3. This explains the origin of the article’s memory paradigm. Research gradually replaced the idea of one storage location with multiple systems that jointly encode, consolidate, retrieve, and reconstruct.*
+{{< figure
+  src="/images/posts/llm-memory-research/human-memory-history-v4-en-4k.png"
+  alt="A history of human memory science, from the forgetting curve to engrams"
+  caption="Figure 3. This explains the origin of the article’s memory paradigm. Research gradually replaced the idea of one storage location with multiple systems that jointly encode, consolidate, retrieve, and reconstruct."
+>}}
 
 ### 1885: Ebbinghaus made memory measurable
 
@@ -204,9 +216,11 @@ The analogy must stop there. The hippocampus is not Redis. Vector similarity is 
 
 The human-memory timeline explains why we ask these questions. The agent timeline explains why current systems have their present shape. The important feature is not the list of model names but the migration of the state boundary: from programs and network dynamics, to context, to retrieved external data, and finally to a dedicated memory layer that owns writing, time, permissions, and deletion.
 
-![The evolution of agent memory from symbolic state and LSTM to memory engineering](/images/posts/llm-memory-research/agent-memory-history-v4-en-4k.png)
-
-*Figure 4. This locates the current engineering stage. Competition has shifted from “can state be preserved?” to “what gets written, when is it recalled, how is it revised, and who may delete it?”*
+{{< figure
+  src="/images/posts/llm-memory-research/agent-memory-history-v4-en-4k.png"
+  alt="The evolution of agent memory from symbolic state and LSTM to memory engineering"
+  caption="Figure 4. This locates the current engineering stage. Competition has shifted from “can state be preserved?” to “what gets written, when is it recalled, how is it revised, and who may delete it?”"
+>}}
 
 ### Stage 1: state lived in programs
 
@@ -278,9 +292,11 @@ This audit is anchored to repository states visible on 2026-07-30 and examines s
 
 The next diagram is a **selection map**, not a logo wall or an overall score. Read each row from left to right: public claim, observed code path, system boundary, and memory paradigm. That makes it possible to distinguish an SDK, runtime, temporal graph engine, framework toolkit, knowledge pipeline, and research implementation before committing to the detailed audit.
 
-![System boundaries and memory paradigms across six open-source agent-memory projects](/images/posts/llm-memory-research/open-source-memory-architectures-v4-en-4k.png)
-
-*Figure 5. This shortens the project-selection path rather than naming an overall winner. A full runtime is heavier; a small toolkit is easier to embed. The important question is whether the boundary matches the desired memory paradigm.*
+{{< figure
+  src="/images/posts/llm-memory-research/open-source-memory-architectures-v4-en-4k.png"
+  alt="System boundaries and memory paradigms across six open-source agent-memory projects"
+  caption="Figure 5. This shortens the project-selection path rather than naming an overall winner. A full runtime is heavier; a small toolkit is easier to embed. The important question is whether the boundary matches the desired memory paradigm."
+>}}
 
 ### Summary: claims, code paths, and memory paradigms
 
@@ -326,7 +342,9 @@ The core operation is not raw chat storage. It is **LLM-driven distillation of c
 - LLM extraction can omit, misattribute, or overgeneralize at write time.
 - Vector similarity does not answer complex historical-truth questions by itself.
 
+{{< alert icon="circle-info" >}}
 **Paradigm:** an external memory layer centered on semantic memory.
+{{< /alert >}}
 
 ### 5.2 Letta: memory as the state model of an agent runtime
 
@@ -352,7 +370,9 @@ Letta grew out of MemGPT. Its largest difference from Mem0 is not retrieval qual
 - Model-managed writing expands the surface for prompt injection, bad writes, and permission errors.
 - A complete runtime can be more system than a narrow application needs.
 
+{{< alert icon="circle-info" >}}
 **Paradigm:** OS-style hierarchical and model-managed memory spanning working, episodic, and semantic state; tools, files, and skills carry more of the procedural layer.
+{{< /alert >}}
 
 ### 5.3 Graphiti: time and provenance are the product, not merely “a graph”
 
@@ -385,7 +405,9 @@ The model can therefore answer different questions:
 - Open-source Graphiti is an engine, not a complete user/session/agent product.
 - Graph construction still relies on LLM extraction, so schema and model quality directly affect write correctness.
 
+{{< alert icon="circle-info" >}}
 **Paradigm:** temporal semantic memory with episodic provenance.
+{{< /alert >}}
 
 ### 5.4 LangMem: composable primitives rather than a memory server
 
@@ -411,7 +433,9 @@ The core implementation is visible in [`knowledge/extraction.py`](https://github
 - `InMemoryStore` examples disappear on restart; production needs Postgres or another durable `BaseStore`.
 - Consistency, permissions, deletion, and observability depend on the surrounding platform or custom implementation.
 
+{{< alert icon="circle-info" >}}
 **Paradigm:** memory primitives centered on semantic and procedural memory.
+{{< /alert >}}
 
 ### 5.5 Cognee: knowledge infrastructure rather than preference memory
 
@@ -439,7 +463,9 @@ add
 - A full cognify pipeline may be excessive for “remember that this user dislikes cilantro.”
 - It is more appropriate than a chat-memory SDK when sources are heterogeneous, relations matter, and access control is central.
 
+{{< alert icon="circle-info" >}}
 **Paradigm:** graph-structured semantic or organizational knowledge memory.
+{{< /alert >}}
 
 ### 5.6 MemoryOS: the clearest cognitive analogy, still a research-oriented implementation
 
@@ -467,7 +493,9 @@ The path is readable in [`memoryos-pypi/memoryos.py`](https://github.com/BAI-LAB
 
 That does not make the project “bad.” It means the deliverable is a research reference, not the same product category as a full platform.
 
+{{< alert icon="circle-info" >}}
 **Paradigm:** hierarchical episodic memory consolidated into profiles and semantic knowledge.
+{{< /alert >}}
 
 ---
 
@@ -569,9 +597,11 @@ MemoryOS is a readable experimental baseline. A paper-oriented reference impleme
 
 The earlier figures define concepts and compare projects. This one is the **implementation blueprint**. Read it from top to bottom: the top row is the online read/write path for one request; the middle row separates persistence by memory type; the bottom row covers source lineage, consolidation, conflict revision, and deletion. It is not a mandatory component list. Its job is to make sure a production design assigns every critical lifecycle responsibility.
 
-![A production agent-memory layer spanning writing, typed stores, retrieval, filtering, and maintenance](/images/posts/llm-memory-research/production-memory-blueprint-v4-en-4k.png)
-
-*Figure 6. This turns the article’s conclusions into an implementation checklist. Production memory is not one vector store; it is an entire layer from raw events and write gating through recall, permission filtering, context assembly, and background governance.*
+{{< figure
+  src="/images/posts/llm-memory-research/production-memory-blueprint-v4-en-4k.png"
+  alt="A production agent-memory layer spanning writing, typed stores, retrieval, filtering, and maintenance"
+  caption="Figure 6. This turns the article’s conclusions into an implementation checklist. Production memory is not one vector store; it is an entire layer from raw events and write gating through recall, permission filtering, context assembly, and background governance."
+>}}
 
 ### 8.1 Separate raw events from derived memory
 
@@ -704,7 +734,9 @@ explain(memory_id)
 
 Human memory science spent more than a century moving from “where is memory stored?” to “how do multiple systems reconstruct the past during retrieval?” Agent memory engineering is undergoing the same conceptual upgrade:
 
-> **The useful question is no longer whether an agent has memory. It is what change the agent preserves, why it preserves it, when it recalls it, how it revises it, and who has the authority to make it forget.**
+{{< alert icon="lightbulb" >}}
+**The useful question is no longer whether an agent has memory. It is what change the agent preserves, why it preserves it, when it recalls it, how it revises it, and who has the authority to make it forget.**
+{{< /alert >}}
 
 ---
 
