@@ -2,6 +2,7 @@
 title: "How to Choose an LLM Inference Engine — A 2026 Map from Local Single-GPU to PD Disaggregation"
 description: "Aliyun's four-engine table — Ollama / vLLM / SGLang / HF Pipeline — is no longer enough in 2026. This piece re-maps inference engines into three tiers (Local → High-Performance Serving → Distributed/Disaggregated), covering 8 mainstream engines plus three new trends — PD disaggregation, speculative decoding, and FP4 quantization — with a decision matrix and a decision tree."
 date: 2026-07-19
+lastmod: 2026-07-30
 tags: ["LLM", "Inference Engine", "vLLM", "SGLang", "Model Serving", "Inference Optimization", "Selection Guide", "Research"]
 categories: ["Deep Dives"]
 showToc: true
@@ -11,7 +12,17 @@ Aliyun's CAP has a piece on picking an inference engine that narrows the field t
 
 By 2026, it's missing half the map. NVIDIA's TensorRT-LLM has completed its "PyTorch-ification," SGLang became famous as the first open-source project to reproduce DeepSeek's large-scale deployment, Hugging Face slapped a "maintenance mode" banner on TGI and told you to switch to vLLM — and the real throughline of the entire 2025 inference landscape can be summed up in one word: **disaggregate**.
 
+{{< lead >}}
 This article updates that map to mid-2026. It won't tell you which product to buy — **it gives you a tiered framework, a decision matrix, and a decision tree so you can narrow the field to 1–2 candidates yourself.**
+{{< /lead >}}
+
+The first diagram prevents the most common comparison error: Ollama, KTransformers, and vLLM do not solve the same layer of the problem. Classify the deployment as local, hybrid offload, or high-performance serving before comparing throughput, model formats, and hardware support within that layer.
+
+{{< figure
+  src="/images/posts/llm-inference-engine-selection/three-layer-inference-map-bilingual-v3-4k.png"
+  alt="A three-layer map of LLM inference engines in 2026"
+  caption="Three-layer inference map: L1 optimizes for running anywhere and simple setup; L1.5 trades host RAM for VRAM; L2 optimizes for concurrency, throughput, and multi-GPU serving. This is a classification framework, not an overall ranking."
+>}}
 
 ---
 
@@ -198,6 +209,14 @@ The landmark event is **OpenAI's gpt-oss (2025) shipping directly in MXFP4** —
 ## The Three New Trends Aliyun's Original Skipped
 
 This is where this article adds the most over the original. The real 2025 progress in inference engines lives entirely in these three things.
+
+The next diagram explains the trend most often compressed into a single phrase: **Prefill–Decode disaggregation**. Prefill and Decode serve one request but are constrained by different objectives—throughput and tail latency—so separate resource pools can scale and schedule them independently.
+
+{{< figure
+  src="/images/posts/llm-inference-engine-selection/prefill-decode-disaggregation-bilingual-v2-4k.png"
+  alt="A distributed inference architecture that separates Prefill and Decode"
+  caption="Prefill–Decode disaggregation: a compute-heavy Prefill pool processes long prompts and produces KV Cache; a latency-sensitive Decode pool takes over token-by-token generation. KV transfer connects the stages while their autoscaling goals remain independent."
+>}}
 
 ### Trend 1: PD Disaggregation — The Architectural Throughline of 2025
 

@@ -2,6 +2,7 @@
 title: "用 Hugo 和双栈 CDN 搭建个人网站"
 description: "记录如何用 Hugo + Blowfish，通过阿里云 OSS/CDN（国内）+ Cloudflare Pages（国际）实现双栈加速，备案、DNS 分线路解析一次走通。"
 date: 2026-05-04
+lastmod: 2026-07-30
 aliases: ["/posts/hello-world/"]
 tags: ["Hugo", "阿里云", "Cloudflare", "CDN", "ICP备案"]
 categories: ["折腾记录"]
@@ -12,6 +13,10 @@ cover:
   alt: "ZhuoQi Dev 网站架构"
 ---
 
+{{< lead >}}
+同一份 Hugo 静态产物，同时发布到阿里云 OSS/CDN 与 Cloudflare Pages，再由 DNS 分线路把国内外访问导向不同边缘网络。
+{{< /lead >}}
+
 ## 为什么选 Hugo
 
 做个人博客选框架，我的第一标准是**维护成本低**——不想三个月后因为 npm 依赖地狱放弃写作。
@@ -20,22 +25,13 @@ Hugo 是单二进制文件，无需 Node.js，构建几千篇文章只需 1-2 �
 
 ## 整体架构
 
-```
-                  ┌─────────────────────────────┐
-                  │       DNS 分线路解析          │
-                  │   (阿里云云解析 GeoDB)        │
-                  └──────┬──────────────┬────────┘
-                         │              │
-              国内访客    ▼    国际访客  ▼
-          ┌──────────────────┐  ┌─────────────────┐
-          │  阿里云 CDN      │  │ Cloudflare Pages │
-          │  ↓               │  │  (免费，全球CDN) │
-          │  阿里云 OSS      │  └─────────────────┘
-          │  (静态托管)      │
-          └──────────────────┘
-                  ↑
-        GitHub Actions 自动构建 & 双栈推送
-```
+这张图同时画出两条不同的路径：从 Git Push 向下看是**发布路径**，国内外访客经 GeoDNS 进入各自 CDN 则是**请求路径**。两边必须来自同一次构建，才能避免内容版本漂移。
+
+{{< figure
+  src="/images/posts/hugo-dual-cdn-blog/dual-cdn-publishing-bilingual-v1-4k.png"
+  alt="Hugo 网站同时发布到阿里云和 Cloudflare 的双栈架构"
+  caption="Hugo 双栈发布：GitHub Actions 只构建一次，产物分别上传到阿里云 OSS/CDN 与 Cloudflare Pages；GeoDNS 决定用户走哪条访问路径，而提交版本保持一致。"
+>}}
 
 这套方案全年花费约 ¥212：
 - 域名 `zhuoqidev.com`：¥85/年（已买 3 年）

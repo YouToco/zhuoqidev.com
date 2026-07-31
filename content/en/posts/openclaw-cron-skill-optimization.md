@@ -2,6 +2,7 @@
 title: "OpenClaw in Practice: One File Path Eliminated 84% of Tool Calls — A Cron Job Debugging Story"
 description: "OpenClaw's daily-ai-news cron job kept timing out. The root cause wasn't a weak model, bloated prompt, or upstream API failure — it was a missing absolute path in the SKILL.md, causing the Agent to spend 15 exec calls searching for a tool's location every run. Message count ballooned from 54 to 165, tool results from 204KB to 1.1MB. This is the full debugging story."
 date: 2026-06-20
+lastmod: 2026-07-30
 tags: ["OpenClaw", "AI Agent", "Cron Job", "SKILL.md", "Prompt Engineering", "Performance"]
 categories: ["Agent Engineering"]
 series: ["OpenClaw Production Notes"]
@@ -12,7 +13,17 @@ showToc: true
 ShowReadingTime: true
 ---
 
-> This is the third post in the [OpenClaw Production Notes](/series/openclaw-production-notes/) series. [The first](/posts/openclaw-pitfalls/) covered compaction silently swallowing replies, [the second](/posts/openclaw-memory-text-to-vector/) covered the memory system running fine without vector search and fixing it with NVIDIA's free API. This one is about a more mundane but higher-impact problem: **what happens when your AI Agent doesn't know where its tools are?**
+{{< alert icon="circle-info" >}}
+This is the third post in the [OpenClaw Production Notes](/series/openclaw-production-notes/) series. [The first](/posts/openclaw-pitfalls/) covered compaction silently swallowing replies, [the second](/posts/openclaw-memory-text-to-vector/) covered the memory system running fine without vector search and fixing it with NVIDIA's free API. This one is about a more mundane but higher-impact problem: **what happens when your AI Agent doesn't know where its tools are?**
+{{< /alert >}}
+
+The before/after diagram establishes the complete causal chain. The model was not “stupid”; a vague instruction forced it to explore directories repeatedly. One absolute path collapsed the action space, reducing messages, searches, and execution calls at the same time.
+
+{{< figure
+  src="/images/posts/openclaw-cron-skill-optimization/outer-loop-path-before-after-bilingual-v1-4k.png"
+  alt="The OpenClaw cron job Outer Loop before and after an explicit path"
+  caption="One path changed the whole loop: messages fell 165→54, exec calls 44→7, and location searches 15→1. The optimization removes repeated tool discovery rather than merely making one tool call faster."
+>}}
 
 ## Symptom: Cron Job Keeps Timing Out
 

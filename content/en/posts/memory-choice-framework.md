@@ -2,16 +2,27 @@
 title: "RAG vs LLM Wiki vs Plain Text — A Decision Framework for Agent Long-Term Memory"
 description: "Cost, latency, accuracy, and maintainability trade-offs across three Agent memory approaches: RAG, structured knowledge bases, and plain-text context memory. Includes decision tree."
 date: 2026-05-11
+lastmod: 2026-07-30
 tags: ["AI Agent", "Memory", "RAG", "Context Engineering"]
 categories: ["Agent Engineering"]
 showToc: true
 ---
 
+{{< lead >}}
 Every Agent builder hits this question eventually: *where do I store user data so the agent remembers it next session?*
+{{< /lead >}}
 
 Three approaches dominate the landscape: RAG (vector retrieval), LLM Wiki (structured knowledge injection), and plain-text context memory (the CLAUDE.md / Cursor Rules pattern). Each has vocal advocates. But picking wrong is expensive — do RAG too light and it's a noise generator; do plain text too heavy and it's a token incinerator.
 
 Here's a decision framework you can use today.
+
+Start with the system boundaries. The important distinction is not the database brand; it is **when retrieval happens, how much content enters context, and who owns writing and maintenance**.
+
+{{< figure
+  src="/images/posts/memory-choice-framework/three-memory-paths-bilingual-v1-4k.png"
+  alt="A comparison of RAG, LLM Wiki, and plain-text context memory"
+  caption="Three memory paths: RAG retrieves on demand from large heterogeneous collections; an LLM Wiki emphasizes structure and auditability; plain text fits a small set of high-value rules that need deterministic injection. No path dominates every dimension."
+>}}
 
 ---
 

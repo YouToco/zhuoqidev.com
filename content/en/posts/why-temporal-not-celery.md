@@ -2,16 +2,27 @@
 title: "Why We Moved from Celery to Temporal for Production Agent Pipelines"
 description: 'Agent pipelines are not ordinary async tasks — they have state, they get stuck, they need replay debugging, and one failure must not sink the entire batch. We hit every one of these walls with Celery before understanding that Temporal solves a fundamentally different problem.'
 date: 2026-05-16
+lastmod: 2026-07-30
 tags: ["Agent Engineering", "Temporal", "Celery", "Workflow Engine", "Production", "Backend", "Python"]
 categories: ["Agent Engineering"]
 showToc: true
 ---
 
+{{< lead >}}
 In April 2026, we migrated seo-project's task queue from Celery to Temporal. We dropped exactly one dependency (`celery`), wrote 11 new files (`src/infrastructure/temporal/`), and renamed our containers from `api/worker/beat` to `api/temporal_worker_blue/green` with blue-green deployment.
+{{< /lead >}}
 
 The most common question afterward: **why not just keep using Celery? If it's already running, what's the point?**
 
 This article is the answer. It doesn't come from documentation comparisons. It comes from production bugs we hit running Agent pipelines at scale.
+
+The diagram first separates the **problem layers**. Celery hands work to workers; Temporal also records event history so a multi-stage workflow can recover from the failure point. The migration was not about replacing a queue with a faster queue. It was about gaining a replayable state machine.
+
+{{< figure
+  src="/images/posts/why-temporal-not-celery/celery-vs-temporal-bilingual-v1-4k.png"
+  alt="Execution semantics of a Celery task queue versus a Temporal durable workflow"
+  caption="Celery and Temporal: the former excels at distributing independent async tasks; the latter adds event history, checkpoints, and replay for long-running multi-stage workflows. When stage C fails, the decisive question is full retry versus resume from C."
+>}}
 
 ---
 

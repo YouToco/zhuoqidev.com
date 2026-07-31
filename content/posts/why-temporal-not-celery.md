@@ -2,16 +2,27 @@
 title: "生产环境 Agent 实践：为什么我们从 Celery 迁移到 Temporal"
 description: 'Agent 流水线不是普通的异步任务——它有状态、会卡住、需要重放排障、单条失败不能拖垮整批。Celery 每一条都踩坑后才明白 Temporal 不是"另一个任务队列"，而是在解决不同层级的问题。'
 date: 2026-05-16
+lastmod: 2026-07-30
 tags: ["Agent 工程", "Temporal", "Celery", "工作流引擎", "生产实践", "后端架构", "Python"]
 categories: ["AI Agent 工程"]
 showToc: true
 ---
 
+{{< lead >}}
 2026 年 4 月，我们把 seo-project 的任务队列从 Celery 全面迁移到了 Temporal。删除的依赖只有一个（`celery`），新增的核心代码有 11 个文件（`src/infrastructure/temporal/`），容器从 `api/worker/beat` 变成了 `api/temporal_worker_blue/green`（蓝绿部署）。
+{{< /lead >}}
 
 这件事做完后，最常被问到的问题是：**为什么不用 Celery？已经能跑的东西换它干什么？**
 
 这篇文章就是答案。它不来自文档对比，来自生产环境跑 Agent 流水线时逐条撞上的坑。
+
+这张图先划清两个工具的**问题层级**。Celery 负责把任务交给 Worker；Temporal 额外保存事件历史，让多阶段流程能够从故障点恢复。迁移的核心不是换一个更快的队列，而是获得可重放的状态机。
+
+{{< figure
+  src="/images/posts/why-temporal-not-celery/celery-vs-temporal-bilingual-v1-4k.png"
+  alt="Celery 任务队列与 Temporal 持久化工作流的执行语义对比"
+  caption="Celery 与 Temporal：前者擅长分发独立异步任务；后者用事件历史、检查点与重放语义支撑长时多阶段流程。C 阶段失败时，关键差异是整批重试还是从 C 恢复。"
+>}}
 
 ---
 
@@ -126,7 +137,7 @@ Temporal 的排障路径是：
 3. **每一步的输入、输出、耗时、异常信息全部可视化在一条时间线上**
 4. 你可以直接看到"Agent C 的 `generate_article` activity 在第 47 秒超时，重试了 2 次，每次的 prompt 和返回的 HTML 片段都可以展开查看"
 
-这不是"Temporal 有个好看的 UI"，而是**调试效率的量级差异**。对于多 Agent 流水线这种"调用链长、状态多、中间产物重要"的场景，可视化的 workflow history 是刚需，不是锦上添花。
+这不是"Temporal 有个好看的 UI"，而是 **调试效率的量级差异**。对于多 Agent 流水线这种"调用链长、状态多、中间产物重要"的场景，可视化的 workflow history 是刚需，不是锦上添花。
 
 ---
 
@@ -178,7 +189,7 @@ Celery 做这件事的方案是"写个脚本对比日期差，手动投递"。Te
 - 团队对 Temporal 的确定性约束不熟悉，短期无学习预算
 - 现有 Celery 系统运行稳定，迁移收益 < 迁移成本
 
-我们的决定不是"Temporal 比 Celery 好"，而是**"Agent 流水线的特征恰好卡在 Celery 的薄弱面和 Temporal 的核心能力之间"**。
+我们的决定不是"Temporal 比 Celery 好"，而是 **"Agent 流水线的特征恰好卡在 Celery 的薄弱面和 Temporal 的核心能力之间"**。
 
 ---
 

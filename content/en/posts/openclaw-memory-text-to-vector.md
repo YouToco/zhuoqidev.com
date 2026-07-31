@@ -2,6 +2,7 @@
 title: "OpenClaw Memory in Practice: From 'Vector Search Is Down But Everything Still Works' to Zero-Cost NVIDIA Embeddings"
 description: "OpenClaw's vector retrieval silently failed — but BM25 text search kept the memory system running for two weeks unnoticed. When you discover 'it works without embeddings,' should you even bother fixing it? Here's how I used NVIDIA's free embedding API to complete the picture, and what I learned about when vector search actually matters."
 date: 2026-06-20
+lastmod: 2026-07-30
 tags: ["OpenClaw", "AI Agent", "Memory System", "Embedding", "NVIDIA", "Vector Search", "BM25"]
 categories: ["Agent Engineering"]
 series: ["OpenClaw Production Notes"]
@@ -12,28 +13,21 @@ showToc: true
 ShowReadingTime: true
 ---
 
-> This is the second post in the [OpenClaw Production Notes](/series/openclaw-production-notes/) series. [The first](/posts/openclaw-pitfalls/) covered compaction silently swallowing replies and defensive Outer Loop design. This one is about the memory system — specifically, a real experience that made me rethink whether vector search is worth the trouble.
+{{< alert icon="circle-info" >}}
+This is the second post in the [OpenClaw Production Notes](/series/openclaw-production-notes/) series. [The first](/posts/openclaw-pitfalls/) covered compaction silently swallowing replies and defensive Outer Loop design. This one is about the memory system—specifically, a real experience that made me rethink whether vector search is worth the trouble.
+{{< /alert >}}
 
 ## Background: How OpenClaw's Memory Retrieval Works
 
 OpenClaw uses a **hybrid retrieval system** — vector (embedding similarity) and BM25 (keyword matching) fused at a 7:3 weight ratio, then passed through PPO-adaptive five-dimensional reranking (recency 0.35 + frequency 0.25 + semantic 0.25 + saliency 0.15 + procedural on-demand).
 
-Architecturally:
+The diagram below places “it still worked” and “why repair it anyway?” on the same path. The upper half shows BM25 maintaining basic retrieval while the vector lane is unavailable. The lower half shows both result streams entering one hybrid ranker after Embedding is restored.
 
-```
-User Query
-   ↓
-┌───────────────┐   ┌───────────────┐
-│ Vector (70%)  │   │ BM25 (30%)    │
-│ embedding →   │   │ keyword match →│
-│ cosine sim    │   │ TF-IDF score  │
-└──────┬────────┘   └──────┬────────┘
-       └────────┬──────────┘
-                ↓
-       Hybrid ranking + PPO 5-dim reweighting
-                ↓
-           Top-K memory chunks
-```
+{{< figure
+  src="/images/posts/openclaw-memory-text-to-vector/dual-engine-retrieval-bilingual-v1-4k.png"
+  alt="OpenClaw's dual-engine BM25 and vector memory retrieval architecture"
+  caption="Dual-engine retrieval: BM25 does not depend on Embeddings and preserves basic availability during a vector-lane failure. Once vector retrieval returns, it improves recall for paraphrases and semantically related memories."
+>}}
 
 Looks great on paper. But after two weeks in production, I discovered something puzzling.
 
