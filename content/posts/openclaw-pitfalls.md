@@ -2,6 +2,7 @@
 title: "OpenClaw 生产踩坑：当最先进的记忆系统遇到最静默的失败"
 description: "从部署到排障，记录 OpenClaw 从启动失败、飞书消息静默吞回复到 production 稳定的全链路实战经验——compaction safeguard、五层排查法、model-harness-fit 与记忆系统对比。"
 date: 2026-05-27
+lastmod: 2026-07-30
 tags: ["OpenClaw", "AI Agent", "飞书", "记忆系统", "Compaction", "排障"]
 categories: ["AI Agent 工程"]
 series: ["OpenClaw 生产实战"]
@@ -111,6 +112,14 @@ flowchart TB
     style SAFEGUARD fill:#51cf66,color:#fff
     style DELIVER fill:#51cf66,color:#fff
 {{< /mermaid >}}
+
+上面的 Mermaid 保留了事故分支；下面的系统图换一个观察角度，把**系统状态**和**用户状态**拆开。真正危险之处是：作业在系统看来“完成且无异常”，用户却始终没有收到最终回复。
+
+{{< figure
+  src="/images/posts/openclaw-pitfalls/silent-compaction-failure-bilingual-v1-4k.png"
+  alt="Compaction 技术成功但用户没有收到回复的静默失败"
+  caption="静默 Compaction 失败：摘要生成成功并不等于用户目标完成。正确闭环必须在压缩前保存待回答问题，压缩后恢复任务，并验证回复确实发送。"
+>}}
 
 一条正常的用户消息，Agent 已经生成了完整回复，但**用户什么都没收到**，bot 像死了一样安静。
 
@@ -229,6 +238,14 @@ export type AgentCompactionConfig = {
 ## 飞书消息不响应：五层排查法
 
 这次事故之后，我沉淀了一套从外到内、按概率排序的排查链路。下次 bot 不回复，按这个顺序查：
+
+这张图把五层与每层的**可观察证据**放在一起。排障不是从模型开始猜，而是沿“进程 → 连接 → 路由 → 执行 → 回复”逐层证明消息走到了哪里。
+
+{{< figure
+  src="/images/posts/openclaw-pitfalls/five-layer-debugging-bilingual-v1-4k.png"
+  alt="OpenClaw 消息不响应的五层排查栈"
+  caption="五层排查法：每层都必须拿到一个可复核信号——进程健康、连接事件、入站日志、运行轨迹、出站消息 ID。第一个缺失的信号通常就是故障边界。"
+>}}
 
 | 层 | 检查点 | 怎么看 |
 |---|---|---|

@@ -2,6 +2,7 @@
 title: "LLM 推理引擎怎么选——2026 年从本地单机到 PD 分离的全景选型地图"
 description: "阿里云那张 Ollama / vLLM / SGLang / HF Pipeline 四引擎表在 2026 年已经不够用了。这篇把推理引擎按「本地 → 高性能服务 → 分布式分离」三层重新梳理，覆盖 8 个主流引擎和 PD 分离 / 投机解码 / FP4 量化三大新趋势，附决策矩阵和决策树。"
 date: 2026-07-19
+lastmod: 2026-07-30
 tags: ["LLM", "推理引擎", "vLLM", "SGLang", "模型部署", "推理优化", "选型指南", "调研报告"]
 categories: ["深度调研"]
 showToc: true
@@ -11,7 +12,17 @@ showToc: true
 
 但到 2026 年，它至少漏掉了半张地图——NVIDIA 的 TensorRT-LLM 完成了「PyTorch 化」转身、SGLang 因为首个开源复现 DeepSeek 大规模部署而封神、Hugging Face 自己给 TGI 挂上了「维护模式」横幅并劝你改用 vLLM，而整个 2025 年推理引擎领域真正的主线，其实是一个字：**拆**。
 
+{{< lead >}}
 这篇文章把这张地图更新到 2026 年年中。它不替你拍板选哪个产品——**它给你一套分层框架、一张决策矩阵和一棵决策树，让你自己把候选收敛到 1–2 个。**
+{{< /lead >}}
+
+第一张图先解决最常见的比较错误：Ollama、KTransformers 和 vLLM 并不在解决同一层问题。先按本地运行、异构卸载与高性能服务划层，再在层内比较吞吐、格式和硬件支持，才有意义。
+
+{{< figure
+  src="/images/posts/llm-inference-engine-selection/three-layer-inference-map-bilingual-v3-4k.png"
+  alt="2026 年 LLM 推理引擎三层选型地图"
+  caption="三层推理地图：L1 追求跑得起与安装简单，L1.5 用内存换显存，L2 追求并发、吞吐和多 GPU 服务。它是分类框架，不是综合排名。"
+>}}
 
 ---
 
@@ -25,7 +36,7 @@ showToc: true
 2. **大规模 MoE 把推理从「单卡工程」推成了「分布式系统工程」。** DeepSeek-V3 是 671B 总参 / 37B 激活，Kimi K2 更是 1T 总参。这类模型单机放不下，必须跨节点做专家并行（EP），推理引擎的选择直接决定了你要不要碰 all-to-all 通信、专家负载均衡这些硬骨头。
 3. **同一个模型，引擎之间的吞吐/成本差异可以到数倍。** 这不是「快一点点」的差别，是「同样的卡，能不能多服务几倍用户」的差别，直接写进云账单。
 
-所以选型不再是「随便挑一个能跑的」，而是**先想清楚你在地图的哪一层**。
+所以选型不再是「随便挑一个能跑的」，而是 **先想清楚你在地图的哪一层**。
 
 ---
 
@@ -69,7 +80,7 @@ L3 分布式 / 分离层    —— 一个机房跑一个大模型，架构比引
 
 ## L1 本地 / 单机层：跑得起、装得简单
 
-这一层的核心诉求不是吞吐，是**「我一个人、一台机器、最好一条命令就能把模型跑起来」**。隐私敏感、离线、端侧、快速原型都归这里。
+这一层的核心诉求不是吞吐，是 **「我一个人、一台机器、最好一条命令就能把模型跑起来」**。隐私敏感、离线、端侧、快速原型都归这里。
 
 ### Ollama / llama.cpp：门面与内核
 
@@ -138,7 +149,7 @@ L3 分布式 / 分离层    —— 一个机房跑一个大模型，架构比引
 
 **核心机制**：把模型编译成 TensorRT 引擎做算子级优化，配合 In-flight Batching（就是 continuous batching 的 NVIDIA 叫法）。
 
-**历史包袱与 1.0 的转身**：TensorRT-LLM 过去的口碑是「编译式、极致快、但难用」。**v1.0.0（2025-09-24，注意是 2025 不是 2024）**是转折点——PyTorch 后端成为默认且稳定、LLM 高层 API 稳定，易用性明显向 vLLM/SGLang 靠拢，同时新增 NVFP4、投机解码增强、Wide-EP（大规模专家并行）（[v1.0.0 Release](https://github.com/NVIDIA/TensorRT-LLM/releases/tag/v1.0.0)）。
+**历史包袱与 1.0 的转身**：TensorRT-LLM 过去的口碑是「编译式、极致快、但难用」。 **v1.0.0（2025-09-24，注意是 2025 不是 2024）** 是转折点——PyTorch 后端成为默认且稳定、LLM 高层 API 稳定，易用性明显向 vLLM/SGLang 靠拢，同时新增 NVFP4、投机解码增强、Wide-EP（大规模专家并行）（[v1.0.0 Release](https://github.com/NVIDIA/TensorRT-LLM/releases/tag/v1.0.0)）。
 
 > ⚠️ **辩证看待营销数字**：网络上流传的「H100 FP8 上 10,000+ tok/s、比原生 PyTorch 快 4×」等数字多来自第三方博客，未在 NVIDIA 官方一手材料里稳定复现，引用需谨慎。
 
@@ -198,6 +209,14 @@ L3 分布式 / 分离层    —— 一个机房跑一个大模型，架构比引
 ## 阿里云原文没讲的三个新趋势
 
 这是这篇文章相比原文最大的增量。2025 年推理引擎领域真正的进展，全在这三件事上。
+
+下面这张图专门解释其中最容易被一句话带过的 **PD 分离**。Prefill 和 Decode 虽然服务同一次请求，却分别受吞吐与尾延迟约束；分开资源池之后，才能独立扩容和调度。
+
+{{< figure
+  src="/images/posts/llm-inference-engine-selection/prefill-decode-disaggregation-bilingual-v2-4k.png"
+  alt="Prefill 与 Decode 分离的分布式推理架构"
+  caption="Prefill–Decode 分离：Prefill 池处理计算密集型长提示词并产生 KV Cache，Decode 池接管逐 Token 生成。两类负载通过 KV Cache 传输连接，却使用不同的扩容目标。"
+>}}
 
 ### 趋势一：PD 分离——2025 年的架构主线
 

@@ -2,19 +2,23 @@
 title: "Where Do ChatGPT Business Promo Codes Come From? An OSINT Correction"
 description: "A source-by-source recheck of OpenAI, partner, Stripe, and linux.do evidence: public links, screened email codes, and partner-funded rebates still coexist."
 date: 2026-05-14
-lastmod: 2026-07-29
+lastmod: 2026-07-30
 tags: ["ChatGPT", "OpenAI", "Stripe", "Promo Codes", "OSINT", "Fact-checking"]
 categories: ["Tinkering"]
 showToc: true
 ---
 
-> **Correction — July 29, 2026**
->
-> The first version of this article combined three observations—a company name inside a promo code, a Stripe-hosted checkout, and community reposts—into a story that was too certain: Stripe's partner network issued the codes and employees of those companies leaked them. The available evidence does not establish that chain.
->
-> The corrected finding is narrower: **OpenAI partner or channel campaigns are the best-supported upstream source. Stripe is payment and promotion-code infrastructure, not a proven campaign owner. Public links, eligibility-screened codes delivered by email, and partner-funded rebates coexist. There is also no evidence that OpenAI has globally retired company-level `/p/...` links.**
+{{< alert icon="triangle-exclamation" >}}
+**Correction — July 29, 2026**
 
+The first version of this article combined three observations—a company name inside a promo code, a Stripe-hosted checkout, and community reposts—into a story that was too certain: Stripe's partner network issued the codes and employees of those companies leaked them. The available evidence does not establish that chain.
+
+The corrected finding is narrower: **OpenAI partner or channel campaigns are the best-supported upstream source. Stripe is payment and promotion-code infrastructure, not a proven campaign owner. Public links, eligibility-screened codes delivered by email, and partner-funded rebates coexist. There is also no evidence that OpenAI has globally retired company-level `/p/...` links.**
+{{< /alert >}}
+
+{{< lead >}}
 In May 2026, a batch of company-branded ChatGPT Business promo codes spread through linux.do and other communities. The original article tried to identify their source but presented several plausible inferences as facts.
+{{< /lead >}}
 
 This revision keeps only claims supported by primary pages or reproducible timestamps, and separates:
 
@@ -22,6 +26,14 @@ This revision keeps only claims supported by primary pages or reproducible times
 - statements published by partners;
 - community observations;
 - unverified inference.
+
+The diagram below defines the article's **evidentiary boundary**. It separates official facts, infrastructure capabilities, channel claims, and community observations. Its most important job is to prevent a leap from “Stripe can execute a discount” to “Stripe designed and distributed the campaign.”
+
+{{< figure
+  src="/images/posts/chatgpt-business-promo-investigation/promotion-evidence-ladder-bilingual-v2-4k.png"
+  alt="A four-level evidence ladder for tracing ChatGPT Business promotions"
+  caption="Evidence ladder: conclusions become stronger as they approach original pages, reproducible timestamps, archives, and independent confirmation. Payment infrastructure shows how a promotion can execute; it does not by itself identify the campaign owner or funder."
+>}}
 
 ## The short answer
 

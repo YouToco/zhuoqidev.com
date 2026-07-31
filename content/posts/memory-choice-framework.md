@@ -2,16 +2,27 @@
 title: "什么时候用 RAG，什么时候用 LLM Wiki，什么时候用纯文本记忆——一个 Agent 记忆选型框架"
 description: "RAG、结构化知识库、纯文本上下文记忆——三种 Agent 长期记忆方案的成本、延迟、精度和可维护性对比，附决策树。"
 date: 2026-05-11
+lastmod: 2026-07-30
 tags: ["AI Agent", "记忆系统", "RAG", "上下文工程", "Agent 架构"]
 categories: ["AI Agent 工程"]
 showToc: true
 ---
 
+{{< lead >}}
 做 Agent 系统的人迟早会撞上这个选择题：**用户的数据往哪放，下次对话怎么记住？**
+{{< /lead >}}
 
 目前工业界有三条主流路线——RAG（向量检索）、LLM Wiki（结构化知识注入）、纯文本上下文记忆（CLAUDE.md / Cursor Rules 模式）。三条路各有拥趸，但**选错的代价很大**：RAG 做轻了是噪音生成器，纯文本做重了是 token 焚化炉。
 
 这篇给出一个可以直接用的决策框架。
+
+先看三条路线的系统边界。它们的核心差异不是数据库品牌，而是**检索发生在什么时候、多少内容进入 Context、写入和维护由谁负责**。
+
+{{< figure
+  src="/images/posts/memory-choice-framework/three-memory-paths-bilingual-v1-4k.png"
+  alt="RAG、LLM Wiki 与纯文本上下文记忆的选型对比"
+  caption="三种记忆路线：RAG 擅长从大规模异构资料中按需召回；LLM Wiki 强调结构与审计；纯文本适合少量高价值、需要确定性注入的规则。没有一条路线在所有维度都占优。"
+>}}
 
 ---
 

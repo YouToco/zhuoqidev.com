@@ -2,12 +2,17 @@
 title: "Building a Personal Site with Hugo and Dual-Stack CDN"
 description: "How I set up Hugo + Blowfish with Alibaba Cloud OSS/CDN for China and Cloudflare Pages for international visitors — ICP filing, geo-DNS routing, and GitHub Actions dual-stack deployment."
 date: 2026-05-04
+lastmod: 2026-07-30
 aliases: ["/en/posts/hello-world/"]
 tags: ["Hugo", "Alibaba Cloud", "Cloudflare", "CDN", "ICP Filing"]
 categories: ["Tinkering"]
 showToc: true
 ShowReadingTime: true
 ---
+
+{{< lead >}}
+One Hugo artifact is published to both Alibaba Cloud OSS/CDN and Cloudflare Pages, while geo-aware DNS sends domestic and international visitors to different edge networks.
+{{< /lead >}}
 
 ## Why Hugo
 
@@ -17,22 +22,13 @@ Hugo is a single binary, requires no Node.js, builds thousands of posts in 1-2 s
 
 ## Architecture
 
-```
-                  ┌─────────────────────────────┐
-                  │    DNS Geo-Based Routing      │
-                  │  (Alibaba Cloud DNS GeoDB)    │
-                  └──────┬──────────────┬────────┘
-                         │              │
-             CN visitors ▼  Intl. visitors ▼
-          ┌──────────────────┐  ┌─────────────────┐
-          │  Alibaba CDN     │  │ Cloudflare Pages │
-          │  ↓               │  │  (Free, Global)  │
-          │  Alibaba OSS     │  └─────────────────┘
-          │  (Static Hosting)│
-          └──────────────────┘
-                  ↑
-        GitHub Actions auto-build & dual-stack push
-```
+The diagram contains two distinct flows. Read downward from Git Push for the **publishing path**; read from GeoDNS toward the two CDNs for the **request path**. Both destinations must come from the same build to prevent content-version drift.
+
+{{< figure
+  src="/images/posts/hugo-dual-cdn-blog/dual-cdn-publishing-bilingual-v1-4k.png"
+  alt="A dual-stack Hugo deployment across Alibaba Cloud and Cloudflare"
+  caption="Dual-CDN publishing: GitHub Actions builds once, then uploads the same artifact to Alibaba Cloud OSS/CDN and Cloudflare Pages. GeoDNS selects the visitor path while the content commit stays identical."
+>}}
 
 Annual cost: approximately ¥212 (~$30 USD):
 - Domain `zhuoqidev.com`: ¥85/yr (bought 3 years)

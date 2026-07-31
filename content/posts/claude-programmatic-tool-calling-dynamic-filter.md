@@ -2,6 +2,7 @@
 title: "Claude 工具调用范式转移：Programmatic Tool Calling 与 Dynamic Filter 深度解读"
 description: "Anthropic 在 Claude 平台推出的 Programmatic Tool Calling 和 Dynamic Filtering 不仅是功能增强，更代表了一种 Agent 架构范式的转移——从自然语言编排转向代码编排，从全量上下文注入转向按需过滤。本文综合多篇非 AI 撰写的深度技术文章，从架构原理、性能数据到生产实践，全面解读这场 Outer Loop 的进化。"
 date: 2026-06-13
+lastmod: 2026-07-30
 tags: ["Claude", "AI Agent", "Agent 架构", "工具调用", "上下文工程", "Programmatic Tool Calling", "Dynamic Filtering", "代码执行"]
 categories: ["AI Agent 工程"]
 series: ["Agent 架构深度"]
@@ -10,6 +11,10 @@ seriesOpened: true
 showToc: true
 ShowReadingTime: true
 ---
+
+{{< lead >}}
+真正的变化不是“又多了两个工具功能”，而是 Agent 开始把多步工具编排移入代码执行环境，并只把压缩后的结果带回模型上下文。
+{{< /lead >}}
 
 ## 背景：Agent 工具调用的成本困境
 
@@ -22,6 +27,14 @@ ShowReadingTime: true
 正如 Bruno 在 [Claude Code Architecture Guide](https://cc.bruniaux.com/guide/architecture/) 中所指出的：**"Outer Loop（模型外的一切：上下文管理、工具调用、验证、记忆巩固）开始比模型推理本身更决定系统质量。"**
 
 Anthropic 在 2025 年 11 月到 2026 年 2 月间陆续推出的一系列工具使用增强功能，本质上都是为了解决 Outer Loop 的效率问题。其中 **Programmatic Tool Calling (PTC)** 和 **Dynamic Filtering** 是最具范式转移意义的两项。
+
+下面这张图先建立全文的**成本模型**。左侧是每调一次工具就重新推理、重新注入完整结果的传统循环；右侧把编排、过滤和聚合留在沙箱中，只把最终答案送回模型。后文的性能数据与使用边界都可以映射回这条路径差异。
+
+{{< figure
+  src="/images/posts/claude-programmatic-tool-calling-dynamic-filter/tool-use-outer-loop-bilingual-v1-4k.png"
+  alt="传统逐轮工具调用与 Programmatic Tool Calling 的 Outer Loop 对比"
+  caption="工具调用 Outer Loop：PTC 的价值不只是少几次 API 请求，而是把中间数据留在容器内处理；Dynamic Filtering 则在外部结果进入上下文之前移除无关内容。"
+>}}
 
 ---
 

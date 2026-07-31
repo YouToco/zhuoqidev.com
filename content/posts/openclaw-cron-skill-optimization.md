@@ -2,6 +2,7 @@
 title: "OpenClaw 实战：一行路径省掉 84% 的工具调用——Cron Job 排障实录"
 description: "OpenClaw 的 daily-ai-news 定时任务连续超时。根因不是模型不够强、不是 prompt 太长、不是上游 API 挂了——是 SKILL.md 里少写了一行绝对路径，导致 Agent 每次执行花 15 次 exec 调用搜索一个 skill 的位置。消息数从 54 膨胀到 165，工具调用结果从 204KB 暴涨到 1.1MB。这篇记录完整的排障过程和修复方法。"
 date: 2026-06-20
+lastmod: 2026-07-30
 tags: ["OpenClaw", "AI Agent", "Cron Job", "SKILL.md", "Prompt Engineering", "性能优化"]
 categories: ["AI Agent 工程"]
 series: ["OpenClaw 生产实战"]
@@ -12,7 +13,17 @@ showToc: true
 ShowReadingTime: true
 ---
 
-> 这是 [OpenClaw 生产实战](/series/openclaw-生产实战/) 系列的第三篇。[第一篇](/posts/openclaw-pitfalls/) 讲 compaction 静默吞回复，[第二篇](/posts/openclaw-memory-text-to-vector/) 讲记忆系统从"向量搜索挂了也能跑"到用 NVIDIA 免费 API 补全。这篇讲一个更朴素但影响更大的问题：**当你的 AI Agent 不知道工具在哪，它会怎么做？**
+{{< alert icon="circle-info" >}}
+这是 [OpenClaw 生产实战](/series/openclaw-生产实战/) 系列的第三篇。[第一篇](/posts/openclaw-pitfalls/) 讲 compaction 静默吞回复，[第二篇](/posts/openclaw-memory-text-to-vector/) 讲记忆系统从“向量搜索挂了也能跑”到用 NVIDIA 免费 API 补全。这篇讲一个更朴素但影响更大的问题：**当你的 AI Agent 不知道工具在哪，它会怎么做？**
+{{< /alert >}}
+
+这张前后对比图先给出事故的完整因果链。左侧不是模型“笨”，而是模糊指令迫使它反复探索目录；右侧的一行绝对路径直接缩小了动作空间，因此消息数、搜索次数和执行调用同时下降。
+
+{{< figure
+  src="/images/posts/openclaw-cron-skill-optimization/outer-loop-path-before-after-bilingual-v1-4k.png"
+  alt="OpenClaw Cron Job 修复前后的 Outer Loop 对比"
+  caption="一行路径带来的变化：消息数 165→54、exec 调用 44→7、定位搜索 15→1。优化点不是单次工具更快，而是 Agent 不再为寻找工具浪费整个推理循环。"
+>}}
 
 ## 现象：定时任务连续超时
 

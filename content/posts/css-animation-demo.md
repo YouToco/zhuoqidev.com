@@ -2,12 +2,23 @@
 title: "在 Hugo 文章里内嵌 CSS 动画 Demo"
 description: "用自定义 shortcode 在 Hugo 博客里直接运行 CSS 动画，无需 CodePen 账号，文章即 demo。"
 date: 2026-05-04
+lastmod: 2026-07-30
 tags: ["Hugo", "CSS", "动画", "Shortcode"]
 categories: ["折腾记录"]
 showToc: true
 ---
 
+{{< lead >}}
 Hugo 用 shortcode 可以很优雅地内嵌代码演示。这里展示三种方式：
+{{< /lead >}}
+
+先用一张图确定边界：原生 shortcode、CodePen iframe 和 CodeSandbox 分别适合不同复杂度，也把代码放在不同的执行与隔离位置。
+
+{{< figure
+  src="/images/posts/css-animation-demo/hugo-embed-paths-bilingual-v1-4k.png"
+  alt="Hugo 文章嵌入交互 Demo 的三种方式"
+  caption="三条嵌入路径：简单且需要版本控制的效果优先用原生 shortcode；可分享片段适合 CodePen；完整交互应用再使用 CodeSandbox。"
+>}}
 
 ## 1. 内联 CSS demo（无需外部服务）
 

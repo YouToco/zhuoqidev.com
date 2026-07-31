@@ -2,12 +2,23 @@
 title: "Embedding CSS Animation Demos in Hugo Articles"
 description: "Use custom shortcodes to run live CSS animations directly in Hugo blog posts — no CodePen account needed."
 date: 2026-05-04
+lastmod: 2026-07-30
 tags: ["Hugo", "CSS", "Animation", "Shortcode"]
 categories: ["Tinkering"]
 showToc: true
 ---
 
+{{< lead >}}
 Hugo shortcodes make it easy to embed live code demos. Here are three ways:
+{{< /lead >}}
+
+The diagram first separates their boundaries: a native shortcode, a CodePen iframe, and a CodeSandbox app serve different complexity levels and execute code in different places.
+
+{{< figure
+  src="/images/posts/css-animation-demo/hugo-embed-paths-bilingual-v1-4k.png"
+  alt="Three ways to embed an interactive demo in a Hugo article"
+  caption="Three embed paths: prefer a native shortcode for simple, versioned effects; CodePen for shareable snippets; and CodeSandbox for a complete interactive application."
+>}}
 
 ## 1. Inline CSS Demo (No External Service)
 

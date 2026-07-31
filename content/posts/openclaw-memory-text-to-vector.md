@@ -2,6 +2,7 @@
 title: "OpenClaw 记忆实战：从「向量搜索挂了也能用」到用 NVIDIA 免费 API 补全最后一块拼图"
 description: "OpenClaw 记忆系统的向量检索默认不可用——但 BM25 文本搜索兜底让系统照常运转。当你发现「不配 embedding 也能跑」，到底要不要修？怎么用 NVIDIA 免费 embedding API 零成本补上？这是一篇生产环境的真实记录。"
 date: 2026-06-20
+lastmod: 2026-07-30
 tags: ["OpenClaw", "AI Agent", "记忆系统", "Embedding", "NVIDIA", "向量搜索", "BM25"]
 categories: ["AI Agent 工程"]
 series: ["OpenClaw 生产实战"]
@@ -12,28 +13,21 @@ showToc: true
 ShowReadingTime: true
 ---
 
-> 这是 [OpenClaw 生产实战](/series/openclaw-生产实战/) 系列的第二篇。[第一篇](/posts/openclaw-pitfalls/) 聊的是 compaction 静默吞回复和 Outer Loop 的防御性设计。这篇聚焦记忆系统——具体来说，是一个让我重新理解"向量检索到底值不值"的真实经历。
+{{< alert icon="circle-info" >}}
+这是 [OpenClaw 生产实战](/series/openclaw-生产实战/) 系列的第二篇。[第一篇](/posts/openclaw-pitfalls/) 聊的是 compaction 静默吞回复和 Outer Loop 的防御性设计。这篇聚焦记忆系统——具体来说，是一个让我重新理解“向量检索到底值不值”的真实经历。
+{{< /alert >}}
 
 ## 背景：OpenClaw 的记忆检索是怎么工作的
 
 OpenClaw 的记忆检索是一个**混合检索系统**——向量（embedding similarity）和 BM25（文本关键词匹配）按 7:3 权重融合，再经过 PPO 自适应的五维加权（recency 0.35 + frequency 0.25 + semantic 0.25 + saliency 0.15 + procedural 按需）产出最终结果。
 
-架构上看：
+下面这张图把“挂了也能用”和“为什么仍值得修”放在同一张路径上。上半部分是向量通道不可用时 BM25 独自兜底；下半部分是修复 Embedding 后，两路结果进入统一混合排序。
 
-```
-用户查询
-   ↓
-┌──────────────┐   ┌──────────────┐
-│ 向量检索(70%) │   │ BM25 检索(30%)│
-│  embedding → │   │ 关键词匹配 → │
-│  余弦相似度   │   │ TF-IDF 打分  │
-└──────┬───────┘   └──────┬───────┘
-       └────────┬─────────┘
-                ↓
-        混合排序 + PPO 五维加权
-                ↓
-           Top-K 记忆片段
-```
+{{< figure
+  src="/images/posts/openclaw-memory-text-to-vector/dual-engine-retrieval-bilingual-v1-4k.png"
+  alt="OpenClaw 的 BM25 与向量混合记忆检索架构"
+  caption="记忆检索双引擎：BM25 不依赖 Embedding，能在向量通道故障时维持基本可用性；向量检索恢复后，则补足同义改写与语义相似内容的召回。"
+>}}
 
 看起来很完美。但部署后跑了两周，我发现了一个让人困惑的事实。
 

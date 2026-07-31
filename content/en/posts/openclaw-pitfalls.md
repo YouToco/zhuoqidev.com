@@ -2,6 +2,7 @@
 title: "OpenClaw in Production: When the Most Advanced Memory System Meets the Quietest Failure"
 description: "A full-chain production battle log: from startup failures and Feishu message silent drops to production stability — compaction safeguard, five-layer debugging, model-harness fit, and memory system comparison."
 date: 2026-05-27
+lastmod: 2026-07-30
 tags: ["OpenClaw", "AI Agent", "Feishu", "Memory System", "Compaction", "Debugging"]
 categories: ["Agent Engineering"]
 series: ["OpenClaw Production Notes"]
@@ -111,6 +112,14 @@ flowchart TB
     style SAFEGUARD fill:#51cf66,color:#fff
     style DELIVER fill:#51cf66,color:#fff
 {{< /mermaid >}}
+
+The Mermaid diagram preserves the exact failure branch. The systems graphic below changes the viewpoint by separating **system state** from **user state**. The dangerous case is a job that appears complete and exception-free while the user still receives no final answer.
+
+{{< figure
+  src="/images/posts/openclaw-pitfalls/silent-compaction-failure-bilingual-v1-4k.png"
+  alt="A silent Compaction failure where the system succeeds but the user receives no reply"
+  caption="Silent Compaction failure: creating a summary is not the same as achieving the user's goal. A correct loop preserves the pending question before compression, restores the task afterward, and verifies that the reply was actually delivered."
+>}}
 
 A normal user message — the Agent generated a complete reply — but the **user received nothing**. The bot appeared dead silent.
 
@@ -230,6 +239,14 @@ This isn't OpenClaw-specific. Any agent system with automatic context compressio
 ## Feishu Message Non-Response: The Five-Layer Debugging Method
 
 After this incident, I developed a debugging chain from outside-in, ordered by probability. Next time the bot doesn't respond, follow this:
+
+The diagram pairs each layer with its **observable evidence**. Debugging should not begin by blaming the model; prove how far the message traveled through Process → Connection → Routing → Execution → Delivery.
+
+{{< figure
+  src="/images/posts/openclaw-pitfalls/five-layer-debugging-bilingual-v1-4k.png"
+  alt="A five-layer debugging stack for an unresponsive OpenClaw message"
+  caption="Five-layer debugging: require one verifiable signal at every boundary—process health, connection event, inbound log, run trace, and outbound message ID. The first missing signal usually identifies the failure boundary."
+>}}
 
 | Layer | Checkpoint | How to check |
 |---|---|---|

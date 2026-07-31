@@ -2,6 +2,7 @@
 title: "Claude's Tool Calling Paradigm Shift: A Deep Dive into Programmatic Tool Calling and Dynamic Filtering"
 description: "Anthropic's Programmatic Tool Calling and Dynamic Filtering aren't just feature additions — they represent a paradigm shift in Agent architecture: from natural language orchestration to code-driven orchestration, from full context injection to on-demand filtering. Synthesizing multiple non-AI-written deep-dive articles, this post covers architecture, benchmarks, and production patterns."
 date: 2026-06-13
+lastmod: 2026-07-30
 tags: ["Claude", "AI Agent", "Agent Architecture", "Tool Calling", "Context Engineering", "Programmatic Tool Calling", "Dynamic Filtering", "Code Execution"]
 categories: ["Agent Engineering"]
 series: ["Agent Architecture Deep Dives"]
@@ -10,6 +11,10 @@ seriesOpened: true
 showToc: true
 ShowReadingTime: true
 ---
+
+{{< lead >}}
+The important change is not “two more tool features.” It is the movement of multi-step orchestration into a code-execution environment, with only a compact result returning to model context.
+{{< /lead >}}
 
 ## Background: The Cost Problem in Agent Tool Calling
 
@@ -22,6 +27,14 @@ In traditional agent tool-calling, every tool invocation requires a full cycle o
 As Florian Bruniaux puts it in the [Claude Code Architecture Guide](https://cc.bruniaux.com/guide/architecture/): **"The Outer Loop — everything outside the model: context management, tool invocation, verification, memory consolidation — increasingly determines system quality more than model inference itself."**
 
 Anthropic's suite of tool-use enhancements, released between November 2025 and February 2026, are fundamentally about solving Outer Loop efficiency. Among them, **Programmatic Tool Calling (PTC)** and **Dynamic Filtering** represent the deepest paradigm shift.
+
+The diagram below establishes the article's **cost model**. The left side repeatedly invokes the model and injects full tool results. The right side keeps orchestration, filtering, and aggregation inside the sandbox and returns only the compact answer. The benchmark and deployment discussions later in the article map back to this path difference.
+
+{{< figure
+  src="/images/posts/claude-programmatic-tool-calling-dynamic-filter/tool-use-outer-loop-bilingual-v1-4k.png"
+  alt="The Outer Loop difference between turn-by-turn tool calling and Programmatic Tool Calling"
+  caption="Tool-use Outer Loop: PTC does more than reduce API calls—it keeps intermediate data inside the container. Dynamic Filtering removes irrelevant external results before they consume context."
+>}}
 
 ---
 
