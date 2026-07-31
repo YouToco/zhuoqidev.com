@@ -1,0 +1,31 @@
+{{- $pages := slice -}}
+{{- $currentLang := .Site.Language.Lang -}}
+{{- $allPages := (index (hugo.Sites) 0).RegularPages -}}
+{{- range $allPages -}}
+  {{- $matchesLanguage := or (and (eq $currentLang "en") (in .RelPermalink "/en/")) (and (eq $currentLang "zh") (not (in .RelPermalink "/en/"))) -}}
+  {{- if and (in .RelPermalink "/posts/") $matchesLanguage (not .Params.searchHidden) -}}
+    {{- $pages = $pages | append . -}}
+  {{- end -}}
+{{- end -}}
+{{- $pages = sort $pages "Lastmod" "desc" -}}
+# {{ .Site.Title }}
+
+> {{ .Site.Params.description | plainify | strings.TrimSpace }}
+
+{{ if eq .Site.Language.Lang "zh" -}}
+本站是刘卓琪的技术博客，聚焦 AI Agent、记忆系统、上下文工程、RAG、工具调用、后端架构与生产实践。以下链接按最近更新时间排序；文章页面是事实与代码细节的权威来源。
+{{- else -}}
+This is Liu ZhuoQi's technical blog about AI agents, memory systems, context engineering, RAG, tool use, backend architecture, and production practice. Links are ordered by most recent update; each article page is the canonical source for its claims and code details.
+{{- end }}
+
+## {{ if eq .Site.Language.Lang "zh" }}文章{{ else }}Articles{{ end }}
+{{ range $pages -}}
+- [{{ .Title }}]({{ .Permalink }}){{ with .Description }}: {{ . | plainify | strings.TrimSpace }}{{ else }}{{ with .Summary }}: {{ . | plainify | strings.TrimSpace | truncate 180 }}{{ end }}{{ end }} ({{ if eq $.Site.Language.Lang "zh" }}更新{{ else }}updated{{ end }}: {{ .Lastmod.Format "2006-01-02" }})
+{{ end }}
+## Optional
+- [{{ if eq .Site.Language.Lang "zh" }}文章归档{{ else }}Article archive{{ end }}]({{ .Site.Home.Permalink }}posts/): {{ if eq .Site.Language.Lang "zh" }}全部文章的分页索引。{{ else }}Paginated index of all articles.{{ end }}
+- [{{ if eq .Site.Language.Lang "zh" }}作品{{ else }}Projects{{ end }}]({{ .Site.Home.Permalink }}projects/): {{ if eq .Site.Language.Lang "zh" }}项目与作品索引。{{ else }}Project and portfolio index.{{ end }}
+- [{{ if eq .Site.Language.Lang "zh" }}关于作者{{ else }}About the author{{ end }}]({{ .Site.Home.Permalink }}about/)
+{{ with .OutputFormats.Get "RSS" -}}
+- [RSS]({{ .Permalink }}): {{ if eq $.Site.Language.Lang "zh" }}站点更新订阅。{{ else }}Site update feed.{{ end }}
+{{ end -}}

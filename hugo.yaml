@@ -101,6 +101,14 @@ outputs:
     - HTML
     - RSS
     - JSON
+    - LLMS
+
+outputFormats:
+  LLMS:
+    mediaType: "text/plain"
+    baseName: "llms"
+    isPlainText: true
+    notAlternative: true
 
 mainSections:
   - posts
