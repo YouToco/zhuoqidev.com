@@ -1,7 +1,8 @@
 ---
 title: "Agent 如何记住你：人脑记忆史与六大开源系统代码审计"
 description: "从 Ebbinghaus、H.M.、工作记忆与 engram 出发，重建 Agent 记忆发展史；再对 Mem0、Letta、Graphiti、LangMem、Cognee、MemoryOS 做宣传卖点与实际代码架构对照。"
-date: 2026-05-04
+date: 2026-07-30
+publishDate: 2026-07-30
 lastmod: 2026-07-30
 tags: ["AI Agent", "LLM", "Memory", "记忆系统", "认知科学", "开源架构"]
 categories: ["深度调研"]
@@ -12,7 +13,10 @@ showToc: true
 
 有的意思是把聊天记录做 embedding，有的意思是维护一份用户画像，有的意思是让模型自己修改 Markdown，还有的已经做到了双时序知识图谱。它们都叫 memory，却不是同一种东西，也不该放在一张跑分榜上直接比较。
 
-![从人类记忆痕迹到 Agent 记忆栈](/images/posts/llm-memory-research/agent-memory-cover-v3-4k.png)
+{{< figure
+  src="/images/posts/llm-memory-research/agent-memory-cover-v3-4k.png"
+  alt="从人类记忆痕迹到 Agent 记忆栈"
+>}}
 
 要判断一个系统是不是真的「会记」，我更愿意问三个问题：
 
@@ -22,13 +26,17 @@ showToc: true
 
 这篇文章从这三个问题出发。前半段把人类记忆科学与 Agent 记忆技术放在同一条历史轴上；后半段直接读代码，对照 Mem0、Letta、Graphiti、LangMem、Cognee 与 MemoryOS 的宣传卖点、实际数据流、系统边界和对应的记忆范式。
 
-> **先给结论：**今天主流的 Agent 并没有获得一种像人脑那样的统一「记忆器官」。工程上真正有效的是一条闭环：**经历 → 写入门控 → 表征 → 存储 → 检索 → 上下文组装 → 行动反馈 → 巩固 / 修订 / 遗忘**。不同开源项目，只是选择接管这条闭环的不同部分。
+{{< alert icon="lightbulb" >}}
+**先给结论：** 今天主流的 Agent 并没有获得一种像人脑那样的统一「记忆器官」。工程上真正有效的是一条闭环：**经历 → 写入门控 → 表征 → 存储 → 检索 → 上下文组装 → 行动反馈 → 巩固 / 修订 / 遗忘**。不同开源项目，只是选择接管这条闭环的不同部分。
+{{< /alert >}}
 
 下面这张图不是某个产品的组件架构，而是全文共用的**判断坐标系**。它要回答的不是「数据放在哪」，而是「一次过去的经历如何真正影响下一次行动」。阅读时先沿中间的七步主环看信息如何从经历变成行动；再看左侧三种载体，区分当前任务、跨会话记忆与真实世界状态；右侧说明每一步完成的变换，底部则展示长期运行后必须发生的巩固、修订与遗忘。这样能避免把数据库、Context、缓存和真实状态都笼统地叫作“记忆”。
 
-![Agent 记忆科学系统图：七步闭环、三种载体与三种治理结果](/images/posts/llm-memory-research/memory-loop-systems-map-v3-4k.png)
-
-*图 1：用来建立本文对“记忆系统”的工作定义。中心主环说明在线行为路径，左侧区分工作记忆、长期记忆与真实状态，底部说明记忆生命周期。数据库只占第四步；没有写入判断、检索、上下文组装、冲突处理和反馈更新，存得再多也只是日志。*
+{{< figure
+  src="/images/posts/llm-memory-research/memory-loop-systems-map-v3-4k.png"
+  alt="Agent 记忆科学系统图：七步闭环、三种载体与三种治理结果"
+  caption="图 1：用来建立本文对“记忆系统”的工作定义。中心主环说明在线行为路径，左侧区分工作记忆、长期记忆与真实状态，底部说明记忆生命周期。数据库只占第四步；没有写入判断、检索、上下文组装、冲突处理和反馈更新，存得再多也只是日志。"
+>}}
 
 ---
 
@@ -38,9 +46,11 @@ LLM 系统里至少有五种状态载体。它们在物理位置、写入速度�
 
 这张图专门负责**术语消歧**。横向比较五个载体，纵向依次看「谁写、能活多久、最擅长什么、不擅长什么」。它不是要找一个最好的 memory，而是避免把性能缓存当成长期记忆、把 Context 当成持久层，或把真实业务状态复制成可能过期的自然语言回忆。
 
-![模型权重、上下文、KV Cache、外部记忆与环境状态的区别](/images/posts/llm-memory-research/memory-carriers-v4-zh-4k.png)
-
-*图 2：用来回答“状态究竟住在哪里”。工程设计里最危险的错误，是把其中两种载体当成同一种。*
+{{< figure
+  src="/images/posts/llm-memory-research/memory-carriers-v4-zh-4k.png"
+  alt="模型权重、上下文、KV Cache、外部记忆与环境状态的区别"
+  caption="图 2：用来回答“状态究竟住在哪里”。工程设计里最危险的错误，是把其中两种载体当成同一种。"
+>}}
 
 ### 1. 参数记忆：模型权重
 
@@ -92,9 +102,11 @@ KV Cache 保存注意力层已经算过的 K/V 张量，Prompt Cache 复用相�
 
 这里放历史图，不是为了给文章增加一段背景知识，而是为了说明本文为什么拒绝「记忆 = 存储」这个模型。阅读时间线时，不必记住所有年份；要观察的是底部的三次概念转向：从单一仓库，到多个可分离系统，再到会在提取中被重构的动态过程。后文的事件、事实、程序、巩固与修订，全部来自这条问题线索。
 
-![人类怎样逐步理解记忆：从遗忘曲线到记忆痕迹](/images/posts/llm-memory-research/human-memory-history-v4-zh-4k.png)
-
-*图 3：用来解释本文的记忆范式来源。一百多年的研究逐渐把记忆从“一个存放位置”，改写成多个系统共同完成的编码、巩固、提取与重构过程。*
+{{< figure
+  src="/images/posts/llm-memory-research/human-memory-history-v4-zh-4k.png"
+  alt="人类怎样逐步理解记忆：从遗忘曲线到记忆痕迹"
+  caption="图 3：用来解释本文的记忆范式来源。一百多年的研究逐渐把记忆从“一个存放位置”，改写成多个系统共同完成的编码、巩固、提取与重构过程。"
+>}}
 
 ### 1885：Ebbinghaus 把记忆变成可测量对象
 
@@ -203,9 +215,11 @@ Nader、Schafe 与 LeDoux 的实验显示，已经巩固的恐惧记忆在被重
 
 人类记忆时间线解释「我们为什么这样提问」，下面的 Agent 时间线则解释「工程为什么走成今天这样」。阅读重点不是模型名称本身，而是状态边界怎样一步步外移：先写在程序和网络内部，后来放进 Context，再通过检索连接外部数据，最后形成包含写入、权限、时间与删除的独立记忆层。
 
-![Agent 记忆发展史：从符号状态、LSTM 到记忆工程](/images/posts/llm-memory-research/agent-memory-history-v4-zh-4k.png)
-
-*图 4：用来定位当前技术阶段。Agent 记忆的竞争，已经从“能不能保存状态”转向“写什么、何时想起、怎样修订、谁能删除”。*
+{{< figure
+  src="/images/posts/llm-memory-research/agent-memory-history-v4-zh-4k.png"
+  alt="Agent 记忆发展史：从符号状态、LSTM 到记忆工程"
+  caption="图 4：用来定位当前技术阶段。Agent 记忆的竞争，已经从“能不能保存状态”转向“写什么、何时想起、怎样修订、谁能删除”。"
+>}}
 
 ### 第一阶段：状态写在程序里
 
@@ -277,9 +291,11 @@ Transformer 让序列内部任意位置之间直接交互，prompt 逐渐成为�
 
 下面这张图承担的是**选型导航**，不是展示项目 Logo，也不是给出总分。最有用的读法是逐行看：官网卖点在左，真实代码主链路在中间，系统边界和记忆范式在右。这样可以迅速判断一个项目是在提供 SDK、Runtime、图引擎、框架工具箱、知识管线，还是研究实现，再决定是否值得进入后面的详细审计。
 
-![六类开源 Agent 记忆系统的系统边界与记忆范式](/images/posts/llm-memory-research/open-source-memory-architectures-v4-zh-4k.png)
-
-*图 5：用来缩短项目选型路径，而不是评选“综合第一”。完整 Runtime 更重，轻量工具箱更容易嵌入；关键是系统边界与目标记忆范式是否匹配。*
+{{< figure
+  src="/images/posts/llm-memory-research/open-source-memory-architectures-v4-zh-4k.png"
+  alt="六类开源 Agent 记忆系统的系统边界与记忆范式"
+  caption="图 5：用来缩短项目选型路径，而不是评选“综合第一”。完整 Runtime 更重，轻量工具箱更容易嵌入；关键是系统边界与目标记忆范式是否匹配。"
+>}}
 
 ### 总表：宣传卖点、代码事实与记忆范式
 
@@ -327,7 +343,9 @@ Mem0 的定位非常清楚：给现有应用加一个统一的长期记忆层。
 - 事实抽取依赖 LLM，因此写入时就可能发生遗漏、归因错误和错误概括；
 - vector search 能找相似内容，但不能天然回答复杂历史真值。
 
-**对应范式：**以 semantic memory 为主的 external memory layer。
+{{< alert icon="circle-info" >}}
+**对应范式：** 以 semantic memory 为主的 external memory layer。
+{{< /alert >}}
 
 ### 2. Letta：记忆不是外挂，而是 Agent Runtime 的状态模型
 
@@ -353,7 +371,9 @@ Letta 的前身就是 MemGPT。它和 Mem0 最大的差别，不是检索算法�
 - 自主改写记忆提高了能力，也扩大了 prompt injection、错误写入和权限边界；
 - Runtime 很完整，不代表每个具体场景都需要这么重。
 
-**对应范式：**OS-style hierarchical memory + model-managed memory；覆盖 working、episodic、semantic，程序记忆则更多通过 tools/files/skills 承载。
+{{< alert icon="circle-info" >}}
+**对应范式：** OS-style hierarchical memory + model-managed memory；覆盖 working、episodic、semantic，程序记忆则更多通过 tools/files/skills 承载。
+{{< /alert >}}
 
 ### 3. Graphiti：真正的卖点不是「图」，而是时间与溯源
 
@@ -387,7 +407,9 @@ Letta 的前身就是 MemGPT。它和 Mem0 最大的差别，不是检索算法�
 - README 也明确区分 Graphiti 与托管 Zep：用户管理、规模化检索、治理、SLA 和开发工具属于更外层；
 - 图构建依赖 LLM 结构化抽取，schema 与模型质量会直接影响写入正确性。
 
-**对应范式：**temporal semantic memory + episodic provenance。
+{{< alert icon="circle-info" >}}
+**对应范式：** temporal semantic memory + episodic provenance。
+{{< /alert >}}
 
 ### 4. LangMem：最像一盒积木，而不是一台记忆服务器
 
@@ -413,7 +435,9 @@ LangMem 的价值在于把常见记忆动作做成可组合原语：
 - `InMemoryStore` 示例重启就丢，生产需要 Postgres Store 或其他 BaseStore；
 - 一致性、权限、删除与观测取决于外层 LangGraph 平台或你自己的实现。
 
-**对应范式：**memory primitives；重点覆盖 semantic 与 procedural memory。
+{{< alert icon="circle-info" >}}
+**对应范式：** memory primitives；重点覆盖 semantic 与 procedural memory。
+{{< /alert >}}
 
 ### 5. Cognee：更像知识基础设施，而不是聊天偏好记忆
 
@@ -441,7 +465,9 @@ add
 - 如果需求只是「记住这个用户不吃香菜」，完整 cognify pipeline 可能过重；
 - 如果需求是大量异构资料、关系查询、权限隔离，它又比纯聊天 memory SDK 更合适。
 
-**对应范式：**graph-structured semantic memory / knowledge memory。
+{{< alert icon="circle-info" >}}
+**对应范式：** graph-structured semantic memory / knowledge memory。
+{{< /alert >}}
 
 ### 6. MemoryOS：脑科学启发最直观，生产架构仍偏研究参考
 
@@ -469,7 +495,9 @@ MemoryOS 把短期、中期和长期做成显式层级：
 
 这不是说它「差」，而是它交付的是研究型参考实现，不应和完整平台用同一把尺子衡量。
 
-**对应范式：**hierarchical episodic memory → profile/semantic consolidation。
+{{< alert icon="circle-info" >}}
+**对应范式：** hierarchical episodic memory → profile/semantic consolidation。
+{{< /alert >}}
 
 ---
 
@@ -575,9 +603,11 @@ MemoryOS 适合当可读、可改的实验基线；不要把论文参考实现�
 
 前面的图负责定义概念和比较项目，这张图才是**落地蓝图**。阅读顺序是自上而下：顶部是一次请求经过的在线读写链路，中部是按记忆类型拆开的持久层，底部是来源血缘、巩固、冲突修订和删除等后台治理。它的目的不是要求所有团队照抄组件，而是确保生产设计没有漏掉生命周期中的关键责任。
 
-![可上线的 Agent 记忆层：写入、存储、召回、过滤与维护](/images/posts/llm-memory-research/production-memory-blueprint-v4-zh-4k.png)
-
-*图 6：用来把全文判断转成实施检查表。生产级记忆不是一个向量库，而是从原始事件、写入门控到召回、权限过滤、上下文组装和后台治理的一整层系统。*
+{{< figure
+  src="/images/posts/llm-memory-research/production-memory-blueprint-v4-zh-4k.png"
+  alt="可上线的 Agent 记忆层：写入、存储、召回、过滤与维护"
+  caption="图 6：用来把全文判断转成实施检查表。生产级记忆不是一个向量库，而是从原始事件、写入门控到召回、权限过滤、上下文组装和后台治理的一整层系统。"
+>}}
 
 ### 1. 原始事件与派生记忆分开
 
@@ -710,7 +740,9 @@ explain(memory_id)
 
 人类记忆科学用了一百多年，才从「记忆存在哪里」走到「多个系统怎样在提取中重构过去」。Agent 记忆工程也正在经历同样的概念升级：
 
-> **我们不再问 Agent 有没有 memory，而是问：它把什么变化保留下来，为什么保留，何时想起，怎样修订，以及谁有权让它忘记。**
+{{< alert icon="lightbulb" >}}
+**我们不再问 Agent 有没有 memory，而是问：它把什么变化保留下来，为什么保留，何时想起，怎样修订，以及谁有权让它忘记。**
+{{< /alert >}}
 
 ---
 
