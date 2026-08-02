@@ -9,7 +9,7 @@ CI_WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
 INSTALL_SCRIPT = ROOT / "scripts" / "install-aliyun.sh"
 RENEW_SCRIPT = ROOT / "scripts" / "renew-cert.sh"
 
-CHECKOUT_SHA = "3d3c42e5aac5ba805825da76410c181273ba90b1"
+CHECKOUT_SHA = "de0fac2e4500dabe0009e67214ff5f5447ce83dd"
 ALIYUN_SHA256 = (
     "b9edbcc21236f14bfeebbd5e272dde6f36fd946af5802fa677475ff69839ed84"
 )
