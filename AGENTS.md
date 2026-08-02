@@ -19,6 +19,8 @@
     `ebbaa1584979971c8614a24965b4405ff95890e0`; also pin its
     `wranglerVersion` input to the latest verified stable Wrangler CLI rather
     than accepting the action's moving `latest` default (4.118.0 on 2026-08-02).
+  - `peaceiris/actions-hugo` v3.2.1:
+    `2752ce1d29631191ea3f27c23495fa06139a5b78`.
 - When upgrading an action, sweep every workflow for sibling references so the
   repository does not mix old and new runtimes.
 - Node 24 actions require a sufficiently recent Actions runner. GitHub-hosted
