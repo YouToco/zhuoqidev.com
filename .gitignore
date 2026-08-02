@@ -3,6 +3,8 @@ resources/_gen/
 .hugo_build.lock
 .DS_Store
 Thumbs.db
+__pycache__/
+*.py[cod]
 .wrangler/
 zhuoqidev-project-status.md
 urls.txt
