@@ -1,0 +1,39 @@
+name: Renew CDN certificate
+
+on:
+  schedule:
+    # Avoid the start-of-hour GitHub Actions load spike.
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zhuoqidev-certificate-renewal
+  cancel-in-progress: false
+
+jobs:
+  renew:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: production-certificate
+
+    steps:
+      - name: Check out trusted default-branch code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install pinned Alibaba Cloud CLI
+        run: bash scripts/install-aliyun.sh
+
+      - name: Check, renew, publish, and verify certificate
+        env:
+          ALIYUN_BIN: ${{ runner.temp }}/aliyun-3.4.10/aliyun
+          ALIYUN_ACCESS_KEY_ID: ${{ secrets.ALIYUN_ACCESS_KEY_ID }}
+          ALIYUN_ACCESS_KEY_SECRET: ${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}
+          ACME_ACCOUNT_EMAIL: ${{ secrets.ACME_ACCOUNT_EMAIL }}
+          CERT_RENEW_THRESHOLD_DAYS: "30"
+          CERT_MIN_NEW_DAYS: "30"
+        run: bash scripts/renew-cert.sh
