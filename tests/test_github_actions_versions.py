@@ -13,6 +13,8 @@ CACHE_TAG = "v5.0.5"
 WRANGLER_ACTION_SHA = "ebbaa1584979971c8614a24965b4405ff95890e0"
 WRANGLER_ACTION_TAG = "v4.0.0"
 WRANGLER_VERSION = "4.118.0"
+HUGO_ACTION_SHA = "2752ce1d29631191ea3f27c23495fa06139a5b78"
+HUGO_ACTION_TAG = "v3.2.1"
 
 
 class GitHubActionsVersionTests(unittest.TestCase):
@@ -54,6 +56,28 @@ class GitHubActionsVersionTests(unittest.TestCase):
         )
         self.assertIn(f'wranglerVersion: "{WRANGLER_VERSION}"', text)
         self.assertNotRegex(text, r"cloudflare/wrangler-action@v\d+(?:\s|$)")
+
+    def test_hugo_action_uses_verified_node24_release(self) -> None:
+        text = self.workflow_text()
+
+        self.assertIn(
+            f"peaceiris/actions-hugo@{HUGO_ACTION_SHA} # {HUGO_ACTION_TAG}",
+            text,
+        )
+
+    def test_every_action_is_immutable_and_release_labeled(self) -> None:
+        text = self.workflow_text()
+        refs = re.findall(
+            r"^\s*uses:\s+([^@\s]+)@([^\s#]+)(?:\s+#\s+([^\s]+))?\s*$",
+            text,
+            flags=re.MULTILINE,
+        )
+
+        self.assertTrue(refs)
+        for action, revision, release in refs:
+            with self.subTest(action=action):
+                self.assertRegex(revision, r"^[0-9a-f]{40}$")
+                self.assertRegex(release, r"^v\d+(?:\.\d+){1,2}$")
 
 
 if __name__ == "__main__":
