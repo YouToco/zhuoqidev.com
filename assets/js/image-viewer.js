@@ -25,7 +25,8 @@
           actual: "1:1",
           actualLabel: "显示原始尺寸",
           loading: "正在加载高清图片…",
-          help: "单击图片退出 · 滚轮缩放 · 拖动画面 · 双击切换 1:1",
+          stage: "图片预览区域；单击图片或空白处关闭",
+          help: "单击图片或空白处退出 · 滚轮缩放 · 拖动画面 · 双击切换 1:1",
         }
       : {
           dialog: "Image preview",
@@ -38,7 +39,8 @@
           actual: "1:1",
           actualLabel: "Show actual size",
           loading: "Loading full-resolution image…",
-          help: "Click image to close · Wheel to zoom · Drag to pan · Double-click for 1:1",
+          stage: "Image preview area; click the image or empty space to close",
+          help: "Click image or empty space to close · Wheel to zoom · Drag to pan · Double-click for 1:1",
         };
 
     const viewer = document.createElement("div");
@@ -58,7 +60,7 @@
         <span class="image-viewer__separator" aria-hidden="true"></span>
         <button class="image-viewer__button image-viewer__button--symbol" type="button" data-viewer-action="close" aria-label="${labels.close}" title="${labels.close}">×</button>
       </div>
-      <div class="image-viewer__stage" tabindex="-1">
+      <div class="image-viewer__stage" tabindex="-1" aria-label="${labels.stage}">
         <img class="image-viewer__image" alt="" draggable="false">
         <div class="image-viewer__loading" role="status">${labels.loading}</div>
       </div>
@@ -243,7 +245,10 @@
 
     viewer.addEventListener("click", (event) => {
       const button = event.target.closest("[data-viewer-action]");
-      if (!button) return;
+      if (!button) {
+        if (event.target === viewer) closeViewer();
+        return;
+      }
       switch (button.dataset.viewerAction) {
         case "zoom-out":
           zoomAt(scale / ZOOM_FACTOR);
@@ -275,6 +280,7 @@
 
     stage.addEventListener("dblclick", (event) => {
       event.preventDefault();
+      if (!gestureStartedOnImage) return;
       if (imageClickTimer) {
         window.clearTimeout(imageClickTimer);
         imageClickTimer = null;
@@ -287,9 +293,13 @@
     });
 
     stage.addEventListener("click", (event) => {
-      if (!gestureStartedOnImage) return;
       if (gestureMoved) {
         gestureMoved = false;
+        return;
+      }
+
+      if (!gestureStartedOnImage) {
+        closeViewer();
         return;
       }
 
