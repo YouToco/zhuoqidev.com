@@ -360,6 +360,7 @@ body.image-viewer-open {
 .image-viewer__image {
   border-radius: 0;
   box-shadow: 0 1rem 4rem rgba(0, 0, 0, 0.45);
+  cursor: zoom-out;
   height: auto;
   left: 50%;
   margin: 0 !important;
@@ -372,6 +373,10 @@ body.image-viewer-open {
   user-select: none;
   width: auto;
   will-change: left, top, transform;
+}
+
+.image-viewer__stage.is-dragging .image-viewer__image {
+  cursor: grabbing;
 }
 
 .image-viewer__loading {

@@ -25,7 +25,7 @@
           actual: "1:1",
           actualLabel: "显示原始尺寸",
           loading: "正在加载高清图片…",
-          help: "滚轮缩放 · 拖动画面 · 双击切换 1:1 · Esc 关闭",
+          help: "单击图片退出 · 滚轮缩放 · 拖动画面 · 双击切换 1:1",
         }
       : {
           dialog: "Image preview",
@@ -38,7 +38,7 @@
           actual: "1:1",
           actualLabel: "Show actual size",
           loading: "Loading full-resolution image…",
-          help: "Wheel to zoom · Drag to pan · Double-click for 1:1 · Esc to close",
+          help: "Click image to close · Wheel to zoom · Drag to pan · Double-click for 1:1",
         };
 
     const viewer = document.createElement("div");
@@ -88,6 +88,10 @@
     const pointers = new Map();
     let lastPointer = null;
     let lastPinch = null;
+    let gestureStart = null;
+    let gestureMoved = false;
+    let gestureStartedOnImage = false;
+    let imageClickTimer = null;
 
     function getStageMetrics() {
       const rect = stage.getBoundingClientRect();
@@ -172,6 +176,10 @@
 
     function closeViewer() {
       if (viewer.hidden) return;
+      if (imageClickTimer) {
+        window.clearTimeout(imageClickTimer);
+        imageClickTimer = null;
+      }
       loadToken += 1;
       viewer.hidden = true;
       image.removeAttribute("src");
@@ -180,6 +188,9 @@
       pointers.clear();
       lastPointer = null;
       lastPinch = null;
+      gestureStart = null;
+      gestureMoved = false;
+      gestureStartedOnImage = false;
       stage.classList.remove("is-dragging");
       document.body.classList.remove("image-viewer-open");
       document.body.style.overflow = previousOverflow;
@@ -264,11 +275,36 @@
 
     stage.addEventListener("dblclick", (event) => {
       event.preventDefault();
+      if (imageClickTimer) {
+        window.clearTimeout(imageClickTimer);
+        imageClickTimer = null;
+      }
       if (Math.abs(scale - fitScale) < 0.01) {
         zoomAt(1, event.clientX, event.clientY);
       } else {
         fitToScreen();
       }
+    });
+
+    stage.addEventListener("click", (event) => {
+      if (!gestureStartedOnImage) return;
+      if (gestureMoved) {
+        gestureMoved = false;
+        return;
+      }
+
+      if (event.detail > 1) {
+        if (imageClickTimer) {
+          window.clearTimeout(imageClickTimer);
+          imageClickTimer = null;
+        }
+        return;
+      }
+
+      imageClickTimer = window.setTimeout(() => {
+        imageClickTimer = null;
+        closeViewer();
+      }, 260);
     });
 
     function pointerSnapshot() {
@@ -285,6 +321,13 @@
 
     stage.addEventListener("pointerdown", (event) => {
       if (event.button !== 0 && event.pointerType === "mouse") return;
+      if (!pointers.size) {
+        gestureStart = { x: event.clientX, y: event.clientY };
+        gestureMoved = false;
+        gestureStartedOnImage = event.target === image;
+      } else {
+        gestureMoved = true;
+      }
       stage.setPointerCapture(event.pointerId);
       pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
       stage.classList.add("is-dragging");
@@ -299,6 +342,12 @@
 
     stage.addEventListener("pointermove", (event) => {
       if (!pointers.has(event.pointerId)) return;
+      if (
+        gestureStart &&
+        Math.hypot(event.clientX - gestureStart.x, event.clientY - gestureStart.y) > 6
+      ) {
+        gestureMoved = true;
+      }
       pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
 
       if (pointers.size === 1 && lastPointer) {
@@ -331,6 +380,7 @@
         stage.classList.remove("is-dragging");
         lastPointer = null;
         lastPinch = null;
+        gestureStart = null;
       } else if (pointers.size === 1) {
         const remaining = Array.from(pointers.values())[0];
         lastPointer = { x: remaining.x, y: remaining.y };
@@ -339,7 +389,10 @@
     }
 
     stage.addEventListener("pointerup", releasePointer);
-    stage.addEventListener("pointercancel", releasePointer);
+    stage.addEventListener("pointercancel", (event) => {
+      gestureMoved = true;
+      releasePointer(event);
+    });
 
     document.addEventListener("keydown", (event) => {
       if (viewer.hidden) return;
