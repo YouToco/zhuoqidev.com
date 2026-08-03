@@ -2,7 +2,7 @@
 title: "Building a Personal Site with Hugo and Dual-Stack CDN"
 description: "How I set up Hugo + Blowfish with Alibaba Cloud OSS/CDN for China and Cloudflare Pages for international visitors — ICP filing, geo-DNS routing, and GitHub Actions dual-stack deployment."
 date: 2026-05-04
-lastmod: 2026-07-30
+lastmod: 2026-08-03
 aliases: ["/en/posts/hello-world/"]
 tags: ["Hugo", "Alibaba Cloud", "Cloudflare", "CDN", "ICP Filing"]
 categories: ["Tinkering"]
@@ -54,6 +54,16 @@ Domestic visitors get the ICP-compliant Alibaba CDN; international visitors get 
 ## Deployment
 
 Push to GitHub → Actions runs `hugo build` → uploads in parallel to OSS and Cloudflare Pages. The whole process takes 2-3 minutes. Publishing a post is nearly instant.
+
+## A Later Addition: an Image Viewer for 4K Architecture Diagrams
+
+Architecture diagrams in technical posts often contain small labels. Blowfish's built-in `medium-zoom` only enlarges an image to fit the screen and closes it on the next click. Even when the source is 4K, readers cannot keep zooming by percentage or pan across the details, so I replaced it with a site-wide image viewer.
+
+The implementation adds no new frontend dependency. The built-in zoom is disabled in `hugo.yaml`, while `assets/js/image-viewer.js` and its CSS are added to the Hugo Pipes asset pipeline. Hugo minifies and fingerprints them during the build, then the same static artifact is published to both CDNs. The script only attaches to `.article-content img:not(.nozoom)`, so article illustrations open in the viewer without hijacking avatars, icons, or card thumbnails.
+
+On open, the viewer calculates a fit-to-screen scale from the viewport and the image's natural dimensions. Wheel and button zooming preserve the point under the cursor, so the detail being inspected stays in place. A zoomed image can be dragged within bounded edges. Pointer Events track two contacts for pinch zoom on touch devices, while the keyboard supports `+`, `-`, arrow keys, `0` for fit, `1` for actual size, and `Esc`. The toolbar reports the live percentage and switches its labels with the article language.
+
+You can try it by clicking any 4K diagram in the [Codex Agent design deep dive](/en/posts/codex-agent-design/). It is also a useful property of a static site: richer interaction remains cacheable JavaScript and CSS, so the dual-CDN publishing topology does not need to change.
 
 ---
 

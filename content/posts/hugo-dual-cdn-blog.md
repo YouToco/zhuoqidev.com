@@ -2,7 +2,7 @@
 title: "用 Hugo 和双栈 CDN 搭建个人网站"
 description: "记录如何用 Hugo + Blowfish，通过阿里云 OSS/CDN（国内）+ Cloudflare Pages（国际）实现双栈加速，备案、DNS 分线路解析一次走通。"
 date: 2026-05-04
-lastmod: 2026-07-30
+lastmod: 2026-08-03
 aliases: ["/posts/hello-world/"]
 tags: ["Hugo", "阿里云", "Cloudflare", "CDN", "ICP备案"]
 categories: ["折腾记录"]
@@ -59,6 +59,16 @@ Hugo 是单二进制文件，无需 Node.js，构建几千篇文章只需 1-2 �
 推送到 GitHub → Actions 自动 `hugo build` → 并行上传到 OSS 和 Cloudflare Pages。
 
 整个流程大约 2-3 分钟，文章发布基本无感。
+
+## 后来补上的细节：能看清 4K 架构图的图片预览器
+
+技术文章里的架构图经常有很多小字。Blowfish 自带的 `medium-zoom` 只会把图片放大到适合屏幕，再点一次便关闭；原图即使是 4K，读者也不能继续按百分比放大、拖动查看局部。因此我后来把它替换成了一个站点级图片查看器。
+
+实现没有引入新的前端依赖：在 `hugo.yaml` 中关闭主题自带缩放，将 `assets/js/image-viewer.js` 和对应 CSS 加进 Hugo Pipes 的资源管线。构建时，它们会和其他资源一起压缩、生成内容指纹，再作为同一份静态产物发布到两套 CDN。脚本只接管 `.article-content img:not(.nozoom)`，所以正文配图可以预览，头像、图标和卡片封面不会被误触发。
+
+查看器打开后先根据视口与图片原始尺寸计算“适应屏幕”的比例；滚轮或按钮缩放时，以鼠标所在位置为锚点重新计算位移，让读者指着哪里就放大哪里。放大后的图片可以拖动，位移会限制在有效边界内。触摸端用 Pointer Events 同时跟踪两个触点，实现双指缩放；键盘则支持 `+`、`-`、方向键、`0`（适应屏幕）、`1`（原始尺寸）和 `Esc`。界面显示实时百分比，并根据文章语言切换中英文标签。
+
+你可以在[这篇 Codex Agent 设计解读](/posts/codex-agent-design/)中点击任意 4K 配图实际体验。这个小功能也说明了静态站点的一个好处：交互逻辑仍然只是可缓存的 JS 和 CSS，发布拓扑完全不需要改变。
 
 ---
 
