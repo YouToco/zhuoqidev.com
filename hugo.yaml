@@ -148,6 +148,7 @@ params:
   enableA11y: true
   enableStructuredBreadcrumbs: true
   disableImageOptimization: false
+  disableImageZoom: true
   fingerprintAlgorithm: "sha512"
 
   # Homepage — Profile layout with recent posts
