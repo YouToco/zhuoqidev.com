@@ -1,6 +1,6 @@
 ---
 title: "How Codex Layers First-Turn Tools: exec, the tool_search Gap, and BM25"
-description: "A Rust-optional source tour of Codex rust-v0.147.0 for Agent engineers: GPT-5.6 first-turn tools, Code Mode Only, deferred loading, and the BM25 implementation behind tool_search."
+description: "A Rust-optional source tour of Codex rust-v0.147.0 covering GPT-5.6 first-turn tools, request context, the Tool Search lifecycle, Code Mode Only, and BM25 for tools and memory."
 date: 2026-08-08
 lastmod: 2026-08-09
 audience_profile: "agent-engineer-source-transition"
@@ -14,7 +14,7 @@ ShowReadingTime: true
 ---
 
 {{< lead >}}
-Think of Codex's first request as airport check-in. The model does not receive a separate ticket for every counter. It gets a few top-level entrypoints; many concrete tools sit behind the `exec` gate, while others can be discovered later. You do not need to know Rust: this article establishes the system roles first, then verifies them with pseudocode and real source.
+Think of Codex's first request as airport check-in. The model does not receive a separate ticket for every counter. It gets a few top-level entrypoints; many concrete tools sit behind the `exec` gate, while others can be discovered later. You do not need Rust: this article first establishes the system roles, then uses pseudocode and source to answer where Tools enter the request, when search runs, how long results survive, and whether BM25 fits Memory retrieval.
 {{< /lead >}}
 
 This article is pinned to stable [`rust-v0.147.0`](https://github.com/openai/codex/releases/tag/rust-v0.147.0), released on August 7, 2026, at commit [`be6e8eac`](https://github.com/openai/codex/commit/be6e8eac029b183056b7e4402879f15d2c85f61b). I also rechecked `main` at commit [`646f7c0a`](https://github.com/openai/codex/commit/646f7c0a91b8e327d263335da68ae8ef212895ce) on August 9. Two conclusions matter up front:
@@ -28,7 +28,7 @@ The default reader understands that an LLM can call tools and has seen ordinary 
 
 Two reading routes are available:
 
-- **Architecture route:** read the glossary, airport diagram, three first-turn sections, BM25 metaphor, and takeaways.
+- **Architecture route:** read the glossary, airport diagram, Tool Search runtime sequence, BM25 metaphor, and takeaways.
 - **Source route:** continue through pseudocode, Rust correspondence, the end-to-end query, and the source index.
 
 ## A Small Terminology Map
@@ -127,6 +127,60 @@ There is, however, an important detail in the latest stable source: **the GPT-5.
 - Public issue [#32101](https://github.com/openai/codex/issues/32101) documents this bridge gap. As of August 9, 2026, commit [`646f7c0`](https://github.com/openai/codex/commit/646f7c0a91b8e327d263335da68ae8ef212895ce) on `main` still contains the skip branch.
 
 That distinction matters: **present in the registry is not the same as visible in the request, and intended to be discoverable is not the same as wired through every Tool Mode today.**
+
+## How Tool Search Fits Into an Agent Loop
+
+Set aside the Code Mode Only bridge gap for a moment and examine a Direct/Deferred path in which `tool_search` **is exposed to the model**. It is not a retrieval job that automatically runs every turn. It is one optional action in the model's toolbox.
+
+### It Is Model-Chosen, Not an Automatic Per-Turn Fallback
+
+The Codex client contains no fallback loop that says, “if none of the explicit Tools fit, run BM25.” Tool choice is automatic; only after the model emits a structured `tool_search_call` does the Router dispatch it to the handler. The model may use an already-visible Tool first or search immediately from the task—it does not have to fail against each explicit Tool before searching.
+
+Imagine a developer entering a hardware store. A hammer and screwdriver are already on the shelf, and the clerk can search the stockroom. The clerk does not search the stockroom after every step of tightening a screw. A request such as “measure fiber loss,” however, justifies a catalog lookup. Once a searched Tool is loaded and remains in the active conversation context, later turns can call it **without searching for the same Tool again**. A new need, a changed catalog, a new task, or loss of the earlier search output from active context can require another search.
+
+The official API's Deferred Loading still gives the model minimal discovery information on turn one: Namespaces and MCP servers expose high-level names and descriptions, while an individually deferred Function retains its name and description but defers most parameters. In Codex's client-side BM25 path, the model first sees the `tool_search` entry and its searchable-source guidance; the complete `LoadableToolSpec` arrives only after a hit. Both designs follow the same principle: **show the catalog before moving the warehouse.**
+
+### Do Explicit Tools Live in the System or User Prompt?
+
+Strictly speaking, usually **neither**. Tool definitions are structured fields in the request protocol, not natural-language text pasted into a Prompt. This stable release has two framings:
+
+| Request path | Where Tool definitions live | Where base instructions live | User message? |
+| --- | --- | --- | --- |
+| Standard Responses | Top-level `tools` array | Top-level `instructions` | No |
+| GPT-5.6 Codex Responses Lite | An `additional_tools` item at the head of input, with role `developer` | The following `developer` Message | No |
+
+Do not search only system/user prose in a captured request. The Responses Lite wire order is closer to:
+
+```text
+[developer: additional_tools]
+[developer: base instructions]
+[previous conversation items]
+[user: current question]
+```
+
+Here `developer` expresses authority and ordering; it does not mean the Tool Schema was rewritten as an essay-like developer prompt. Code Mode Only adds another layer: many nested tool contracts appear inside the structured `exec` definition and its JavaScript usage guide, and the model calls them through that gateway.
+
+### Where Results Appear and How Long They Remain Usable
+
+A client-executed search has this sequence:
+
+```text
+model: tool_search_call(query="calendar")
+Codex: BM25 Top-K → LoadableToolSpec
+context tail: tool_search_output { call_id, status, tools: [...] }
+model: function_call(name="create_event", ...)
+later turns: create_event remains callable
+```
+
+`tool_search_output` is a dedicated Responses input item—not system text, user text, or a retroactive edit of the initial `additional_tools`. Codex records the Call/Output pair in conversation history. When the next request carries those history items, the model can treat the complete schemas in `tools` as loaded candidates. The official design injects loaded tools at the end of model context, which also preserves a stable prefix and improves the opportunity for Prompt Cache hits.
+
+“Callable in future turns” needs a boundary: it means within the same active conversation while that output remains in the context sent to the model. It is not a process-wide permanent installation. A new conversation, context-compaction policy, or catalog update can require discovery again. Think of placing a stockroom manual into this work order, not welding the machine permanently onto the bench.
+
+### Why Does the Stable Catalog Select Code Mode Only for GPT-5.6?
+
+The source proves a configuration fact: GPT-5.6 Sol, Terra, and Luna in the stable model catalog all declare `tool_mode: "code_mode_only"` and Responses Lite; the adjacent GPT-5.5 entry does not. The code treats this as **model capability metadata and a protocol compatibility contract**. There is no comment or design document saying, “5.6 is smarter, therefore enable it.” API-level `tool_search` is not exclusive to 5.6 either: the official guide lists support for GPT-5.4 and later.
+
+The following is an explicitly labeled engineering inference, not a source quotation. Code Mode Only asks the model to write valid JavaScript inside `exec`, follow Tool Schemas, manage asynchronous work and failures, and filter or compress results within one cell. Stronger coding, reasoning, and tool-use training are clearly enabling conditions. Activation also depends on targeted post-training, evaluation thresholds, provider protocol support, and rollout policy. **“A stronger model makes this viable” is reasonable; “raw strength is the only reason” is not established.**
 
 ## BM25 Does Not Abandon Keywords; It Ranks Them
 
@@ -327,27 +381,67 @@ The current engine uses `Language::English` and does not add vector recall, a sy
 
 That is why tool `name`, `description`, and parameter documentation are operational metadata, not cosmetic copy. BM25 is the librarian, but it can read only what is printed on the cards. If tool scale, multilingual use, or paraphrase diversity grows substantially, a sensible upgrade is **BM25 recall + exact-name boost + lightweight reranking**, not necessarily an immediate jump to pure vector retrieval.
 
-## Three Takeaways
+## Is BM25 Suitable for Memory Retrieval?
+
+**Yes, but it fits best as the lexical-recall leg—not as an entire long-term memory system.** First, a source-level correction: this stable Codex release does not reuse the BM25 implementation above for Memory search. `ext/memories` exposes substring queries, optionally normalizes whitespace or separators, and organizes matches by path and line number. It neither computes BM25 relevance nor ranks by semantic similarity.
+
+BM25 is still useful for Memory because error codes, function names, file paths, project codenames, people, and exact decision language are powerful lexical anchors. For “how did we handle `EADDRINUSE` last time?”, BM25 is often more stable than vectors alone and ranks results more usefully than a substring filter.
+
+Memory is harder than a collection of Tool cards, however. The same event may be paraphrased; a newer conclusion may supersede an older one; retrieval must account for whose memory, which project, when it happened, and how trustworthy it is. BM25 does not model those relationships:
+
+| Memory need | BM25 alone |
+| --- | --- |
+| Exact names, paths, error codes, and APIs | Strong |
+| Paraphrases and cross-language expressions | Weak |
+| User, project, and time scope | Needs metadata filters |
+| Conflicting conclusions, trust, and importance | Needs additional ranking and governance |
+
+A more reliable production pipeline is:
+
+```text
+metadata filters for user / project / time
+  → BM25 lexical recall  ||  embedding semantic recall
+  → fuse both candidate sets (for example, RRF)
+  → weight recency, importance, trust, and usage
+  → lightweight reranking
+  → return source spans and provenance
+```
+
+For a small local Memory dominated by technical logs, starting with BM25 is entirely reasonable; it adds meaningful ranking over the current substring list. As paraphrase, multilingual use, and contradictory memories grow, hybrid retrieval becomes more valuable. This is a general architecture recommendation—**not a claim that Codex already implements this pipeline.**
+
+## Five Takeaways
 
 First, the initial request does not “send every tool to the model.” Exposure, Tool Mode, provider capabilities, environment state, and feature gates jointly compute the interface.
 
-Second, Code Mode places many schemas behind `exec`. That saves more than schema tokens: filtering, loops, and parallel orchestration can stay inside one JavaScript cell instead of forcing repeated model–tool round trips.
+Second, explicit Tools normally live in structured request fields. Responses Lite uses a developer-role `additional_tools` item, but that is still not system/user prose.
 
-Third, `tool_search` is valuable not because it magically understands intent, but because a cheap, deterministic, explainable retrieval layer can compress a growing tool warehouse into a handful of cards worth inspecting. BM25 is keyword retrieval—just much smarter than “contains this string.”
+Third, `tool_search` is a model-chosen action, not an automatic per-turn fallback. Its structured output enters history, so loaded Tools remain callable in the same active conversation.
+
+Fourth, Code Mode Only demands stronger coding and orchestration capabilities, but the stable source only establishes model compatibility metadata; it does not prove that “strength” is the sole reason GPT-5.6 receives it.
+
+Fifth, BM25 is ranked keyword retrieval. It fits Tool Schemas and exact lexical Memory recall; a complete Memory system benefits from metadata, BM25, vector recall, and reranking together.
 
 ## Source Index
 
 - [GPT-5.6 Sol capabilities and Tool Mode](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/models-manager/models.json#L4-L22)
+- [GPT-5.6 Terra Code Mode Only metadata](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/models-manager/models.json#L119-L137)
+- [GPT-5.6 Luna Code Mode Only metadata](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/models-manager/models.json#L232-L250)
+- [The adjacent GPT-5.5 entry does not select Code Mode Only](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/models-manager/models.json#L341-L359)
+- [Official OpenAI Tool Search guide: deferred loading, call sequence, and reuse in future turns](https://developers.openai.com/api/docs/guides/tools-tool-search)
+- [Official OpenAI Programmatic Tool Calling guide](https://developers.openai.com/api/docs/guides/tools-programmatic-tool-calling)
 - [Tool registry, exposure, and model-visible spec planning](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/spec_plan.rs#L319-L486)
 - [Conditional registration of core tools](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/spec_plan.rs#L818-L1118)
 - [Responses Lite `additional_tools` request framing](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/client.rs#L849-L885)
 - [`tool_search` BM25 engine and Top-K output](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/handlers/tool_search.rs#L76-L169)
 - [How names, descriptions, and schemas become tool-search text](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/tools/src/tool_search.rs#L23-L150)
 - [How a `tool_search` result becomes a dedicated input item for the next request](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/context.rs#L149-L185)
+- [How `tool_search_call` / `tool_search_output` remain in conversation history](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/context_manager/history.rs#L350-L386)
 - [Direct / Deferred registration of MCP tools](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/mcp_tool_exposure.rs#L17-L89)
 - [BM25 crate version: 2.3.2](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/Cargo.toml#L294)
 - [`bm25` 2.3.2 equation and default parameters](https://github.com/Michael-JB/bm25/blob/8ef726045b41702e148d8996d344f3500844fde1/src/embedder.rs#L146-L205)
 - [`bm25` 2.3.2 tokenizer splitting, normalization, stop words, and stemming](https://github.com/Michael-JB/bm25/blob/8ef726045b41702e148d8996d344f3500844fde1/src/default_tokenizer.rs#L263-L289)
+- [Current substring-query semantics of the Codex Memory Tool](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/ext/memories/src/tools/search.rs#L28-L62)
+- [Codex Memory local search and result ordering](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/ext/memories/src/local/search.rs#L17-L88)
 
 > Source checked on August 9, 2026. The stable release is pinned to `be6e8eac`; the same-day `main` check is pinned to `646f7c0a`; the BM25 crate is pinned to `v2.3.2` commit `8ef72604`. Tool exposure and model catalogs continue to evolve; debug a specific environment against its actual request and exact commit.
 
