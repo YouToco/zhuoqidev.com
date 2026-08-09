@@ -100,16 +100,152 @@ CLI 也可临时传 `codex --enable code_mode_only`。公开配置仍把它标�
   caption="这是一张版本化的概念图，不是永久工具清单：实线表示当前可见入口；tool_search 一侧的虚线表示按需发现设计，路障表示 rust-v0.147.0 的 GPT-5.6 Code Mode Only 首轮没有暴露该入口。"
 >}}
 
-## 模型第一次到底能看到什么
+## 模型第一次到底能看到什么：先分清公开 API 与 Codex 内部封装
 
-GPT-5.6 Sol 使用一种较新的请求包装方式：工具不再放在传统的顶层 `tools` 数组，而是放进请求开头一个叫 `additional_tools` 的结构化数据块。**它不是藏在系统提示词或用户文字里。** 因此抓包时没看到顶层 `tools`，不代表模型没有工具。
+先纠正一个很容易造成误解的说法：**开发者直接调用 [OpenAI 公开 Responses API](https://developers.openai.com/api/docs/guides/tools) 时，即使用 GPT-5.6，工具仍然放在顶层 `tools`。不应该因为 Codex 源码里出现了 `additional_tools`，就把自己的公开 API 请求改成这个写法。**
 
-在这条路径里，“模型第一次能看到”分为两种：
+这里其实混在了一起的是两个问题：
 
-1. **单独摆在桌面上的入口**：例如 `exec`、`wait`，模型可以直接点名调用；
-2. **收在 `exec` 说明书里的工具**：模型第一次同样能读到它们，但调用时必须写成 `tools.xxx(...)`。
+1. **模型能使用哪些工具**：取决于服务最终交给模型哪些工具说明；
+2. **这些说明怎样穿过网络送到服务**：取决于客户端和服务端约定的请求格式。
 
-这和机场很像：登机牌只有几张，但 `EXEC` 那张票背面已经印着登机口内有哪些柜台。不能因为柜台不是单独一张票，就说旅客不知道它存在。
+模型不会亲自阅读 HTTP 包并比较 JSON 键名。服务端会先把请求还原成“模型可调用的工具”。所以 `tools` 与 `additional_tools` 更像是**两种信封**：信封写法不同，里面都可以装同一份工具说明书。真正受这个区别影响的是客户端能否与服务端对上格式，而不是模型突然多了或少了某种推理能力。
+
+### 对比一：开发者直接调用公开 Responses API
+
+下面是一份完整的最小请求。为了让两边能逐项比较，只放一个 `weather` 工具组：
+
+```bash
+curl https://api.openai.com/v1/responses \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-5.6",
+    "instructions": "需要实时天气时调用工具，不要猜测。",
+    "input": [
+      {
+        "role": "user",
+        "content": "巴黎现在多少度？"
+      }
+    ],
+    "tools": [
+      {
+        "type": "namespace",
+        "name": "weather",
+        "description": "查询实时天气。",
+        "tools": [
+          {
+            "type": "function",
+            "name": "get_current_weather",
+            "description": "按城市查询当前温度。",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "city": { "type": "string" }
+              },
+              "required": ["city"],
+              "additionalProperties": false
+            },
+            "strict": true
+          }
+        ]
+      }
+    ],
+    "tool_choice": "auto"
+  }'
+```
+
+这里有三条彼此平行的输入：`instructions` 告诉模型做事原则，`input` 装用户问题，`tools` 装可以调用什么。工具既不是系统提示词里的自然语言清单，也不是用户消息的一部分。
+
+### 对比二：Codex 选择 Responses Lite 后发出的请求
+
+Codex 的稳定版模型配置会为 GPT-5.6 Sol 选择 `use_responses_lite`。此时源码仍然构造一个 Responses 请求体，但做了两次搬家：顶层 `tools` 搬到 `input` 的第一项，顶层 `instructions` 搬到第二项。下面仍用同一个人为示例的 `weather` 工具组，方便逐字段比较；字段位置和固定值来自源码，尖括号中的缓存键与追踪值则由 Codex 每轮生成：
+
+```http
+POST <Codex 当前模型接入层配置的 Responses 地址>
+Authorization: Bearer <当前登录或 API 凭据>
+Content-Type: application/json
+x-openai-internal-codex-responses-lite: true
+
+{
+  "model": "gpt-5.6-sol",
+  "input": [
+    {
+      "type": "additional_tools",
+      "role": "developer",
+      "tools": [
+        {
+          "type": "namespace",
+          "name": "weather",
+          "description": "查询实时天气。",
+          "tools": [
+            {
+              "type": "function",
+              "name": "get_current_weather",
+              "description": "按城市查询当前温度。",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "city": { "type": "string" }
+                },
+                "required": ["city"],
+                "additionalProperties": false
+              },
+              "strict": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "message",
+      "role": "developer",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "需要实时天气时调用工具，不要猜测。"
+        }
+      ]
+    },
+    {
+      "type": "message",
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "巴黎现在多少度？"
+        }
+      ]
+    }
+  ],
+  "tool_choice": "auto",
+  "parallel_tool_calls": false,
+  "reasoning": { "effort": "low", "context": "all_turns" },
+  "store": false,
+  "stream": true,
+  "include": ["reasoning.encrypted_content"],
+  "prompt_cache_key": "<由 Codex 会话生成>",
+  "text": { "verbosity": "low" },
+  "client_metadata": {
+    "x-codex-turn-metadata": "<由 Codex 生成的 JSON 字符串>"
+  }
+}
+```
+
+最值得注意的不是字段多了一个，而是请求头已经明确写着 **`internal-codex-responses-lite`**。[Codex 的源码测试](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/tests/suite/responses_lite.rs#L28-L139)也明确检查：这种请求没有顶层 `tools` 和 `instructions`，`input[0]` 必须是 `additional_tools`，下一项才是 `developer` 指令。它是 Codex 与支持该格式的模型服务之间的内部传输合同，不是公开 Responses API 文档要求普通开发者采用的新格式。
+
+| 精准对比 | 公开 Responses API | Codex Responses Lite |
+| --- | --- | --- |
+| 面向谁 | 普通 API 开发者 | Codex 与明确支持 Lite 的模型接入层 |
+| 工具放哪里 | 顶层 `tools` | `input[0].tools`，这一项的类型叫 `additional_tools` |
+| 基础指令放哪里 | 顶层 `instructions` | 下一条 `developer` 消息 |
+| 顶层 `tools` 是否存在 | 存在 | 源码设为 `None`，发出时省略 |
+| 是否公开、通用 | 是 | 否，请求头明确标记为 Codex internal |
+| 模型最终是否能看到工具 | 能 | 服务端支持这份内部合同才能看到 |
+
+因此，之前真正应该表达的区别不是“GPT-5.6 改用了新的公开 API”，而是：**同一个 Codex 客户端内有两种请求编码；模型目录为某些模型选择了内部 Lite 编码。** 在 Lite 路径里，第一次可见的入口仍分两种：`exec`、`wait` 等入口可以直接点名；收在 `exec` 使用指南里的工具也能被读到，但要写成 `tools.xxx(...)` 调用。
+
+这和机场很像：公开 API 与 Lite 是两家航空公司的登机牌版式，不是两座不同的机场。`exec` 则像其中一张联程票，票面已经写明过闸后可以到哪些柜台。
 
 ## GPT-5.6 Sol/Terra 第一次能直接点哪些入口
 
@@ -169,25 +305,59 @@ Codex 没有一段“现有工具都不合适，就自动执行 BM25”的兜底
 
 OpenAI 的通用做法会先给模型一点点“可发现信息”，例如某组工具叫什么、能做什么，但把冗长参数留到搜索命中后再发。Codex 的本地 BM25 路径则先给模型 `tool_search` 入口和可搜索范围，命中后再返回完整工具说明。共同点都是：**先给目录，不先搬来整个仓库。**
 
-### 一开始就有的工具，放在系统提示词还是用户提示词里
+### 开发新 Agent 时，到底要不要使用这个区别
 
-严格答案是：通常**两者都不是**。工具说明是请求里单独的结构化数据，不是拼进自然语言提示词的一段文字。这个稳定版有两种装法：
+先从第一性原理判断：一个 Agent 只需要打通四件事——**你有哪些工具 → 模型收到哪些说明 → 模型用什么格式提出调用 → 你的程序怎样执行并返回结果**。`tools` 与 `additional_tools` 只属于第二件事的“运输包装”，不应该侵入你的业务工具代码。
 
-| 请求方式 | 工具说明放在哪里 | 基础指令放在哪里 | 属于用户消息吗 |
-| --- | --- | --- | --- |
-| 普通请求 | 顶层 `tools` 数组 | 顶层 `instructions` | 否 |
-| GPT-5.6 的精简请求 | 输入开头的 `additional_tools` 数据块，标记为 `developer` | 紧随其后的 `developer` 消息 | 否 |
+| 你的场景 | 应该怎样做 | 不应该怎样做 |
+| --- | --- | --- |
+| 直接使用 OpenAI 公开 Responses API | 继续使用顶层 `tools`；需要官方工具搜索时，在这里加入 `tool_search` 和标记为延迟加载的工具 | 不要自己构造 `additional_tools` |
+| 工具数量很少 | 直接把完整工具放进 `tools`，先保持系统简单 | 不要为了模仿 Codex 强行增加一层搜索 |
+| 工具有几百个，而且创建请求时已经知道完整目录 | 使用官方托管的 `tool_search`，让 OpenAI 服务完成搜索与加载 | 不必先复制 Codex 的本地 BM25 |
+| 工具随租户、项目或权限实时变化 | 使用客户端执行的 `tool_search`；模型提出搜索，你的程序用 BM25、向量或混合方法查找，再回传 `tool_search_output` | 不要把所有租户的全部工具都发送给模型 |
+| Fork Codex，且模型服务明确支持 Responses Lite | 保留 Codex 的接入层，让它负责生成 `additional_tools` 和内部请求头 | 不要让业务代码直接依赖这份内部格式 |
+| 接 DeepSeek、GLM、Kimi 或本地模型 | 在 Agent 内部保留统一的工具说明，再为每个模型写一个很薄的格式转换层 | 不要假设对方认识 OpenAI 的内部 `additional_tools` |
 
-所以抓包时不要只搜索 system/user 文本。GPT-5.6 的请求顺序更接近：
+如果你现在用公开 Responses API 开发一个有大量工具的新 Agent，真正可以直接复用的是下面这种官方写法，而不是 Lite 写法：
 
-```text
-[developer: additional_tools]
-[developer: base instructions]
-[此前 conversation items]
-[user: 当前问题]
+```python
+from openai import OpenAI
+
+client = OpenAI()
+
+response = client.responses.create(
+    model="gpt-5.6",
+    input="列出客户 CUST-12345 的未完成订单。",
+    tools=[
+        {
+            "type": "namespace",
+            "name": "crm",
+            "description": "客户资料与订单工具。",
+            "tools": [
+                {
+                    "type": "function",
+                    "name": "list_open_orders",
+                    "description": "按客户 ID 查询未完成订单。",
+                    "defer_loading": True,
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "customer_id": {"type": "string"}
+                        },
+                        "required": ["customer_id"],
+                        "additionalProperties": False,
+                    },
+                    "strict": True,
+                }
+            ],
+        },
+        {"type": "tool_search"},
+    ],
+    parallel_tool_calls=False,
+)
 ```
 
-这里的 `developer` 只说明这块数据的权限和位置，不表示工具说明被改写成一篇提示词。许多收进 `exec` 的工具说明，则写在 `exec` 的 JavaScript 使用指南里，模型通过这个总入口调用它们。
+这段代码表达的设计才值得带走：先给模型 `crm` 这本目录，需要时再加载 `list_open_orders` 的完整参数。至于底层最终用顶层 `tools`、Lite 输入项，还是另一个模型厂商的格式，应由最外层的模型接入代码转换。
 
 ### 搜索结果怎样进入上下文，又能用多久
 
@@ -543,7 +713,7 @@ wire_api = "responses"
 
 第一，第一次请求不会把所有工具都塞给模型；程序会根据模型、环境和功能开关，决定哪些一开始就给、哪些搜索后再给、哪些不给。
 
-第二，一开始就有的工具通常放在请求的结构化数据里，不是藏在 system 或 user 提示词中。
+第二，公开 Responses API 把工具放在顶层 `tools`；Codex 的内部 Responses Lite 才把它们放进 `additional_tools` 输入项。两者都是结构化数据，不是藏在 system 或 user 提示词中。
 
 第三，`tool_search` 由模型按需选择，不是每轮自动执行；搜到的工具说明留在同一会话里，后面可以继续使用。
 
@@ -568,6 +738,7 @@ wire_api = "responses"
 - [Tool Registry、Exposure 与首轮可见 Spec 规划](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/spec_plan.rs#L319-L486)
 - [核心 Tool 的条件化注册](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/spec_plan.rs#L818-L1118)
 - [Responses Lite 的 `additional_tools` 请求封装](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/client.rs#L849-L885)
+- [Responses Lite 测试：内部请求头、顶层字段缺席与输入项顺序](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/tests/suite/responses_lite.rs#L28-L139)
 - [`tool_search` 的 BM25 Engine 与 Top-K 返回](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/handlers/tool_search.rs#L76-L169)
 - [Tool Search 索引文本如何由名称、描述和 Schema 组成](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/tools/src/tool_search.rs#L23-L150)
 - [`tool_search` 结果如何变成下一次请求的专用输入项](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/context.rs#L149-L185)

@@ -70,6 +70,11 @@ first explains what is cached, why reuse is safe, and when it is rebuilt.
 - When discussing an open-source Agent, distinguish framework reuse from model
   compatibility. Cover transport, wire protocol, capability metadata, and
   eval requirements before calling another model “drop-in.”
+- When two request formats are compared, first identify the public documented
+  contract and any product-internal extension. Show complete minimal requests
+  side by side, state what moved, what disappeared, and what stayed
+  semantically equivalent, then tell the reader which format to use in a new
+  Agent. A client model-catalog flag is not evidence of a new public API rule.
 - Explain efficiency with a simple cost or scaling model when possible, and
   include the condition under which the optimization stops being worthwhile.
 
@@ -185,6 +190,8 @@ claims.
 - [ ] One input is traced end to end.
 - [ ] Application glue and dependency internals are distinguished.
 - [ ] Facts, inference, and illustrative values are visibly separated.
+- [ ] Every protocol comparison distinguishes public and internal contracts,
+      includes side-by-side minimal requests, and gives an adoption decision.
 - [ ] Images do not contradict the pinned implementation.
 - [ ] Chinese and English versions have equivalent claims.
 - [ ] Source tag, commit, dependency version, and check date are pinned.

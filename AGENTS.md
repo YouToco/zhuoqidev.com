@@ -27,6 +27,11 @@
   application languages or providers. For model replacement, distinguish
   transport, wire protocol, capability metadata, and eval compatibility; do
   not describe a model as drop-in based only on a matching endpoint shape.
+- Whenever an article contrasts request or protocol formats, identify which
+  contract is public and documented versus product-internal, show complete
+  minimal payloads side by side, compare the fields that moved or disappeared,
+  and end with a decision table for readers building a new Agent. Never turn a
+  model-catalog choice inside one client into general API guidance.
 - Chinese and English editions must preserve the same claims, caveats, code,
   examples, version scope, and visual meaning.
 - Technical images are evidence-bearing content. Validate their labels and
