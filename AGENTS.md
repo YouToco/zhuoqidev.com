@@ -1,5 +1,25 @@
 # zhuoqidev.com repository instructions
 
+## Editorial audience policy
+
+- Before creating or substantially revising an article, read
+  `docs/editorial-audience.md` and follow its reader contract and publication
+  checklist.
+- The default reader profile is `agent-engineer-source-transition`: an
+  engineer who understands basic LLM tool calling and can read Python or
+  TypeScript, but is not assumed to know Rust, the target project's source
+  tree, or project-specific type/function names.
+- Explain the system concept before introducing source identifiers. Use the
+  sequence: problem -> mental model -> glossary -> pseudocode/data flow ->
+  real source -> concrete example -> limitations and evidence.
+- Source depth must not be removed to make an article accessible. Instead,
+  provide the conceptual stairs needed to reach it. No internal identifier may
+  carry an unexplained architectural claim.
+- Chinese and English editions must preserve the same claims, caveats, code,
+  examples, version scope, and visual meaning.
+- Technical images are evidence-bearing content. Validate their labels and
+  implied behavior against the article; aesthetics never override accuracy.
+
 ## GitHub Actions dependency policy
 
 - Before adding or changing any `uses:` entry, query the action's official GitHub
