@@ -2,7 +2,7 @@
 title: "Codex 第一次请求到底暴露了哪些 Tool？以及 tool_search 为什么用 BM25"
 description: "基于 Codex 最新稳定版 rust-v0.147.0 源码，拆解 GPT-5.6 Code Mode 首次请求的工具表、exec 嵌套工具、延迟加载，以及 tool_search 选择 BM25 的工程原因。"
 date: 2026-08-08
-lastmod: 2026-08-08
+lastmod: 2026-08-09
 tags: ["Codex", "OpenAI", "Tool Calling", "Tool Search", "BM25", "MCP", "Code Mode", "AI Agent"]
 categories: ["AI Agent 工程"]
 series: ["Agent 架构深度"]
@@ -105,6 +105,99 @@ score(D, Q) = Σ IDF(t) × TF_saturation(t, D) × length_normalization(D)
 - **直接产出 Top-K**：`tool_search` 需要的是默认 8 个有序候选，不是一大包无序布尔命中。
 
 源码不是只搜索 Tool 名字。普通 Tool 的索引文本会拼接 Namespace 名称与说明、Tool 名称、把下划线换成空格后的名称、Tool 描述、参数名和参数描述；MCP Tool 还会加入 canonical/callable name、Server、标题、Connector、Plugin 显示名以及输入 Schema 的属性名。也就是说，一张“工具卡”已经把用户和模型可能想到的多个入口词放在了一起。
+
+## 源码怎么跑：从 Deferred Tool 到可加载 Schema
+
+公式回答了“怎样打分”，但真正的实现还要回答三个问题：文档从哪里来、BM25 返回的编号怎样找回 Tool、为什么搜索结果能在下一轮变成可调用 Schema。稳定版的答案集中在 `spec_plan.rs`、`tool_search.rs` 和 `codex-tools` 的检索文本构造代码里。
+
+先说最容易误解的一点：**Codex 没有自己手写一遍 BM25 公式。** `codex-rs/Cargo.toml` 依赖 [`bm25 = "2.3.2"`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/Cargo.toml#L294)，分词、文档频率、平均文档长度和评分由这个内存检索库完成；Codex 写的是围绕它的数据准备与结果映射。
+
+### 第一步：只收集延迟暴露的工具
+
+`append_tool_search_executor()` 从 Registry 过滤出 Deferred Tool，再向每个 Runtime 索取 `search_info`。下面是保留真实类型和方法名的精简代码：
+
+```rust
+let search_infos = registry
+    .entries()
+    .filter(|tool| tool.exposure.is_deferred())
+    .filter_map(|tool| tool.runtime.search_info())
+    .collect::<Vec<_>>();
+
+registry.register_trusted(
+    tool_search_handler_cache.get_or_build(search_infos, source_listing),
+);
+```
+
+每个条目把“用于搜索的卡片文字”和“命中后要返回的工具定义”绑在一起：
+
+```rust
+pub struct ToolSearchEntry {
+    pub search_text: String,
+    pub output: LoadableToolSpec,
+}
+```
+
+这里的 `search_text` 就是上一节列出的名称、描述、参数和 Namespace 等元数据；`output` 则是下一轮模型请求可以装载的 Function 或 Namespace Schema。可以把它想成图书馆索引卡：正面写着供馆员检索的关键词，背面拴着书库中那本书的提取单。
+
+### 第二步：把数组下标当成“取书号”建索引
+
+[`ToolSearchHandler::new()`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/handlers/tool_search.rs#L76-L110) 枚举所有卡片，把 `search_infos` 的数组下标作为 BM25 文档 ID：
+
+```rust
+let documents = search_infos
+    .iter()
+    .map(|info| info.entry.search_text.clone())
+    .enumerate()
+    .map(|(idx, text)| Document::new(idx, text))
+    .collect();
+
+let search_engine =
+    SearchEngineBuilder::<usize>::with_documents(
+        Language::English,
+        documents,
+    )
+    .build();
+```
+
+这个 `usize` 很关键。BM25 引擎只需返回诸如 `7、2、11` 这样的有序文档 ID，Codex 就能用它们回查 `search_infos[7]`、`search_infos[2]`、`search_infos[11]`。没有数据库主键，也没有第二张映射表，数组位置本身就是“取书号”。整个语料一次性装进内存，并明确采用 `Language::English`。
+
+### 第三步：搜索 Top-K，再把 ID 映射回 Schema
+
+调用时，Handler 会先 `trim()` 查询，拒绝空字符串和 `limit = 0`；未指定 `limit` 时使用 `TOOL_SEARCH_DEFAULT_LIMIT`，也就是 8。核心搜索代码很短：
+
+```rust
+let results = self.search_engine
+    .search(query, limit)
+    .into_iter()
+    .map(|result| result.document.id)
+    .filter_map(|id| self.search_infos.get(id))
+    .map(|info| &info.entry);
+
+coalesce_loadable_tool_specs(
+    results.map(|entry| entry.output.clone()),
+)
+```
+
+这里有两个值得注意的细节：
+
+1. Codex 没有把 BM25 的数值分数继续传给模型，只使用检索库已经排好的顺序；
+2. `coalesce_loadable_tool_specs()` 会把同一 Namespace 下命中的多个 Tool 合并，避免返回几份重复的 Namespace 外壳。
+
+于是完整数据流就是：
+
+```text
+Deferred Runtime
+  → ToolSearchInfo(search_text + LoadableToolSpec)
+  → BM25 Document<usize>
+  → Top-K 有序文档 ID
+  → 回查 LoadableToolSpec
+  → 合并 Namespace
+  → 放进下一次模型请求
+```
+
+最后还有一个性能细节：[`ToolSearchHandlerCache`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/handlers/tool_search.rs#L34-L74) 会比较新的 `search_infos` 和 Source Listing。工具世界没变就复用已有 `Arc<ToolSearchHandler>` 和内存索引；MCP、Plugin 或动态工具发生变化才重建。它很像馆藏没变时继续用昨天的卡片柜，只有进了新书才重新编目。
+
+对应源码入口可从 [`append_tool_search_executor()`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/spec_plan.rs#L1165-L1185)、[`ToolSearchHandler`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/handlers/tool_search.rs#L76-L197) 和 [`ToolSearchEntry` / `search_text` 构造](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/tools/src/tool_search.rs#L12-L150) 三处顺着读下来。
 
 ## 为什么这个场景选 BM25 很合理
 

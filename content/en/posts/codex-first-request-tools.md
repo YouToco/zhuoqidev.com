@@ -2,7 +2,7 @@
 title: "Which Tools Does Codex Expose on the First LLM Request—and Why Does tool_search Use BM25?"
 description: "A source-level tour of Codex rust-v0.147.0: GPT-5.6's first-request tool surface, tools nested under exec, deferred loading, and the engineering case for BM25 in tool_search."
 date: 2026-08-08
-lastmod: 2026-08-08
+lastmod: 2026-08-09
 tags: ["Codex", "OpenAI", "Tool Calling", "Tool Search", "BM25", "MCP", "Code Mode", "AI Agent"]
 categories: ["AI Agent Engineering"]
 series: ["Agent Architecture Deep Dives"]
@@ -105,6 +105,99 @@ In library terms:
 - **The output is already Top-K.** `tool_search` wants eight ordered candidates by default, not a bag of unordered boolean hits.
 
 The source does not index only tool names. For ordinary tools, search text combines namespace name and description, the tool name, a space-separated version of underscore names, tool descriptions, parameter names, and parameter descriptions. MCP tools add canonical and callable names, server, title, connector, plugin display names, and input-schema property names. Each “catalog card” therefore contains several terms the user or model may plausibly use.
+
+## How the Code Runs: From Deferred Tool to Loadable Schema
+
+The formula explains how documents are scored, but an implementation must still answer three questions: where the documents come from, how a BM25 document ID leads back to a tool, and how a search hit becomes a callable schema on the next turn. In the stable release, that path runs through `spec_plan.rs`, the `ToolSearchHandler`, and the search-text builders in `codex-tools`.
+
+The first important clarification is that **Codex does not reimplement the BM25 equation itself**. `codex-rs/Cargo.toml` depends on [`bm25 = "2.3.2"`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/Cargo.toml#L294). That in-memory library handles tokenization, document frequency, average document length, and scoring; Codex supplies the corpus and maps ranked results back into its tool types.
+
+### Step 1: Collect only deferred tools
+
+`append_tool_search_executor()` filters the registry for Deferred Tools and asks each runtime for its `search_info`. This is condensed code with the real types and method names preserved:
+
+```rust
+let search_infos = registry
+    .entries()
+    .filter(|tool| tool.exposure.is_deferred())
+    .filter_map(|tool| tool.runtime.search_info())
+    .collect::<Vec<_>>();
+
+registry.register_trusted(
+    tool_search_handler_cache.get_or_build(search_infos, source_listing),
+);
+```
+
+Each entry binds the text used for retrieval to the definition that should be returned on a hit:
+
+```rust
+pub struct ToolSearchEntry {
+    pub search_text: String,
+    pub output: LoadableToolSpec,
+}
+```
+
+`search_text` contains the names, descriptions, parameters, namespace metadata, and other fields described above. `output` is the Function or Namespace schema that can be loaded into the next model request. Think of a library card whose front contains searchable terms while its back carries the retrieval slip for the actual book.
+
+### Step 2: Use the array index as the retrieval number
+
+[`ToolSearchHandler::new()`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/handlers/tool_search.rs#L76-L110) enumerates the cards and uses each entry's position in `search_infos` as its BM25 document ID:
+
+```rust
+let documents = search_infos
+    .iter()
+    .map(|info| info.entry.search_text.clone())
+    .enumerate()
+    .map(|(idx, text)| Document::new(idx, text))
+    .collect();
+
+let search_engine =
+    SearchEngineBuilder::<usize>::with_documents(
+        Language::English,
+        documents,
+    )
+    .build();
+```
+
+That `usize` is the bridge back. The BM25 engine only needs to return ranked IDs such as `7, 2, 11`; Codex can then look up `search_infos[7]`, `search_infos[2]`, and `search_infos[11]`. There is no database key or second mapping table—the array position is the retrieval number. The full corpus is indexed in memory with `Language::English`.
+
+### Step 3: Search Top-K and map IDs back to schemas
+
+On invocation, the handler trims the query and rejects both an empty query and `limit = 0`. If the caller omits the limit, `TOOL_SEARCH_DEFAULT_LIMIT` supplies eight. The central retrieval code is short:
+
+```rust
+let results = self.search_engine
+    .search(query, limit)
+    .into_iter()
+    .map(|result| result.document.id)
+    .filter_map(|id| self.search_infos.get(id))
+    .map(|info| &info.entry);
+
+coalesce_loadable_tool_specs(
+    results.map(|entry| entry.output.clone()),
+)
+```
+
+Two details are easy to miss:
+
+1. Codex does not forward the numeric BM25 score to the model; it uses the order already produced by the retrieval library.
+2. `coalesce_loadable_tool_specs()` merges multiple hits from the same Namespace, avoiding several duplicate Namespace wrappers.
+
+The whole pipeline is therefore:
+
+```text
+Deferred Runtime
+  → ToolSearchInfo(search_text + LoadableToolSpec)
+  → BM25 Document<usize>
+  → ranked Top-K document IDs
+  → recover LoadableToolSpec
+  → coalesce Namespaces
+  → include in the next model request
+```
+
+There is one final performance detail. [`ToolSearchHandlerCache`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/handlers/tool_search.rs#L34-L74) compares the new `search_infos` and source-listing mode with the cached handler. If the tool world is unchanged, Codex reuses the existing `Arc<ToolSearchHandler>` and in-memory index; it rebuilds only when MCP, plugin, or dynamic-tool metadata changes. In library terms, yesterday's card catalog remains useful until new books arrive.
+
+To follow the exact source path, read [`append_tool_search_executor()`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/spec_plan.rs#L1165-L1185), [`ToolSearchHandler`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/handlers/tool_search.rs#L76-L197), and the [`ToolSearchEntry` / `search_text` builders](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/tools/src/tool_search.rs#L12-L150) in that order.
 
 ## Why BM25 Is a Sensible Engineering Choice Here
 
