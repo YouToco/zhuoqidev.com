@@ -1,6 +1,6 @@
 ---
-title: "How Codex Layers First-Turn Tools: First Principles, tool_search, BM25, and Model Replacement"
-description: "A source-grounded tour of Codex rust-v0.147.0, starting from finite context and interface contracts, then deriving Tool Search, portable BM25 retrieval for Rust/Python/Go, and custom model-provider boundaries."
+title: "Why Codex Does Not Give the Model Every Tool: tool_search, BM25, and Model Replacement"
+description: "A plain-language, source-grounded explanation of why Codex loads tools on demand, how BM25 ranks the best few, and how the same design transfers to Python, Go, and other models."
 date: 2026-08-08
 lastmod: 2026-08-09
 audience_profile: "agent-engineer-source-transition"
@@ -14,68 +14,66 @@ ShowReadingTime: true
 ---
 
 {{< lead >}}
-Think of Codex's first request as airport check-in. Context is finite, so the model should not receive a separate ticket for every counter; it gets a few entrances and a searchable catalog. This article starts from that unavoidable constraint, then explains where Tools live, how N schemas become K, how BM25 transfers to Python/Go Agents, and how open-source Codex can connect to a business model.
+Think of the model as an engineer with a small desk. If hundreds of tool manuals cover it, every request becomes expensive and the right manual is harder to find. Codex instead provides a short catalog and retrieves only the most relevant manuals. This article explains that design, BM25 ranking, reuse in Python or Go, and model replacement.
 {{< /lead >}}
 
 This article is pinned to stable [`rust-v0.147.0`](https://github.com/openai/codex/releases/tag/rust-v0.147.0), released on August 7, 2026, at commit [`be6e8eac`](https://github.com/openai/codex/commit/be6e8eac029b183056b7e4402879f15d2c85f61b). I also rechecked `main` at commit [`646f7c0a`](https://github.com/openai/codex/commit/646f7c0a91b8e327d263335da68ae8ef212895ce) on August 9. Two conclusions matter up front:
 
-1. **There is no timeless first-turn tool list independent of the model, provider, environment, and feature gates.**
-2. **The `tool_search` feature and BM25 handler are implemented, and Direct mode can use them; this stable GPT-5.6 Code Mode Only path simply does not put `tool_search` in the model-visible first-turn tool surface.** That is a gap in one exposure path, not an unfinished feature globally.
+1. **The tools visible on the first request are not a permanent list.** They change with the model, connection, runtime environment, and feature settings.
+2. **`tool_search` and its BM25 ranking code are implemented, and ordinary direct mode can use them. The stable GPT-5.6 `exec`-centered path simply misses the search entrance.** The feature exists; one wire is not connected.
 
 ## Who This Article Is For
 
-The default reader understands that an LLM can call tools and has seen ordinary Function Calling with a `tools` field and JSON Schema. **Rust knowledge and prior Codex source reading are not prerequisites.** If you mainly write Python or TypeScript, read the Rust iterator chains as “filter a list → transform each item → collect the result.”
+The reader only needs to know that an LLM can call an outside tool. **Rust and prior Codex source reading are not prerequisites.** Read Rust iterator chains as “filter a list → transform each item → collect the result.”
 
 Two reading routes are available:
 
 - **Architecture route:** read the first principles, airport diagram, Tool Search runtime sequence, cross-language transfer, and model replacement.
 - **Source route:** continue through pseudocode, Rust correspondence, the end-to-end query, and the source index.
 
-## Start With Four First Principles
+## Start With Four Plain Statements
 
 Erase the Rust function names, OpenAI protocol names, and GPT-5.6 model labels for a moment. A tool-using Agent still cannot escape four facts:
 
-1. **A model can choose only interfaces it can see.** A Handler whose Schema never enters the request effectively does not exist for the model.
-2. **Context is a finite, priced workbench.** More Tools mean more schemas resent each turn, increasing cost, latency, and the space for mistaken choices.
-3. **Retrieval exists to reduce the choice space.** Selecting K relevant Tools from N candidates before model judgment is usually more reliable than asking the model to read N manuals at once.
-4. **The Agent Runtime and model meet through contracts.** If requests, Tool Calls, Tool Outputs, and state transitions align, the runtime, retrieval algorithm, programming language, and model Provider can all be replaced.
+1. **A model can use only tools it can see.** Working execution code is useless to the model until its tool manual enters the request.
+2. **The model's desk is finite, and every word costs time and money.** More manuals also create more chances to choose the wrong one.
+3. **Search first reduces the choice.** Ranking a few relevant tools out of hundreds is easier than reading every manual at once.
+4. **The Agent shell and model can be separated.** If both sides agree on requests, tool calls, and returned results, the language, search method, and model can change.
 
 The minimum architecture in this article is therefore one chain:
 
 ```text
-finite context
-  → all Tool Schemas cannot remain resident
-  → expose a few entrances and a searchable catalog
-  → retrieve Top-K complete Schemas
-  → model calls a Tool
-  → Runtime executes and writes the result back into state
+limited desk space
+  → every tool manual cannot stay open
+  → keep a few common tools and a catalog
+  → retrieve the best few complete manuals
+  → model calls a tool
+  → the program executes it and returns the result
 ```
 
 Once that chain is clear, it becomes easy to decide what must stay and what can be removed:
 
 | What appears in the source | Must understand? | Why |
 | --- | --- | --- |
-| Direct / Deferred / Hidden state transitions | Yes | They determine what the model sees and when |
-| `search_text → ranked IDs → Schema` data flow | Yes | This retrieval contract transfers to any Agent |
-| Provider input/output and capability contracts | Yes | They determine whether a model can be replaced safely |
+| Whether a tool is visible now, visible after search, or never visible | Yes | It determines what the model can choose |
+| `searchable words → ranked IDs → complete manual` | Yes | This design transfers to any Agent |
+| How the model connection sends data and what it supports | Yes | It determines whether model replacement is safe |
 | Rust iterators, concrete type names, and paths | Not initially | They are project implementation, not architectural law |
 | The `bm25` crate and array-index trick | Replaceable | Python, Go, or a search service can implement the same interface |
 | The current GPT-5.6 Tool list | Version snapshot only | Model, environment, and Feature changes recompute it |
 
-## A Small Terminology Map
+## Only Four Things Need Names
 
-| Term | Layer | Meaning in this article |
+| Plain name | Meaning | Source name when needed |
 | --- | --- | --- |
-| Tool / Schema | Request protocol | A Tool is a callable capability; its Schema is the name, description, and parameter contract |
-| Namespace | Request protocol | A single entrypoint grouping related Tools, such as `collaboration` |
-| Registry | Codex runtime | The catalog of registered tools for the turn; presence here does not guarantee model visibility |
-| Runtime / Handler | Codex implementation | A Runtime describes a Tool; a Handler executes it after a call occurs |
-| Exposure | Tool planning | Determines whether a Tool is Direct, Deferred, or Hidden |
-| Provider | Model adapter | Converts Codex Tool Specs into the request format for a particular model endpoint |
-| MCP | External tool protocol | Model Context Protocol, through which Codex can connect external Tools and resources |
-| `LoadableToolSpec` | Search output | A tool definition returned by `tool_search` and loadable into a later model request |
+| Tool manual | A tool's name, purpose, and required parameters | Schema / Tool Spec |
+| Tool catalog | Every tool the program currently knows, not necessarily every tool shown to the model | Registry |
+| Execution code | The program that does the work after the model names a tool | Runtime / Handler |
+| Model connection | The adapter that sends Codex requests in a format the model service understands | Provider |
 
-## What Is Code Mode Only, and Do I Enable It?
+The source names appear later only for verification. They are not vocabulary the reader must memorize.
+
+## Why Does Codex Put Many Tools Behind `exec`?
 
 This Mode does not mean the user can only write code. It controls **how the model sees and calls Tools**:
 
@@ -102,7 +100,7 @@ The diagram can now be read without treating an internal selector as a familiar 
   caption="This is a versioned conceptual diagram, not a timeless tool list. Solid paths are visible entrypoints; the dashed tool_search path is the on-demand design, while the barrier marks its missing first-turn exposure in rust-v0.147.0 GPT-5.6 Code Mode Only."
 >}}
 
-## “Exposed” Actually Means Two Different Things
+## What Can the Model Actually See at First?
 
 The GPT-5.6 Sol model catalog sets `tool_mode` to `code_mode_only`, `multi_agent_version` to `v2`, and enables `use_responses_lite`. Responses Lite does not use the conventional top-level `tools` request field. Instead, it inserts a developer-role `additional_tools` item at the start of the input. Seeing no `tools` field in a trace therefore does not mean the model has no tools.
 
@@ -113,7 +111,7 @@ There are two kinds of first-turn visibility in this path:
 
 The airport analogy is precise: there may be only a few boarding passes, but the `EXEC` pass already lists the counters available beyond that gate.
 
-## The First-Turn Top-Level Entrypoints for GPT-5.6 Sol/Terra
+## What GPT-5.6 Sol/Terra Can Call Directly at First
 
 With the normal App/CLI defaults, an available execution environment, and no enterprise policy disabling them, the core top-level surface is:
 
@@ -159,7 +157,7 @@ There is, however, an important detail in the latest stable source: **the GPT-5.
 
 That distinction matters: **present in the registry is not the same as visible in the request, and intended to be discoverable is not the same as wired through every Tool Mode today.**
 
-## How Tool Search Fits Into an Agent Loop
+## What One Tool Search Actually Looks Like
 
 Set aside the Code Mode Only bridge gap for a moment and examine a Direct/Deferred path in which `tool_search` **is exposed to the model**. It is not a retrieval job that automatically runs every turn. It is one optional action in the model's toolbox.
 
@@ -171,7 +169,7 @@ Imagine a developer entering a hardware store. A hammer and screwdriver are alre
 
 The official API's Deferred Loading still gives the model minimal discovery information on turn one: Namespaces and MCP servers expose high-level names and descriptions, while an individually deferred Function retains its name and description but defers most parameters. In Codex's client-side BM25 path, the model first sees the `tool_search` entry and its searchable-source guidance; the complete `LoadableToolSpec` arrives only after a hit. Both designs follow the same principle: **show the catalog before moving the warehouse.**
 
-### Do Explicit Tools Live in the System or User Prompt?
+### Are the Initial Tools in the System or User Prompt?
 
 Strictly speaking, usually **neither**. Tool definitions are structured fields in the request protocol, not natural-language text pasted into a Prompt. This stable release has two framings:
 
@@ -213,7 +211,7 @@ The source proves a configuration fact: GPT-5.6 Sol, Terra, and Luna in the stab
 
 The following is an explicitly labeled engineering inference, not a source quotation. Code Mode Only asks the model to write valid JavaScript inside `exec`, follow Tool Schemas, manage asynchronous work and failures, and filter or compress results within one cell. Stronger coding, reasoning, and tool-use training are clearly enabling conditions. Activation also depends on targeted post-training, evaluation thresholds, provider protocol support, and rollout policy. **“A stronger model makes this viable” is reasonable; “raw strength is the only reason” is not established.**
 
-## What N Schemas Becoming K Actually Saves
+## What Shrinking Hundreds of Manuals to a Few Actually Saves
 
 Suppose an Agent connects N Tools and each complete Schema averages S tokens. Sending everything directly makes the tool portion of one request approximately:
 
@@ -267,7 +265,7 @@ In library terms:
 
 The source does not index only tool names. For ordinary tools, search text includes both the raw name and an underscore-to-space form—`create_event` and `create event`—plus namespace metadata, descriptions, parameter names, and parameter descriptions. MCP tools add canonical and callable names, server, title, connector, plugin display names, and input-schema property names. This matters because the default tokenizer splits on Unicode word boundaries, lowercases, removes English stop words, and applies English stemming; the space-separated form makes `create` and `event` independent lexical signals.
 
-## How Codex Calls BM25: From Deferred Tool to Loadable Schema
+## Source Deep Dive (Optional): How Codex Connects BM25
 
 The formula explains how documents are scored, but an implementation must still answer three questions: where the documents come from, how a BM25 document ID leads back to a tool, and how a search hit becomes a callable schema on the next turn. In the stable release, that path runs through `spec_plan.rs`, the `ToolSearchHandler`, and the search-text builders in `codex-tools`.
 
@@ -284,7 +282,7 @@ return merge(cards[id].loadable_schema)
 
 The Rust below is the strongly typed form of those four operations. Read `.filter()`, `.map()`, and `.collect()` as ordinary list filtering, transformation, and collection.
 
-### Step 1: Collect only deferred tools
+### Step 1: Collect only tools that should appear after search
 
 `append_tool_search_executor()` filters the registry for Deferred Tools and asks each runtime for its `search_info`. This is condensed code with the real types and method names preserved:
 
@@ -311,7 +309,7 @@ pub struct ToolSearchEntry {
 
 `search_text` contains the names, descriptions, parameters, namespace metadata, and other fields described above. `output` is the Function or Namespace schema that can be loaded into the next model request. Think of a library card whose front contains searchable terms while its back carries the retrieval slip for the actual book.
 
-### Step 2: Use the array index as the retrieval number
+### Step 2: Give every card a numeric retrieval number
 
 [`ToolSearchHandler::new()`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/handlers/tool_search.rs#L76-L110) enumerates the cards and uses each entry's position in `search_infos` as its BM25 document ID:
 
@@ -333,7 +331,7 @@ let search_engine =
 
 That `usize` is the bridge back. The BM25 engine only needs to return ranked IDs such as `7, 2, 11`; Codex can then look up `search_infos[7]`, `search_infos[2]`, and `search_infos[11]`. There is no database key or second mapping table—the array position is the retrieval number. The full corpus is indexed in memory with `Language::English`.
 
-### Step 3: Search Top-K and map IDs back to schemas
+### Step 3: Rank the IDs and recover complete tool manuals
 
 On invocation, the handler trims the query and rejects both an empty query and `limit = 0`. If the caller omits the limit, `TOOL_SEARCH_DEFAULT_LIMIT` supplies eight. The central retrieval code is short:
 
@@ -408,7 +406,7 @@ There is one final performance detail. [`ToolSearchHandlerCache`](https://github
 
 To follow the exact source path, read [`append_tool_search_executor()`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/spec_plan.rs#L1165-L1185), [`ToolSearchHandler`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/handlers/tool_search.rs#L76-L197), and the [`ToolSearchEntry` / `search_text` builders](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/tools/src/tool_search.rs#L12-L150) in that order.
 
-## BM25 Is Not a Rust Feature: Porting It to Python, Go, or Your Agent
+## Python and Go Can Use the Same Design
 
 The lesson above should not be “Codex has a Rust-specific trick.” It should reveal three language-independent interfaces:
 
@@ -458,7 +456,7 @@ The current engine uses `Language::English` and does not add vector recall, a sy
 
 That is why tool `name`, `description`, and parameter documentation are operational metadata, not cosmetic copy. BM25 is the librarian, but it can read only what is printed on the cards. If tool scale, multilingual use, or paraphrase diversity grows substantially, a sensible upgrade is **BM25 recall + exact-name boost + lightweight reranking**, not necessarily an immediate jump to pure vector retrieval.
 
-## Is BM25 Suitable for Memory Retrieval?
+## Can BM25 Search Memory Too?
 
 **Yes, but it fits best as the lexical-recall leg—not as an entire long-term memory system.** First, a source-level correction: this stable Codex release does not reuse the BM25 implementation above for Memory search. `ext/memories` exposes substring queries, optionally normalizes whitespace or separators, and organizes matches by path and line number. It neither computes BM25 relevance nor ranks by semantic similarity.
 
@@ -486,7 +484,7 @@ metadata filters for user / project / time
 
 For a small local Memory dominated by technical logs, starting with BM25 is entirely reasonable; it adds meaningful ranking over the current substring list. As paraphrase, multilingual use, and contradictory memories grow, hybrid retrieval becomes more valuable. This is a general architecture recommendation—**not a claim that Codex already implements this pipeline.**
 
-## Open-Source Codex Can Change Models, but Three Contracts Must Change Together
+## Open-Source Codex Can Change Models, but It Takes More Than a New Name
 
 The precise claim is not “turn GPT-5.6 into DeepSeek, GLM, or Kimi.” It is: **keep the Codex Agent Runtime and replace the model and Provider behind it.** Core components such as Codex CLI, SDK, and App Server are open source, while model transport is isolated behind the Provider layer. The sandbox, approvals, Tool Registry, MCP, conversation history, and execution loop can therefore remain reusable.
 

@@ -1,6 +1,6 @@
 ---
-title: "Codex 首轮 Tool 怎么分层？从第一性原理到 tool_search、BM25 与模型替换"
-description: "基于 Codex rust-v0.147.0 源码，从有限上下文与接口契约出发，拆解 Tool Search、可跨 Rust/Python/Go 复用的 BM25 检索，以及自定义模型 Provider 的适配边界。"
+title: "Codex 为什么不把所有工具都交给模型？讲透 tool_search、BM25 与模型替换"
+description: "基于 Codex rust-v0.147.0 源码，用大白话解释工具为什么要按需加载、BM25 如何从大量工具中排出最相关的几个，以及怎样把同一设计搬到 Python、Go 和其他模型。"
 date: 2026-08-08
 lastmod: 2026-08-09
 audience_profile: "agent-engineer-source-transition"
@@ -14,85 +14,83 @@ ShowReadingTime: true
 ---
 
 {{< lead >}}
-把 Codex 首轮请求想成机场值机：上下文容量有限，模型不该拿到每个柜台的一张票，而只拿少数入口与一份可搜索目录。本文先从这个不可逃避的约束出发，再解释 Tool 放在哪里、怎样从 N 个 Schema 缩到 K 个、BM25 如何迁移到 Python/Go Agent，以及开源 Codex 怎样接入业务模型。
+把模型想成只有一张小桌子的工程师。工具说明书有几百本时，全部摊在桌上既贵又难找；更好的办法是先给它一本目录，需要什么再取出最相关的几本。本文就讲清 Codex 怎样做这件事、为什么使用 BM25 排序，以及怎样把同一办法搬到 Python、Go 和其他模型上。
 {{< /lead >}}
 
 本文固定在 2026-08-07 发布的稳定版 [`rust-v0.147.0`](https://github.com/openai/codex/releases/tag/rust-v0.147.0)，源码 commit 为 [`be6e8eac`](https://github.com/openai/codex/commit/be6e8eac029b183056b7e4402879f15d2c85f61b)；另复查了 2026-08-09 的 `main` commit [`646f7c0a`](https://github.com/openai/codex/commit/646f7c0a91b8e327d263335da68ae8ef212895ce)。先给两个不会误导人的结论：
 
-1. **首轮 Tool 没有脱离模型、Provider、环境和 Feature 的永久名单。**
-2. **`tool_search` 功能和 BM25 Handler 已实现，Direct 模式可用；但在这个稳定版的 GPT-5.6 Code Mode Only 路径中，它没有进入模型首轮可见工具表。** 这不是“功能尚未开发”，而是特定工具暴露路径的缺口。
+1. **模型第一次能看到哪些工具，不是一张永远不变的名单。** 它会随模型、接入方式、运行环境和功能开关变化。
+2. **`tool_search` 和背后的 BM25 排序代码都已经写好，普通直连方式可以使用；但这个稳定版给 GPT-5.6 采用的 `exec` 集中调用方式漏掉了搜索入口。** 这不是功能没开发，而是一条接线没有接通。
 
 ## 这篇文章写给谁
 
-默认读者已经知道 LLM 可以调用 Tool，并见过普通 Function Calling 的 `tools`/JSON Schema；但**不要求会 Rust，也不要求读过 Codex 源码**。如果你主要写 Python 或 TypeScript，可以把后面的 Rust iterator 链暂时理解为“过滤列表 → 转换元素 → 收集结果”。
+默认读者只需要知道“大模型可以调用外部工具”。**不要求会 Rust，也不要求读过 Codex 源码。** 如果你主要写 Python 或 TypeScript，后面的 Rust 连写可以直接理解成“筛选列表 → 改造每一项 → 收集结果”。
 
 有两条阅读路线：
 
-- **只想理解架构**：读第一性原理、机场图、Tool Search 运行时序、跨语言复用和模型替换；
+- **只想理解做法**：读小桌子问题、机场图、工具搜索过程、跨语言复用和模型替换；
 - **想跟进源码**：继续读伪代码、Rust 对照、完整查询实例和源码索引。
 
-## 先只记住四个第一性原理
+## 先只记住四句大白话
 
-把 Rust 函数名、OpenAI 协议名和 GPT-5.6 型号暂时全部擦掉，一个 Tool-using Agent 仍逃不开四件事：
+先把 Rust 函数名和 OpenAI 的专有叫法全部擦掉，一个会使用工具的模型仍逃不开四件事：
 
-1. **模型只能选择它看得见的接口。** Handler 写好了但 Schema 没进请求，对模型就等于不存在；
-2. **上下文是有限且有成本的工作台。** Tool 越多，每轮重复发送的 Schema 越长，费用、延迟和错误选择空间都会增长；
-3. **检索的本质是缩小选择空间。** 先从 N 个候选中找出 K 个相关 Tool，再让模型精确决策，通常比让模型同时阅读 N 份说明书更稳；
-4. **Agent Runtime 与模型通过契约连接。** 只要请求、Tool Call、Tool Output 和状态循环能对齐，运行时、检索算法、编程语言与模型 Provider 都可以替换。
+1. **模型只能使用它看得见的工具。** 真正干活的代码即使已经写好，没有把工具说明交给模型，模型也不知道它存在；
+2. **模型眼前的空间有限，而且放进去的每个字都要付出费用和时间。** 工具越多，重复发送的说明书越长，模型也越容易选错；
+3. **搜索就是先缩小范围。** 先从几百个工具里排出最相关的几个，再让模型选择，比让它同时读几百本说明书更稳；
+4. **Agent 外壳和大模型可以分开。** 只要双方对“问题怎样发、工具怎样调用、结果怎样交回”达成一致，编程语言、搜索方法和模型都可以替换。
 
 因此全文最小的知识骨架其实只有这一条：
 
 ```text
-有限上下文
-  → 不能常驻全部 Tool Schema
-  → 先暴露少量入口和可搜索目录
-  → 检索 Top-K 完整 Schema
+模型眼前的空间有限
+  → 不能一直摆着所有工具说明书
+  → 先给少量常用工具和一本目录
+  → 搜索并取出排名靠前的几份完整说明
   → 模型调用
-  → Runtime 执行并把结果写回状态
+  → 程序真正执行，再把结果交回模型
 ```
 
 理解这条链以后，下面哪些必须保留、哪些可以摘掉就很清楚：
 
 | 阅读源码时看到的内容 | 是否必须理解 | 原因 |
 | --- | --- | --- |
-| Direct / Deferred / Hidden 的状态变化 | 必须 | 它决定模型在什么时候看见什么 |
-| `search_text → ranked IDs → Schema` 数据流 | 必须 | 这是可迁移到任何 Agent 的检索契约 |
-| Provider 的输入输出与能力契约 | 必须 | 它决定能否安全替换模型 |
+| 工具是一开始就给、搜索后再给，还是完全不给 | 必须 | 它决定模型在什么时候看见什么 |
+| `可搜索文字 → 排名后的编号 → 完整工具说明` | 必须 | 这是可以搬到任何 Agent 的核心做法 |
+| 模型接入层怎样收发数据、支持哪些能力 | 必须 | 它决定能否安全替换模型 |
 | Rust iterator、具体类型名、文件路径 | 可以先摘掉 | 它们是本项目实现，不是架构定律 |
 | `bm25` crate 名称与数组下标技巧 | 可以替换 | Python、Go 或数据库检索都能实现同一接口 |
-| GPT-5.6 当前 Tool 名单 | 只能当版本快照 | 模型、环境、Feature 改变后会重新计算 |
+| GPT-5.6 当前工具名单 | 只能当版本快照 | 模型、环境和功能开关改变后会重新计算 |
 
-## 先看术语地图
+## 全文只需要认识四样东西
 
-| 术语 | 所属层 | 本文中的意思 |
+| 白话名字 | 它是什么 | 源码里偶尔出现的名字 |
 | --- | --- | --- |
-| Tool / Schema | 请求协议 | Tool 是模型可调用的能力；Schema 是它的名称、说明和参数契约 |
-| Namespace | 请求协议 | 把一组相关 Tool 包在一个命名空间入口下，例如 `collaboration` |
-| Registry | Codex 运行时 | 当前会话已经注册的工具目录；存在于这里不代表模型一定可见 |
-| Runtime / Handler | Codex 实现 | Runtime 描述 Tool；Handler 在调用发生时真正执行它 |
-| Exposure | 工具规划 | 决定 Tool 是 Direct、Deferred 还是 Hidden |
-| Provider | 模型接入层 | 负责把 Codex 的 Tool Spec 转成具体模型请求格式 |
-| MCP | 外部工具协议 | Model Context Protocol；Codex 可通过 MCP Server 接入外部 Tool 和资源 |
-| `LoadableToolSpec` | 搜索输出 | `tool_search` 命中后返回、可装进后续模型请求的工具定义 |
+| 工具说明书 | 工具叫什么、能做什么、需要哪些参数 | Schema / Tool Spec |
+| 工具总表 | 程序目前知道的全部工具；不等于全部都交给模型 | Registry |
+| 真正干活的代码 | 模型点名某个工具后，负责执行它的程序 | Runtime / Handler |
+| 模型接入层 | 把 Codex 的请求翻译成模型服务能够收发的格式 | Provider |
 
-## Code Mode Only 是什么，需要手动开启吗
+后文再次出现英文原名时，它只是为了和源码对照。理解正文不需要背这些词。
 
-这里的 Mode 不是“用户只能写代码”的聊天模式，而是**模型怎样看到和调用 Tool**：
+## 为什么很多工具要收进 `exec`
 
-| Tool Mode | 模型看到的工具布局 |
-| --- | --- |
-| Direct | 多数 Tool 作为独立顶层入口，模型直接调用 |
-| Code Mode | 部分 Tool 可直调，部分 Tool 通过 `exec` 里的 `tools.xxx()` 编排 |
-| Code Mode Only | 大多数普通 Tool 不再各占一个顶层入口，模型主要通过 `exec` 调用；`wait`、用户控制面等少量入口仍可直调 |
+这里讨论的不是“用户只能写代码”的聊天模式，而是**工具以什么方式交给模型**：
 
-在本文稳定版里，GPT-5.6 Sol 的模型目录已经写入 `"tool_mode": "code_mode_only"`。**选择这个模型后由 Codex 自动采用，不需要在 UI 里再开一个按钮。** 对没有模型内置 Tool Mode 的情况，源码还保留实验 Feature：
+| 白话说法 | 源码名称 | 模型看到什么 |
+| --- | --- | --- |
+| 每个工具单独摆出来 | Direct | 多数工具都有自己的调用入口 |
+| 常用的单独摆，其他收进总入口 | Code Mode | 一部分工具直接调用，另一部分通过 `exec` 里的 `tools.xxx()` 调用 |
+| 几乎都收进总入口 | Code Mode Only | 模型主要写一小段 JavaScript，通过 `exec` 统一调用；只有 `wait` 等少量入口仍单独保留 |
+
+在本文稳定版里，GPT-5.6 Sol 的模型配置已经写明采用“几乎都收进 `exec`”的方式。**选择这个模型后 Codex 会自动采用，不需要在 UI 里再开一个按钮。** 源码也保留了下面这个实验开关，方便开发者测试其他模型：
 
 ```toml
 [features]
 code_mode_only = true
 ```
 
-CLI 也可临时传 `codex --enable code_mode_only`。这个 Feature 会自动连带启用 Code Mode，但公开配置把它标成 under development；若模型没有声明支持，Codex 会警告可能降低模型表现。因此它更适合源码验证，不建议对任意模型强行开启。它也不同于 `--code-mode-host`：后者只是在选择 Code Mode 的远程执行 Host。
+CLI 也可临时传 `codex --enable code_mode_only`。公开配置仍把它标成“开发中”；模型没有经过这种调用方式的训练和验证时，强行开启可能让表现变差。因此它适合测试，不适合对任意模型盲开。`--code-mode-host` 是另一回事，它只决定这段工具编排代码在哪里运行。
 
 现在再看分层图。它同时画出“设计中的延迟发现”与“稳定版 Code Mode Only 的首轮实际状态”；虚线和路障表示 `tool_search` 已实现，但在这个特定首轮工具布局中没有暴露给模型。
 
@@ -102,18 +100,18 @@ CLI 也可临时传 `codex --enable code_mode_only`。这个 Feature 会自动�
   caption="这是一张版本化的概念图，不是永久工具清单：实线表示当前可见入口；tool_search 一侧的虚线表示按需发现设计，路障表示 rust-v0.147.0 的 GPT-5.6 Code Mode Only 首轮没有暴露该入口。"
 >}}
 
-## 先澄清：“暴露”其实有两层
+## 模型第一次到底能看到什么
 
-GPT-5.6 Sol 的模型目录把 `tool_mode` 设为 `code_mode_only`、`multi_agent_version` 设为 `v2`，并启用 `use_responses_lite`。Responses Lite 不再把工具放进传统顶层 `tools` 字段，而是在输入开头插入一个 developer 角色的 `additional_tools` item。换句话说，抓包时看到 `tools` 字段缺失，不代表模型没有工具。
+GPT-5.6 Sol 使用一种较新的请求包装方式：工具不再放在传统的顶层 `tools` 数组，而是放进请求开头一个叫 `additional_tools` 的结构化数据块。**它不是藏在系统提示词或用户文字里。** 因此抓包时没看到顶层 `tools`，不代表模型没有工具。
 
 在这条路径里，“模型第一次能看到”分为两种：
 
-1. **请求协议里的顶层入口**：独立出现在 `additional_tools` 里的 Tool 或 Namespace；
-2. **`exec` 里的嵌套工具**：它们的名称、说明与参数定义被写进 `exec` 的 JavaScript 工具指南，模型同样能在首轮阅读，但调用时要写成 `tools.xxx(...)`。
+1. **单独摆在桌面上的入口**：例如 `exec`、`wait`，模型可以直接点名调用；
+2. **收在 `exec` 说明书里的工具**：模型第一次同样能读到它们，但调用时必须写成 `tools.xxx(...)`。
 
 这和机场很像：登机牌只有几张，但 `EXEC` 那张票背面已经印着登机口内有哪些柜台。不能因为柜台不是单独一张票，就说旅客不知道它存在。
 
-## GPT-5.6 Sol/Terra 的首轮顶层入口
+## GPT-5.6 Sol/Terra 第一次能直接点哪些入口
 
 在默认 App/CLI 配置、存在执行环境、未被企业策略关闭的前提下，核心顶层入口可以归纳为：
 
@@ -122,65 +120,65 @@ GPT-5.6 Sol 的模型目录把 `tool_mode` 设为 `code_mode_only`、`multi_agen
 | `exec` | 执行一段 JavaScript，在同一个 cell 里编排多个嵌套工具，并只返回压缩后的结果 | Code Mode 的总入口，减少多次模型—工具往返 |
 | `wait` | 等待先前 yield 的长时间 `exec` cell | 等待期间不占住一次长工具调用 |
 | `request_user_input` | 在允许的协作模式中向用户提短问题 | 它是人与 Agent 的控制面，不适合藏进代码编排 |
-| `collaboration` | 一个 Namespace，包含 `spawn_agent`、`send_message`、`followup_task`、`wait_agent`、`interrupt_agent`、`list_agents` | GPT-5.6 Sol/Terra 选择 Multi-Agent V2，源码默认让这组工具保持非 Code Mode 直调 |
+| `collaboration` | 一组多 Agent 协作动作，包含创建、发消息、等待和中断子 Agent 等 | 这些动作负责协调多个 Agent，源码选择让它们保持直接可用 |
 
-`collaboration` 是一个工具 Namespace，不是只有一个动作。因此从请求对象数量看它算一个入口，从可调用函数数量看则是六个。Luna 的模型目录仍选择 Multi-Agent V1，所以它的首轮形态会不同；若达到子 Agent 深度限制，协作工具还可能被关闭。
+`collaboration` 看起来是一个入口，里面实际装着六个协作动作。Luna 使用另一套多 Agent 方式，所以第一次看到的入口会不同；达到子 Agent 层数限制后，协作入口还可能被关闭。
 
 ## `exec` 里面又有哪些工具
 
-`exec` 不是 Shell 的别名，而更像一张能在候机楼内转乘的通票。源码中的 `add_core_tool_sources()` 依次汇集 Shell、MCP resource、通用工具和协作工具，再叠加 Extension、Dynamic Tool 与 Hosted Tool。常见成员如下：
+`exec` 不是 Shell 的别名，而像一张能在候机楼内转乘的通票。Codex 会把命令执行、文件修改、外部服务和工作编排等能力汇总进去。常见成员如下：
 
 | 类别 | 常见工具 | 出现条件 |
 | --- | --- | --- |
 | 命令执行 | Windows 常见 `shell_command`；启用 Unified Exec 时是 `exec_command` + `write_stdin` | 必须有执行环境；具体形态由模型与 Feature 决定 |
-| 文件修改与检查 | `apply_patch`、`view_image` | 模型支持相应 Tool，且环境/Feature 可用 |
+| 文件修改与检查 | `apply_patch`、`view_image` | 模型支持相应工具，且当前环境允许 |
 | 工作编排 | `update_plan` | 配置默认开启，可显式关闭 |
 | MCP 资源 | `list_mcp_resources`、`list_mcp_resource_templates`、`read_mcp_resource` | 至少连接了一个 MCP Server |
-| App 扩展 | `web.run`、`image_gen.imagegen` | Provider、登录、模型模态、网络与 Feature 均通过门禁 |
+| App 扩展 | `web.run`、`image_gen.imagegen` | 模型接入、登录状态、图片能力和网络均满足条件 |
 | 插件安装 | `request_plugin_install`，有时还有候选列表工具 | Apps、Plugins、ToolSuggest 开启且确有候选项 |
-| 其他扩展 | Goal、自动化、App Server dynamic tools 等 | 相应 Extension 或客户端动态注册 |
+| 其他扩展 | Goal、自动化、App Server 动态工具等 | 相应扩展已经安装或由客户端加入 |
 
-所以“源码里定义了一个 Handler”不等于“它会出现在每次首轮请求”。真正的路径是：**注册 Runtime → 计算 Direct / Deferred / Hidden exposure → 处理 Code Mode → 合并 Namespace → 序列化请求**。环境不存在、Feature 关闭、Provider 不支持 Namespace、账号方案不满足或工具名冲突，都可能在中途把它拿掉。
+所以“真正干活的代码已经写好”不等于“模型第一次就能看到这个工具”。程序还要依次决定：**把工具加入总表 → 判断一开始就给、搜索后再给还是不给 → 决定是否收进 `exec` → 生成最终请求**。运行环境缺失、功能关闭、模型服务不支持、账号权限不足或工具重名，都可能让某个工具中途消失。
 
 ## 那 `tool_search` 到底在不在第一次请求里
 
-设计上，`tool_search` 只有同时满足两件事才会注册：
+程序只有同时满足两件事，才会把 `tool_search` 加入工具总表：
 
-- 模型声明 `supports_search_tool`，Provider 支持 Namespace Tool；
-- Registry 里确实存在至少一个带 `search_info` 的 Deferred Tool。
+- 当前模型声明“我会使用工具搜索”，模型接入层也支持成组工具；
+- 工具总表里确实存在至少一个“需要搜索后再给模型”的工具。
 
-在 `rust-v0.147.0` 中，只要 Search 可用，MCP Tool 会先注册到 Runtime，但 exposure 设为 Deferred；它们的完整 Schema 不必全部塞进首轮上下文。模型调用 `tool_search` 后，命中的 `LoadableToolSpec` 才在下一次模型调用中被暴露，默认最多返回 8 个结果。
+在 `rust-v0.147.0` 中，外部 MCP 工具可以先进入工具总表，但标记成“搜索后再给”。这样它们的完整说明书不必全部塞进第一次请求。模型调用 `tool_search` 后，程序才把最相关的完整工具说明放进下一次请求，默认最多返回 8 个。
 
-这里有一个容易错过的最新源码细节：**GPT-5.6 的 `code_mode_only` 路径当前并没有把 `ToolSpec::ToolSearch` 转成 `exec` 的嵌套定义。** `register_code_mode_executors()` 遇到 `ToolSearch` 会 `continue`，而 Code Mode Only 又会隐藏除 `exec` / `wait` 之外的普通 Direct Tool。因此：
+这里有一个容易错过的源码细节：**GPT-5.6 采用“几乎都收进 `exec`”的方式时，负责组装工具的代码恰好跳过了 `tool_search`。** 同时，这种方式又会隐藏 `exec`、`wait` 之外的普通独立入口。因此：
 
-- 在 Direct 模式，只要存在 Deferred Tool，`tool_search` 可以成为首轮顶层工具；
-- 在 GPT-5.6 Code Mode Only 的稳定版路径，BM25 Handler 即使已经注册，`tool_search` 也**不会进入**模型首轮可调用表；没有暴露 Tool Spec，Agent 就没有一个可发起调用的入口；
+- 每个工具单独摆出来时，只要存在“搜索后再给”的工具，`tool_search` 就可以成为第一次请求里的独立入口；
+- GPT-5.6 采用 `exec` 集中调用时，BM25 排序代码即使已经准备好，`tool_search` 也**不会进入**模型第一次可调用的名单；模型看不见入口，自然无法发起搜索；
 - 这正是公开 issue [#32101](https://github.com/openai/codex/issues/32101) 描述的桥接缺口。截至 2026-08-09，`main` 的 commit [`646f7c0`](https://github.com/openai/codex/commit/646f7c0a91b8e327d263335da68ae8ef212895ce) 仍保留该跳过分支。
 
-这一区分很重要：**Registry 里“存在”，不等于首轮请求里“可见”；设计上“应该被搜索”，也不等于当前每种 Tool Mode 都已经接通。**
+这一区分很重要：**程序知道一个工具存在，不等于模型看得见；设计上准备了搜索，也不等于每种工具摆放方式都已接通。**
 
-## Tool Search 在一轮 Agent 循环里怎样发生
+## 一次工具搜索到底怎样发生
 
-先暂时放下上面的 Code Mode Only 桥接缺口，观察一个**已经把 `tool_search` 暴露给模型**的 Direct/Deferred 路径。它不是每轮固定执行的检索器，而是模型工具箱里的一个可选动作。
+先暂时放下上面的接线缺口，观察一条**模型确实能看见 `tool_search`** 的正常路径。搜索不是每轮固定执行，而是模型可以选择的一个动作。
 
 ### 不是每轮自动重搜，而是模型按需决定
 
-Codex 客户端没有一段“如果显式 Tool 都不合适，就自动执行 BM25”的兜底循环。请求采用自动工具选择；只有模型输出结构化的 `tool_search_call`，Router 才把它交给 Handler。模型可以先用已有 Tool，也可以根据任务直接搜索，并不需要先把显式 Tool 逐个试错。
+Codex 没有一段“现有工具都不合适，就自动执行 BM25”的兜底程序。只有模型主动发出 `tool_search_call`，Codex 才真正开始搜索。模型可以直接使用手边的工具，也可以一开始就查目录，不需要先把现有工具逐个试错。
 
-可以把它想成开发者走进五金店：手边货架已经有锤子和螺丝刀，店员同时知道后仓可以查货。拧螺丝时不必每走一步都查一次后仓；遇到“测光纤”这类货架外需求时，才去目录里搜索。搜索加载的 Tool 在仍留于当前会话上下文时，后续轮次可以继续调用，**不必每轮重复搜索同一件工具**。出现新需求、工具目录变化、开启新任务，或旧搜索输出不再处于有效上下文时，才可能需要再次搜索。
+可以把它想成开发者走进五金店：手边已有锤子和螺丝刀，店员还能查后仓。拧螺丝时不必每走一步都查一次；遇到“测光纤”这类货架外需求时，才去翻目录。查出来的工具说明只要还留在本次会话里，后面就能继续使用，**不必每轮重复搜索同一个工具**。只有需求变了、工具目录更新、开启新任务，或旧结果已经不在模型眼前时，才需要再搜。
 
-官方 API 的 Deferred Loading 仍会在首轮给模型最小发现信息：Namespace/MCP 主要暴露高层名称和说明，单个 Deferred Function 保留名称和说明而延迟大部分参数。Codex 这条客户端 BM25 路径则让模型先看到 `tool_search` 入口及可搜索来源说明，完整 `LoadableToolSpec` 要等命中后才返回。两者共同点都是：**先给目录，不先搬来整个仓库。**
+OpenAI 的通用做法会先给模型一点点“可发现信息”，例如某组工具叫什么、能做什么，但把冗长参数留到搜索命中后再发。Codex 的本地 BM25 路径则先给模型 `tool_search` 入口和可搜索范围，命中后再返回完整工具说明。共同点都是：**先给目录，不先搬来整个仓库。**
 
-### 显式 Tool 放在系统提示词还是用户提示词里
+### 一开始就有的工具，放在系统提示词还是用户提示词里
 
-严格答案是：通常**两者都不是**。Tool 定义是请求协议中的结构化字段，不是拼进自然语言 Prompt 的一段文字。这个稳定版有两种封装：
+严格答案是：通常**两者都不是**。工具说明是请求里单独的结构化数据，不是拼进自然语言提示词的一段文字。这个稳定版有两种装法：
 
-| 请求路径 | Tool 定义放在哪里 | 基础指令放在哪里 | 属于用户消息吗 |
+| 请求方式 | 工具说明放在哪里 | 基础指令放在哪里 | 属于用户消息吗 |
 | --- | --- | --- | --- |
-| 普通 Responses | 顶层 `tools` 数组 | 顶层 `instructions` | 否 |
-| GPT-5.6 Codex Responses Lite | 输入开头的 `additional_tools` item，角色为 `developer` | 紧随其后的 `developer` Message | 否 |
+| 普通请求 | 顶层 `tools` 数组 | 顶层 `instructions` | 否 |
+| GPT-5.6 的精简请求 | 输入开头的 `additional_tools` 数据块，标记为 `developer` | 紧随其后的 `developer` 消息 | 否 |
 
-所以抓包时不要只搜索 system/user 文本。Responses Lite 的线格式更接近：
+所以抓包时不要只搜索 system/user 文本。GPT-5.6 的请求顺序更接近：
 
 ```text
 [developer: additional_tools]
@@ -189,7 +187,7 @@ Codex 客户端没有一段“如果显式 Tool 都不合适，就自动执行 B
 [user: 当前问题]
 ```
 
-这里的 `developer` 是权限和顺序语义，不表示工具 Schema 被改写成一篇开发者提示词。Code Mode Only 又多一层：许多嵌套工具的契约被放进 `exec` 的结构化定义和 JavaScript 使用指南里，模型通过这个总入口调用它们。
+这里的 `developer` 只说明这块数据的权限和位置，不表示工具说明被改写成一篇提示词。许多收进 `exec` 的工具说明，则写在 `exec` 的 JavaScript 使用指南里，模型通过这个总入口调用它们。
 
 ### 搜索结果怎样进入上下文，又能用多久
 
@@ -197,48 +195,48 @@ Codex 客户端没有一段“如果显式 Tool 都不合适，就自动执行 B
 
 ```text
 模型：tool_search_call(query="calendar")
-Codex：BM25 Top-K → LoadableToolSpec
+Codex：BM25 排出前几个 → 取回完整工具说明
 上下文尾部：tool_search_output { call_id, status, tools: [...] }
 模型：function_call(name="create_event", ...)
 后续轮次：仍可调用已加载的 create_event
 ```
 
-`tool_search_output` 是一种专门的 Responses input item，不是 system 文本、user 文本，也不是回头修改首轮的 `additional_tools`。Codex 把 Call/Output 成对写入 conversation history；下一次请求携带这些历史项时，模型便能把 `tools` 中的完整 Schema 当成已加载候选。官方设计把新加载工具放在上下文尾部，这还能保持前缀稳定，增加 Prompt Cache 命中的机会。
+`tool_search_output` 是请求里专门存放搜索结果的数据块，不是 system 文本或 user 文本，也不会回头修改第一次的 `additional_tools`。Codex 会把“搜索请求”和“搜索结果”一起记进会话历史。下一次请求带上这段历史后，模型就能使用结果里的完整工具说明。新内容放在上下文末尾，还能尽量保持前半部分不变，提高缓存复用机会。
 
 “以后都能用”要加一个边界：它指同一活跃会话里，该输出仍在传给模型的上下文中。它不是进程级永久安装；新会话、上下文压缩策略或工具目录更新，都可能重新触发发现。可以把它想成把后仓取来的说明书夹进本次工单，而不是把机器永久焊在工作台上。
 
 ### 为什么稳定版只给 GPT-5.6 选择 Code Mode Only
 
-源码能证明的是配置事实：稳定版模型目录中的 GPT-5.6 Sol、Terra、Luna 都声明 `tool_mode: "code_mode_only"` 和 Responses Lite；紧邻的 GPT-5.5 条目没有。源码把它当作**模型能力元数据和协议兼容契约**，没有一段注释或设计文档说“因为 5.6 更聪明，所以开启”。而且 API 级 `tool_search` 并非 5.6 独占，官方文档列出的支持范围是 GPT-5.4 及更新模型。
+源码能证明的是：稳定版给 GPT-5.6 Sol、Terra、Luna 都选择了“几乎都通过 `exec` 调用”的方式，GPT-5.5 没有。源码只把它记录成**这个模型适合哪些调用方式**，并没有写“因为 5.6 更聪明，所以开启”。而且 `tool_search` 本身并非 5.6 独占，官方文档说 GPT-5.4 及更新模型也支持。
 
-下面是明确标注的工程推断，而不是源码原话：Code Mode Only 要求模型在 `exec` 中写正确 JavaScript、遵守 Tool Schema、处理异步与错误、并在一个 cell 内筛选和压缩结果。更强的代码生成、推理和工具调用训练显然是前提；但是否启用还取决于专门后训练、评测门槛、Provider 协议和灰度发布。**“强模型使它可行”是合理解释，“只因为参数更强”则是未经证实的简化。**
+下面是工程推断，不是源码原话：这种方式要求模型写对 JavaScript、按工具说明填写参数、处理异步和错误，还要在一次执行里筛选结果。更强的代码、推理和工具调用能力显然有帮助；但能否开启还取决于专门训练、评测、模型服务是否支持和发布策略。**“强模型让它更可行”是合理解释，“只因为模型更强”则过度简化。**
 
-## 从 N 份 Schema 缩到 K 份，真正省了什么
+## 从几百份说明书缩到几份，真正省了什么
 
-假设 Agent 接入 N 个 Tool，每份完整 Schema 平均占 S 个 Token。全部直塞时，一轮请求里的工具部分近似是：
+假设 Agent 接入 N 个工具，每份完整说明平均占 S 个 Token。全部塞给模型时，一轮请求里的工具部分近似是：
 
 ```text
 Full cost ≈ N × S
 ```
 
-延迟加载改成只常驻搜索入口和简短目录，命中后加载 K 个 Tool：
+改成“需要时再加载”后，平时只放搜索入口和简短目录，命中后只取 K 个工具：
 
 ```text
-Deferred cost ≈ catalog_summary + search_tool + K × S
+按需加载 ≈ 简短目录 + 搜索入口 + K × S
 ```
 
 当 `K ≪ N`，节省的不只是 Token。模型面对的相似名称和参数组合变少，最终 Tool 选择也更容易。严格说，`tool_search` 没有提高模型参数中的“智力”；它通过**减少噪声、提供恰当信息、把大决策拆成两次小决策**，提高了 Agent 的有效智能。
 
-这不是无条件免费：搜索会多一次 Model → Tool → Model 往返，还可能漏召回。Tool 只有十几个、每轮几乎都会用时，全部直塞可能更快；Tool 达到几百或几千、每次只用少数时，Deferred + Top-K 才开始明显占优。这也是可迁移的设计判断，不依赖 Codex 或 Rust。
+这不是无条件免费：搜索会多一次“模型 → 搜索程序 → 模型”的往返，还可能漏掉正确工具。只有十几个工具、每轮几乎都会用时，全部摆出来可能更快；工具达到几百或几千、每次只用少数时，先搜索再取前几个才明显占优。这个判断不依赖 Codex 或 Rust。
 
 ## BM25 不是“不要关键词”，而是“给关键词排座次”
 
-常有人问：为什么不用关键词匹配，反而用 BM25？这句话本身有一点误会。**BM25 仍然是词法关键词检索**，它不是 Embedding，也不理解“订会议”和“安排日程”一定是同义词。它与朴素关键词匹配的区别，是后者通常只回答“命中 / 没命中”，BM25 还会回答“谁更应该排第一”。
+常有人问：为什么不用关键词匹配，反而用 BM25？其实 **BM25 仍然在匹配关键词，只是会给结果排先后**。它不真正理解词义，也不知道“订会议”和“安排日程”表达的是同一件事。普通匹配只回答“有没有这个词”，BM25 还会判断“哪一张工具卡更值得排在前面”。
 
 {{< figure
   src="/images/posts/codex-first-request-tools/bm25-library-v2-zh.png"
-  alt="用图书馆理卡比喻比较关键词命中和 BM25 对 Tool metadata 的 Top-K 排序"
-  caption="关键词筛选像把所有命中的卡片倒成一堆；BM25 像熟练馆员，按稀有度、重复饱和与描述长度排序。图中的 Top-5 只是为了可读性，Codex 默认 limit 是 8；图也明确提醒 BM25 是英文词法检索，不负责跨语言语义理解。"
+  alt="用图书馆卡片比喻普通关键词匹配和 BM25 排序"
+  caption="普通关键词筛选像把所有命中的卡片倒成一堆；BM25 像熟练馆员，会考虑词有多特别、重复是否过多、说明是否过长，再排出先后。图中画 5 张只是为了好读，Codex 默认返回 8 张。"
 >}}
 
 先用一条概念式记住三个力：
@@ -263,13 +261,13 @@ score(D, Q) = Σ IDF(qᵢ) ×
 - **稀有词更值钱（IDF）**：几乎每张工具卡都写着 `get`，它像“本馆藏书”一样没什么区分度；只有少数卡片写着 `calendar`，这个词更能定位目标；
 - **重复会饱和**：描述里写三次 `calendar` 可以增强信号，但不会比写一次机械地强三倍，避免关键词堆砌霸榜；
 - **长描述要归一**：一本厚说明书天然更容易碰到查询词，BM25 会校正长度，避免“写得最多”自动等于“最相关”；
-- **直接产出 Top-K**：`tool_search` 需要的是默认 8 个有序候选，不是一大包无序布尔命中。
+- **直接排出前几个**：`tool_search` 默认需要 8 个按相关程度排好的候选，而不是一大包无序的“命中 / 未命中”。
 
-源码不是只搜索 Tool 名字。普通 Tool 的索引文本会同时放入原名和把下划线换成空格后的名称，例如 `create_event` 与 `create event`，再拼接 Namespace、描述、参数名和参数描述；MCP Tool 还会加入 canonical/callable name、Server、标题、Connector、Plugin 显示名以及输入 Schema 的属性名。这一步很关键：默认分词器按 Unicode 单词边界切分、转小写、去英文停用词并做英文词干化，而空格版名称保证 `create`、`event` 能成为独立的词法信号。
+Codex 不只搜索工具名。它会把原名、把下划线换成空格后的名字、用途说明、参数名和参数说明拼成一张可搜索卡片。例如同时写入 `create_event` 和 `create event`，可以让搜索程序分别看到 `create` 与 `event`。外部 MCP 工具还会加入服务名、标题、插件名等信息。卡片写得越接近用户真正会说的话，越容易搜对。
 
-## Codex 怎样调用 BM25：从 Deferred Tool 到可加载 Schema
+## 源码深挖（可以跳过）：Codex 怎样接上 BM25
 
-公式回答了“怎样打分”，但真正的实现还要回答三个问题：文档从哪里来、BM25 返回的编号怎样找回 Tool、为什么搜索结果能在下一轮变成可调用 Schema。稳定版的答案集中在 `spec_plan.rs`、`tool_search.rs` 和 `codex-tools` 的检索文本构造代码里。
+如果只想把设计搬进自己的 Agent，记住“工具卡 → BM25 排名 → 用编号取回完整工具说明”已经够了。下面这一节只负责用真实源码证明三件事：工具卡从哪里来、排名结果怎样找回工具、工具说明怎样交给下一轮模型。
 
 先说最容易误解的一点：**Codex 没有自己手写一遍 BM25 公式。** `codex-rs/Cargo.toml` 依赖 [`bm25 = "2.3.2"`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/Cargo.toml#L294)，分词、文档频率、平均文档长度和评分由这个内存检索库完成；Codex 写的是围绕它的数据准备与结果映射。
 
@@ -284,9 +282,9 @@ return merge(cards[id].loadable_schema)
 
 下面的 Rust 代码只是这四步的强类型版本；可以把 `.filter()`、`.map()`、`.collect()` 分别当成列表的筛选、转换和收集。
 
-### 第一步：只收集延迟暴露的工具
+### 第一步：只收集“需要搜索后再给”的工具
 
-`append_tool_search_executor()` 从 Registry 过滤出 Deferred Tool，再向每个 Runtime 索取 `search_info`。下面是保留真实类型和方法名的精简代码：
+`append_tool_search_executor()` 从工具总表里挑出“需要搜索后再给”的工具，再向真正管理该工具的代码索取可搜索文字。下面保留真实源码名称，方便核对：
 
 ```rust
 let search_infos = registry
@@ -309,9 +307,9 @@ pub struct ToolSearchEntry {
 }
 ```
 
-这里的 `search_text` 就是上一节列出的名称、描述、参数和 Namespace 等元数据；`output` 则是下一轮模型请求可以装载的 Function 或 Namespace Schema。可以把它想成图书馆索引卡：正面写着供馆员检索的关键词，背面拴着书库中那本书的提取单。
+`search_text` 是卡片正面，用来搜索；`output` 是卡片背面，保存命中后要交给模型的完整工具说明。它就像图书馆索引卡：正面供馆员查找，背面写着怎样取到真正的书。
 
-### 第二步：把数组下标当成“取书号”建索引
+### 第二步：给每张卡一个数字编号
 
 [`ToolSearchHandler::new()`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/handlers/tool_search.rs#L76-L110) 枚举所有卡片，把 `search_infos` 的数组下标作为 BM25 文档 ID：
 
@@ -333,9 +331,9 @@ let search_engine =
 
 这个 `usize` 很关键。BM25 引擎只需返回诸如 `7、2、11` 这样的有序文档 ID，Codex 就能用它们回查 `search_infos[7]`、`search_infos[2]`、`search_infos[11]`。没有数据库主键，也没有第二张映射表，数组位置本身就是“取书号”。整个语料一次性装进内存，并明确采用 `Language::English`。
 
-### 第三步：搜索 Top-K，再把 ID 映射回 Schema
+### 第三步：取排名靠前的编号，再换回完整工具说明
 
-调用时，Handler 会先 `trim()` 查询，拒绝空字符串和 `limit = 0`；未指定 `limit` 时使用 `TOOL_SEARCH_DEFAULT_LIMIT`，也就是 8。核心搜索代码很短：
+调用时，真正执行搜索的代码会先去掉首尾空格，拒绝空查询和 `limit = 0`；没有指定数量时默认取 8 个。核心代码很短：
 
 ```rust
 let results = self.search_engine
@@ -353,17 +351,17 @@ coalesce_loadable_tool_specs(
 这里有两个值得注意的细节：
 
 1. Codex 没有把 BM25 的数值分数继续传给模型，只使用检索库已经排好的顺序；
-2. `coalesce_loadable_tool_specs()` 会把同一 Namespace 下命中的多个 Tool 合并，避免返回几份重复的 Namespace 外壳。
+2. `coalesce_loadable_tool_specs()` 会把同一工具组里的多个命中合在一起，避免返回几份重复外壳。
 
 于是完整数据流就是：
 
 ```text
-Deferred Runtime
-  → ToolSearchInfo(search_text + LoadableToolSpec)
-  → BM25 Document<usize>
-  → Top-K 有序文档 ID
-  → 回查 LoadableToolSpec
-  → 合并 Namespace
+搜索后再给的工具
+  → 可搜索文字 + 完整工具说明
+  → 带数字编号的 BM25 卡片
+  → 排名靠前的编号
+  → 按编号取回完整工具说明
+  → 合并同一工具组
   → 放进下一次模型请求
 ```
 
@@ -381,9 +379,9 @@ Deferred Runtime
 create_event create event Create a calendar event title start_time end_time
 ```
 
-默认英文分词器把查询和卡片统一做 Unicode 归一、小写化、停用词过滤和词干化。BM25 若把这张卡排进 Top-K，Handler 就通过文档 ID 找回与它绑定的 `LoadableToolSpec`。这里不要把“文字相似”理解成直接调用：**搜索命中的是卡片编号，编号取回的才是完整 Schema。**
+英文分词器会统一大小写、去掉一些没有区分度的常见词，并把词形尽量归一。BM25 如果把这张卡排在前面，程序就通过数字编号找回与它绑定的完整工具说明。**搜索命中的是卡片编号，不是直接执行工具；用编号取回说明后，模型才能调用。**
 
-随后 [`ToolSearchOutput::to_response_item()`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/context.rs#L149-L185) 把结果变成一种专门的 Responses 输入项。源码单元测试验证的线格式如下；为了聚焦数据流，下面只保留一个空参数对象：
+随后 [`ToolSearchOutput::to_response_item()`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/context.rs#L149-L185) 把结果包装成下一次请求能携带的数据。源码测试验证的格式如下；这里只保留一个空参数对象：
 
 ```json
 {
@@ -402,15 +400,15 @@ create_event create event Create a calendar event title start_time end_time
 }
 ```
 
-它不是普通的文本结果，也不是 Codex 临时去改首轮的 `additional_tools` 数组；它作为 `tool_search_output` 进入会话历史，并随下一次 Responses 请求送回 Provider。这样，Provider 和模型能把 `tools` 中的定义当作本次搜索加载出的候选工具。上面的单元测试验证的是“结果怎样封装”，并不假装执行了一次真实 BM25 排名；排名部分由前面的 `SearchEngine::search()` 负责。
+它不是普通文字，也不会回头修改第一次请求；它以 `tool_search_output` 的名字进入会话历史，并随下一次请求送回模型服务。这样模型就能使用本次搜索找到的完整工具说明。上面的测试只证明“结果怎样包装”，真正的先后排名由前面的 `SearchEngine::search()` 完成。
 
-最后还有一个性能细节：[`ToolSearchHandlerCache`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/handlers/tool_search.rs#L34-L74) 会比较新的 `search_infos` 和 Source Listing。工具世界没变就复用已有 `Arc<ToolSearchHandler>` 和内存索引；MCP、Plugin 或动态工具发生变化才重建。它很像馆藏没变时继续用昨天的卡片柜，只有进了新书才重新编目。
+最后还有一个省时间的办法：[`ToolSearchHandlerCache`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/handlers/tool_search.rs#L34-L74) 会检查工具目录是否改变。没变化就继续使用已经建好的内存索引；MCP、插件或动态工具变化后才重建。它像图书馆继续使用昨天的卡片柜，只有进了新书才重新编目。
 
 对应源码入口可从 [`append_tool_search_executor()`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/spec_plan.rs#L1165-L1185)、[`ToolSearchHandler`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/handlers/tool_search.rs#L76-L197) 和 [`ToolSearchEntry` / `search_text` 构造](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/tools/src/tool_search.rs#L12-L150) 三处顺着读下来。
 
-## BM25 不属于 Rust：迁移到 Python、Go 或自己的 Agent
+## 换成 Python 或 Go，照样能做
 
-读完上一节，不应该得出“Codex 有一个 Rust 专用技巧”，而应该看到三个与语言无关的接口：
+真正需要照搬的只有三步，与编程语言无关：
 
 ```text
 build(cards: [{id, search_text, schema}]) -> index
@@ -418,100 +416,100 @@ search(index, query, top_k) -> ranked_ids
 load(cards, ranked_ids) -> callable_schemas
 ```
 
-Codex 用 `Vec<ToolSearchInfo>` 保存卡片、用 Rust `bm25` crate 排名、用数组下标取回 Schema。换一种语言只是在替换容器和库：
+Codex 用 Rust 列表保存卡片、用 `bm25` 库排名、用数字编号取回完整工具说明。换一种语言只是在替换容器和库：
 
-| 实现环境 | Tool 卡片 | BM25 排名 | 命中后加载 |
+| 实现环境 | 怎样存卡片 | 怎样排名 | 命中后怎样取说明 |
 | --- | --- | --- | --- |
 | Rust / Codex | `Vec<ToolSearchInfo>` | `bm25` crate | `search_infos[id]` |
 | Python Agent | list / dataclass / dict | 任意 BM25 库或搜索服务 | `cards[id]["schema"]` |
 | Go Agent | `[]ToolCard` struct | 任意 Go BM25 实现或搜索服务 | `cards[id].Schema` |
-| 多服务架构 | 数据库或 Tool Registry | 独立检索服务 | 通过 Tool ID 拉取 Schema |
+| 多服务架构 | 数据库或工具总表 | 独立搜索服务 | 通过工具编号拉取完整说明 |
 
 真正需要复刻的是数据契约，不是源码写法：
 
-1. 为每个 Tool 生成高质量 `search_text`，至少包含名称、动作、对象、参数和风险词；
-2. 让 BM25 返回有序 Top-K ID，而不是“包含关键词”的无序布尔集合；
-3. 用 ID 取回完整、可验证的 Schema，并把它写进 Agent 的后续状态；
+1. 为每个工具生成高质量的可搜索文字，至少包含名称、动作、对象、参数和风险词；
+2. 让 BM25 返回按相关程度排好的工具编号，而不是一堆无序的“包含关键词”；
+3. 用编号取回完整、可检查的工具说明，并交给下一轮模型；
 4. 记录命中率、误召回、最终调用成功率和新增往返延迟，再决定 K 和是否增加向量召回。
 
-因此，哪怕业务 Agent 完全由 Python 或 Go 编写，也可以照搬这个设计。BM25 的公式、输入卡片和 Top-K 输出不会因为编程语言改变；Rust 只是 Codex 选择的一种实现载体。
+因此，业务 Agent 即使完全由 Python 或 Go 编写，也可以照搬这个设计。BM25 的公式、输入卡片和排名结果不会因为编程语言改变；Rust 只是 Codex 选用的一种实现方式。
 
 ## 为什么这个场景选 BM25 很合理
 
-源码明确告诉我们“用了什么”，没有留下“一定因为以下五点”的设计备忘录。结合数据形态做工程推断，BM25 很适合 Tool Discovery：
+源码明确告诉我们“用了什么”，但没有留下“为什么选它”的设计备忘录。根据数据特点判断，BM25 很适合从大量工具里找候选：
 
-1. **工具元数据是短小、结构化、术语稳定的文本。** `calendar`、`pull_request`、`spawn_agent`、`issue_number` 这类 API 名和参数名本来就适合词法检索；
-2. **索引可以完全在本地重建。** Handler 直接用 Rust `bm25` crate 和 `Language::English` 建引擎，不需要请求 Embedding 服务，也不需要维护向量数据库；
-3. **首轮延迟和可用性优先。** Tool 列表会随 MCP、Plugin、动态工具和策略变化，BM25 对这类小型动态语料启动快、成本低、行为可解释；
-4. **目标是缩小 Schema，而不是回答开放世界问题。** 搜索只需把几十或几百张工具卡缩成 Top-K，再让强模型判断最终该调哪个；
+1. **工具说明短，而且技术词很明确。** `calendar`、`pull_request`、`spawn_agent`、`issue_number` 这类名字和参数本来就适合按关键词找；
+2. **可以完全在本机建立索引。** 不需要请求向量模型，也不需要维护向量数据库；
+3. **工具目录经常变化。** MCP、插件或动态工具可能随时增减，BM25 重建快、成本低，也容易解释为什么排在前面；
+4. **这里只需要缩小范围，不需要回答开放问题。** 搜索把几十或几百张工具卡缩成几张，再让模型做最终选择；
 5. **精确技术词不能被“语义相似”冲淡。** `delete_issue` 与 `get_issue` 语义相关，但权限风险完全不同。名称与参数的词法证据在工具选择里很重要。
 
-相比之下，朴素 substring filter 没有稳定排序；Embedding 虽能处理同义词和跨语言，却增加模型/服务依赖、索引更新和相似度误召回。对一批短 Schema 来说，BM25 是很务实的中间点。
+简单的“字符串里有没有这个词”不会认真排序；向量搜索虽然更擅长同义词和跨语言，却要增加模型服务、索引维护，也可能把“意思相近但不能乱用”的工具排在一起。对短小的工具说明来说，BM25 是一个务实的中间选择。
 
 ## BM25 的边界也很清楚
 
-当前实现把语言设为 `English`，没有再叠加向量召回、同义词表、exact-name boost 或 reranker。因此这些查询并非它的强项：
+当前实现只按英文文字搜索，没有再加向量搜索、同义词表、工具名额外加分或第二轮精排。因此这些查询并非它的强项：
 
 - 中文问“安排会议”，工具只写 `create_calendar_event`；
 - 用户说“查代码评审”，工具只写 `pull_request_review`；
-- 两个 Tool 的描述大量共享模板词，真正差异藏在很少见的业务语义里。
+- 两个工具的说明大量使用相同套话，真正差异没有明确写出来。
 
-这也是为什么 Tool 的 `name`、`description` 和参数说明不能随便写。BM25 像馆员，但它只能阅读卡片上已有的字。好的元数据应该包含用户会说的动作、对象、约束和危险性；如果未来工具规模、跨语言需求或同义表达显著增加，更稳妥的升级路线是 **BM25 召回 + exact-name boost + 轻量 rerank**，而不是立刻把一切换成纯向量。
+这也是为什么工具名称、用途和参数说明不能随便写。BM25 像馆员，但只能阅读卡片上已有的字。好的卡片要写出用户会说的动作、对象、限制和危险性。工具更多、语言更多或表达更灵活时，可以升级成 **BM25 先找一批 + 工具名完全命中时加分 + 再做一次轻量精排**，不必立刻全部改成向量搜索。
 
-## BM25 适不适合 Memory 检索
+## BM25 能不能用来搜索记忆
 
-**适合，但更适合做词法召回的一条腿，而不是完整的长期记忆系统。** 还要先澄清一个源码事实：这个稳定版 Codex 的 Memory 搜索并没有复用上面的 BM25。`ext/memories` 暴露的是子串查询，可选择忽略空格或分隔符，并按路径和行号整理匹配结果；它没有计算 BM25 相关度，也没有按语义相似度排序。
+**能用，但更适合负责“按原词找一批候选”，不能单独承担完整的长期记忆。** 还要先澄清一个源码事实：这个稳定版 Codex 搜索记忆时并没有使用 BM25，而只是查找“文字里是否包含查询内容”，再按文件路径和行号整理结果。
 
 为什么 BM25 仍值得用在 Memory？错误码、函数名、文件路径、项目代号、人名和已经写入的决策措辞，都是非常强的词法锚点。用户问“上次 `EADDRINUSE` 怎么处理”，BM25 往往比纯向量更稳定，也比子串匹配更会给结果排序。
 
-但 Memory 比 Tool 卡片更难：同一件事会被换一种说法，旧结论可能被新结论推翻，还要考虑“谁的记忆、哪个项目、多久以前、可信度多高”。BM25 不理解这些关系：
+但记忆比工具卡更难：同一件事可能换一种说法，旧结论可能被新结论推翻，还要考虑“谁的记忆、哪个项目、多久以前、可信度多高”。BM25 不理解这些关系：
 
-| Memory 需求 | BM25 单独处理的效果 |
+| 记忆搜索需求 | 只用 BM25 的效果 |
 | --- | --- |
 | 精确名称、路径、错误码、API | 强 |
 | 同义改写、跨语言表达 | 弱 |
-| 用户 / 项目 / 时间范围 | 需要 metadata filter |
+| 用户 / 项目 / 时间范围 | 需要先按这些信息筛选 |
 | 新旧结论冲突、可信度和重要性 | 需要额外排序与治理 |
 
 一个更可靠的生产方案是：
 
 ```text
-用户 / 项目 / 时间等 metadata filter
-  → BM25 词法召回  ||  Embedding 语义召回
-  → 融合两路候选（例如 RRF）
+先按用户 / 项目 / 时间筛选
+  → BM25 按原词找  ||  向量搜索按意思找
+  → 合并两边的候选
   → 按新鲜度、重要性、可信度、使用次数加权
-  → 轻量 rerank
+  → 再做一次轻量精排
   → 返回原文片段与出处
 ```
 
-对于很小、以技术日志为主的本地 Memory，先从 BM25 开始完全合理；它会比当前子串列表多出一层有效排序。随着自然语言转述、跨语言和矛盾记忆增加，再升级为混合检索。这里的结论是通用架构建议，**不是在声称 Codex 当前已经这样实现。**
+对于很小、主要存技术日志的本地记忆，先用 BM25 完全合理；它至少会比简单的“包含文字”多一层有效排序。自然语言转述、跨语言和冲突记忆增多后，再升级成“按原词找 + 按意思找”。这是通用建议，**不是说 Codex 当前已经这样实现。**
 
-## 开源 Codex 可以换模型，但要替换三层契约
+## 开源 Codex 可以换模型，但不是只改一个名字
 
-准确的说法不是“把 GPT-5.6 改成 DeepSeek、GLM 或 Kimi”，而是：**保留 Codex 的 Agent Runtime，把它背后的模型与 Provider 替换掉。** Codex CLI、SDK 和 App Server 等核心组件开源，模型调用又被隔离在 Provider 层，因此沙箱、审批、Tool Registry、MCP、会话历史和执行循环可以继续复用。
+准确的说法不是“把 GPT-5.6 变成 DeepSeek、GLM 或 Kimi”，而是：**保留 Codex 这套 Agent 外壳，换掉背后的模型和模型接入层。** Codex CLI、SDK 和 App Server 等核心组件已经开源，所以沙箱、操作确认、工具总表、MCP 外部工具、会话历史和执行循环都可以继续复用。
 
 最小控制循环与具体模型品牌无关：
 
 ```text
-用户任务 + 会话状态 + Tool Schemas
+用户任务 + 会话记录 + 工具说明
               ↓
-        Model Provider
+          模型接入层
               ↓
-      Tool Call / Agent Text
+        工具调用 / 文字回答
               ↓
-   Codex Runtime 执行、审批、回写
+   Codex 执行、请求确认、记录结果
               └──────────────→ 下一轮模型请求
 ```
 
-但模型替换不是只改一行 `model = "..."`。至少要对齐三层契约：
+但模型替换不是只改一行 `model = "..."`。至少要保证三层能够对上：
 
 | 适配层 | 必须对齐什么 | 没对齐时的表现 |
 | --- | --- | --- |
-| Transport | `base_url`、鉴权、Header、流式连接、重试 | 连不上、401、流中断 |
-| Wire protocol | Responses input items、Tool Call/Output、流式事件与错误格式 | 能聊天但 Tool 循环断裂 |
-| Capability | 上下文长度、结构化调用、并行 Tool、推理字段、Tool Mode 与 Search | 请求能跑，但 Agent 表现退化或功能消失 |
+| 网络连接 | 地址、密钥、请求头、流式连接、失败重试 | 连不上、401、回答到一半中断 |
+| 数据格式 | 问题、工具调用、工具结果、流式事件和错误分别怎样表示 | 能聊天，但一调用工具就断 |
+| 模型能力 | 能读多长、能否稳定按格式调用工具、能否并行、能否搜索工具 | 请求能跑，但 Agent 变笨或功能消失 |
 
-官方配置支持自定义 `model_provider`。如果业务网关已经提供兼容的 Responses Endpoint，最短路径类似：
+官方配置允许自定义模型接入层。如果业务网关已经支持 Codex 使用的 Responses 请求格式，最短配置类似：
 
 ```toml
 model = "your-business-model"
@@ -526,36 +524,36 @@ wire_api = "responses"
 
 这里必须结合本文固定版本加一句重要限制：`rust-v0.147.0` 的 [`WireApi`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/model-provider-info/src/lib.rs#L49-L79) 只接受 `responses`，并明确拒绝 `wire_api = "chat"`。因此接入 DeepSeek、GLM、Kimi 或其他业务模型时：
 
-- 若服务端完整兼容 Responses、流式事件和 Tool Calling，可从自定义 Provider 配置开始；
-- 若只有 Chat-Completions 风格接口，需要一个把 Responses 双向翻译成厂商协议的网关，或直接修改开源的 Provider/Client 适配层；
-- “接口能返回文字”不等于 Agent 已适配完成，必须用真实 Tool Call、Tool Output、长上下文、错误恢复和并行调用做评测。
+- 若服务端完整兼容 Responses、流式回答和工具调用，可以先从自定义模型接入配置开始；
+- 若只有 Chat Completions 一类接口，需要加一个网关，在 Codex 格式与厂商格式之间双向翻译；也可以直接修改开源的模型接入代码；
+- “接口能返回文字”不等于 Agent 已适配完成，还要实际测试工具调用、结果回传、长对话、错误恢复和并行调用。
 
-还有一个不明显但很关键的源码行为：未知模型名会落到 [`fallback model metadata`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/models-manager/src/model_info.rs#L137-L180)。这个保守默认会关闭 `supports_search_tool`、Responses Lite、Code Mode Only 和并行 Tool Call。也就是说，换模型后普通 Direct Tool 循环可能先跑起来，但 GPT-5.6 的特殊优化**不会自动继承**。要恢复它们，需要扩展模型目录或能力配置，并用评测证明新模型确实能可靠完成这些协议动作。
+还有一个关键细节：Codex 不认识的新模型会采用一套 [`保守默认设置`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/models-manager/src/model_info.rs#L137-L180)，先关闭工具搜索、精简请求、`exec` 集中调用和并行工具。也就是说，换模型后，简单的“模型点名工具 → 程序执行 → 结果交回”可能先跑起来，但 GPT-5.6 的特殊优化**不会自动继承**。要重新打开它们，必须补充该模型的能力说明，并用实际任务证明它确实做得稳。
 
 对业务团队来说，最快且风险最低的迁移顺序是：
 
-1. 先让新模型通过 Responses 适配层完成文本与少量 Direct Tool 闭环；
-2. 验证参数 Schema、Tool Call/Output 配对、流式中断和上下文压缩；
+1. 先让新模型完成文字回答和少量直接工具调用；
+2. 验证参数填写、工具调用与结果能否成对、回答中断后能否恢复、长对话能否压缩；
 3. 用业务任务集比较成功率、成本和延迟，而不是只看聊天效果；
-4. 再逐步打开并行 Tool、Deferred Search、Code Mode 等高级能力。
+4. 再逐步打开并行调用、按需搜索工具、`exec` 集中调用等高级能力。
 
-这才是开源 Agent 框架的真正复用价值：不必重写成熟的执行与治理底座，只替换模型传输和能力边界，并把业务 Tool、策略、Memory 与评测加在自己可控的层上。
+这才是开源 Agent 框架的真正复用价值：不必重写成熟的执行和安全底座，只替换模型接入部分，再把业务工具、规则、记忆和评测加在自己可控的层上。
 
 ## 最值得带走的七点
 
-第一，第一次请求不是“把所有 Tool 全塞给模型”，而是一个由 Exposure、Tool Mode、Provider 与 Feature 共同计算出的接口面。
+第一，第一次请求不会把所有工具都塞给模型；程序会根据模型、环境和功能开关，决定哪些一开始就给、哪些搜索后再给、哪些不给。
 
-第二，显式 Tool 通常是请求协议里的结构化字段；Responses Lite 使用 developer 角色的 `additional_tools`，但它仍不是 system/user 自然语言。
+第二，一开始就有的工具通常放在请求的结构化数据里，不是藏在 system 或 user 提示词中。
 
-第三，`tool_search` 是模型按需选择的 Tool，不是每轮自动 fallback；搜索结果以结构化历史项进入上下文，同一会话可以继续调用已加载 Tool。
+第三，`tool_search` 由模型按需选择，不是每轮自动执行；搜到的工具说明留在同一会话里，后面可以继续使用。
 
-第四，Code Mode Only 需要更强的代码与工具编排能力，但稳定版为什么只为 GPT-5.6 选择它，源码只给出了模型兼容元数据，没有证明“强”是唯一原因。
+第四，把大量工具收进 `exec` 需要模型更会写代码和组织工具，但源码没有证明“模型更强”是 GPT-5.6 使用它的唯一原因。
 
-第五，BM25 是有排序能力的关键词检索。它很适合 Tool Schema，也适合 Memory 的精确词法召回；完整 Memory 更适合 metadata、BM25、向量召回和重排共同工作。
+第五，BM25 仍然是关键词搜索，只是会认真排序。它适合工具说明，也适合从记忆中找错误码、路径等原词；完整记忆还需要按项目和时间筛选、按意思搜索、再次精排。
 
-第六，BM25 与 `search_text → ranked IDs → Schema` 是语言无关的契约，可以在 Rust、Python、Go 或独立检索服务中复现。
+第六，“可搜索文字 → 排名后的编号 → 完整工具说明”与语言无关，可以在 Rust、Python、Go 或独立搜索服务中复现。
 
-第七，开源 Codex 允许替换 Model Provider，但要同时对齐 Transport、Responses 线协议和模型能力；替换模型不会自动继承 GPT-5.6 的 Tool Search 与 Code Mode 元数据。
+第七，开源 Codex 可以替换模型，但网络连接、请求格式和模型能力必须同时对上；新模型不会自动继承 GPT-5.6 的工具搜索和 `exec` 调用方式。
 
 ## 源码索引
 
@@ -583,6 +581,6 @@ wire_api = "responses"
 - [稳定版只接受 Responses Wire API，并拒绝旧 `chat` 配置](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/model-provider-info/src/lib.rs#L49-L79)
 - [未知模型怎样落到保守的 fallback capability metadata](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/models-manager/src/model_info.rs#L137-L180)
 
-> 源码核对日期：2026-08-09。稳定版固定到 `be6e8eac`，同时核对了当日 `main` 的 `646f7c0a`；BM25 crate 固定到 `v2.3.2` 的 `8ef72604`。Tool Exposure 与模型目录会继续演进，排查具体环境时应以实际请求和对应 commit 为准。
+> 源码核对日期：2026-08-09。稳定版固定到 `be6e8eac`，同时核对了当日 `main` 的 `646f7c0a`；BM25 库固定到 `v2.3.2` 的 `8ef72604`。模型能看到哪些工具以及模型目录都会继续变化，排查具体环境时应以实际请求和对应 commit 为准。
 
-> 配图生成说明：中英文两版共六张技术图，均通过 Codex 内置 `image_gen.imagegen` 生成或编辑；在固定版本源码中，该扩展把 [`IMAGE_MODEL` 写死为 `gpt-image-2`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/ext/image-generation/src/tool.rs#L53-L58)，并用它构造 Images 请求。发布前人工复核了模式状态、Top-K 注记、示意 ID 和中英文标签。
+> 配图生成说明：中英文两版共六张技术图，均通过 Codex 内置 `image_gen.imagegen` 生成或编辑；在固定版本源码中，该扩展把 [`IMAGE_MODEL` 写死为 `gpt-image-2`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/ext/image-generation/src/tool.rs#L53-L58)，并用它构造图片请求。发布前人工复核了模式状态、返回数量、示意编号和中英文标签。

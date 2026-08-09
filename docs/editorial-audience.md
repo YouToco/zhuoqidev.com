@@ -113,6 +113,18 @@ Do not use this order:
 ## Terminology rules
 
 - Define every project-specific term on first use.
+- Defining jargon once is not enough if the main narrative continues to depend
+  on it. Give each unavoidable source term a precise plain-language name, then
+  use the plain-language name throughout the conceptual sections.
+- Confine exact class/type/function names to code, source-verification
+  paragraphs, and the source index whenever they are not needed to state the
+  architecture.
+- Apply the deletion test: if parenthetical source names and English jargon are
+  removed, the surrounding explanation must still remain accurate and clear.
+- Prefer concrete nouns and verbs such as “tool manual,” “tool catalog,” “the
+  code that performs the work,” “model connection,” “rank the best eight,” and
+  “store the result in conversation history.” A glossary is not permission to
+  write the rest of the article in repository vocabulary.
 - Classify important terms by layer: model metadata, client configuration,
   runtime registry, request protocol, handler implementation, or external
   library.
@@ -167,6 +179,8 @@ claims.
       Agent design, including cross-language or cross-provider boundaries when
       relevant.
 - [ ] Internal terms are defined before they carry the explanation.
+- [ ] Conceptual sections still make sense after exact source identifiers and
+      parenthetical jargon are removed.
 - [ ] Pseudocode or a diagram precedes nontrivial source excerpts.
 - [ ] One input is traced end to end.
 - [ ] Application glue and dependency internals are distinguished.

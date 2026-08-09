@@ -12,6 +12,10 @@
 - Explain the system concept before introducing source identifiers. Use the
   sequence: problem -> mental model -> glossary -> pseudocode/data flow ->
   real source -> concrete example -> limitations and evidence.
+- A glossary does not make jargon-led prose accessible. Give unavoidable source
+  terms precise plain-language names, use those plain names in the main
+  narrative, and keep exact identifiers in source-verification sections. The
+  explanation must survive deleting parenthetical source names.
 - Source depth must not be removed to make an article accessible. Instead,
   provide the conceptual stairs needed to reach it. No internal identifier may
   carry an unexplained architectural claim.
