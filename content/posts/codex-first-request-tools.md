@@ -1,6 +1,6 @@
 ---
-title: "Codex 首轮 Tool 怎么分层？从 exec、tool_search 缺口到 BM25 实现"
-description: "基于 Codex rust-v0.147.0 源码，面向不熟 Rust 的 Agent 工程师，拆解 GPT-5.6 首轮工具、请求上下文、Tool Search 生命周期、Code Mode Only 与 BM25/Memory 检索。"
+title: "Codex 首轮 Tool 怎么分层？从第一性原理到 tool_search、BM25 与模型替换"
+description: "基于 Codex rust-v0.147.0 源码，从有限上下文与接口契约出发，拆解 Tool Search、可跨 Rust/Python/Go 复用的 BM25 检索，以及自定义模型 Provider 的适配边界。"
 date: 2026-08-08
 lastmod: 2026-08-09
 audience_profile: "agent-engineer-source-transition"
@@ -14,7 +14,7 @@ ShowReadingTime: true
 ---
 
 {{< lead >}}
-把 Codex 首轮请求想成机场值机：模型不会拿到每个柜台的一张票，而只拿到少数顶层入口；大量具体工具收进 `exec` 这道登机口，其他工具可以延迟发现。你不需要会 Rust，本文会先解释系统角色，再用伪代码和真实源码回答：Tool 放在请求哪里、什么时候搜索、结果能用几轮，以及 BM25 能不能检索 Memory。
+把 Codex 首轮请求想成机场值机：上下文容量有限，模型不该拿到每个柜台的一张票，而只拿少数入口与一份可搜索目录。本文先从这个不可逃避的约束出发，再解释 Tool 放在哪里、怎样从 N 个 Schema 缩到 K 个、BM25 如何迁移到 Python/Go Agent，以及开源 Codex 怎样接入业务模型。
 {{< /lead >}}
 
 本文固定在 2026-08-07 发布的稳定版 [`rust-v0.147.0`](https://github.com/openai/codex/releases/tag/rust-v0.147.0)，源码 commit 为 [`be6e8eac`](https://github.com/openai/codex/commit/be6e8eac029b183056b7e4402879f15d2c85f61b)；另复查了 2026-08-09 的 `main` commit [`646f7c0a`](https://github.com/openai/codex/commit/646f7c0a91b8e327d263335da68ae8ef212895ce)。先给两个不会误导人的结论：
@@ -28,8 +28,39 @@ ShowReadingTime: true
 
 有两条阅读路线：
 
-- **只想理解架构**：读术语地图、机场图、Tool Search 运行时序、BM25 类比和最后总结；
+- **只想理解架构**：读第一性原理、机场图、Tool Search 运行时序、跨语言复用和模型替换；
 - **想跟进源码**：继续读伪代码、Rust 对照、完整查询实例和源码索引。
+
+## 先只记住四个第一性原理
+
+把 Rust 函数名、OpenAI 协议名和 GPT-5.6 型号暂时全部擦掉，一个 Tool-using Agent 仍逃不开四件事：
+
+1. **模型只能选择它看得见的接口。** Handler 写好了但 Schema 没进请求，对模型就等于不存在；
+2. **上下文是有限且有成本的工作台。** Tool 越多，每轮重复发送的 Schema 越长，费用、延迟和错误选择空间都会增长；
+3. **检索的本质是缩小选择空间。** 先从 N 个候选中找出 K 个相关 Tool，再让模型精确决策，通常比让模型同时阅读 N 份说明书更稳；
+4. **Agent Runtime 与模型通过契约连接。** 只要请求、Tool Call、Tool Output 和状态循环能对齐，运行时、检索算法、编程语言与模型 Provider 都可以替换。
+
+因此全文最小的知识骨架其实只有这一条：
+
+```text
+有限上下文
+  → 不能常驻全部 Tool Schema
+  → 先暴露少量入口和可搜索目录
+  → 检索 Top-K 完整 Schema
+  → 模型调用
+  → Runtime 执行并把结果写回状态
+```
+
+理解这条链以后，下面哪些必须保留、哪些可以摘掉就很清楚：
+
+| 阅读源码时看到的内容 | 是否必须理解 | 原因 |
+| --- | --- | --- |
+| Direct / Deferred / Hidden 的状态变化 | 必须 | 它决定模型在什么时候看见什么 |
+| `search_text → ranked IDs → Schema` 数据流 | 必须 | 这是可迁移到任何 Agent 的检索契约 |
+| Provider 的输入输出与能力契约 | 必须 | 它决定能否安全替换模型 |
+| Rust iterator、具体类型名、文件路径 | 可以先摘掉 | 它们是本项目实现，不是架构定律 |
+| `bm25` crate 名称与数组下标技巧 | 可以替换 | Python、Go 或数据库检索都能实现同一接口 |
+| GPT-5.6 当前 Tool 名单 | 只能当版本快照 | 模型、环境、Feature 改变后会重新计算 |
 
 ## 先看术语地图
 
@@ -181,6 +212,24 @@ Codex：BM25 Top-K → LoadableToolSpec
 源码能证明的是配置事实：稳定版模型目录中的 GPT-5.6 Sol、Terra、Luna 都声明 `tool_mode: "code_mode_only"` 和 Responses Lite；紧邻的 GPT-5.5 条目没有。源码把它当作**模型能力元数据和协议兼容契约**，没有一段注释或设计文档说“因为 5.6 更聪明，所以开启”。而且 API 级 `tool_search` 并非 5.6 独占，官方文档列出的支持范围是 GPT-5.4 及更新模型。
 
 下面是明确标注的工程推断，而不是源码原话：Code Mode Only 要求模型在 `exec` 中写正确 JavaScript、遵守 Tool Schema、处理异步与错误、并在一个 cell 内筛选和压缩结果。更强的代码生成、推理和工具调用训练显然是前提；但是否启用还取决于专门后训练、评测门槛、Provider 协议和灰度发布。**“强模型使它可行”是合理解释，“只因为参数更强”则是未经证实的简化。**
+
+## 从 N 份 Schema 缩到 K 份，真正省了什么
+
+假设 Agent 接入 N 个 Tool，每份完整 Schema 平均占 S 个 Token。全部直塞时，一轮请求里的工具部分近似是：
+
+```text
+Full cost ≈ N × S
+```
+
+延迟加载改成只常驻搜索入口和简短目录，命中后加载 K 个 Tool：
+
+```text
+Deferred cost ≈ catalog_summary + search_tool + K × S
+```
+
+当 `K ≪ N`，节省的不只是 Token。模型面对的相似名称和参数组合变少，最终 Tool 选择也更容易。严格说，`tool_search` 没有提高模型参数中的“智力”；它通过**减少噪声、提供恰当信息、把大决策拆成两次小决策**，提高了 Agent 的有效智能。
+
+这不是无条件免费：搜索会多一次 Model → Tool → Model 往返，还可能漏召回。Tool 只有十几个、每轮几乎都会用时，全部直塞可能更快；Tool 达到几百或几千、每次只用少数时，Deferred + Top-K 才开始明显占优。这也是可迁移的设计判断，不依赖 Codex 或 Rust。
 
 ## BM25 不是“不要关键词”，而是“给关键词排座次”
 
@@ -359,6 +408,34 @@ create_event create event Create a calendar event title start_time end_time
 
 对应源码入口可从 [`append_tool_search_executor()`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/spec_plan.rs#L1165-L1185)、[`ToolSearchHandler`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/handlers/tool_search.rs#L76-L197) 和 [`ToolSearchEntry` / `search_text` 构造](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/tools/src/tool_search.rs#L12-L150) 三处顺着读下来。
 
+## BM25 不属于 Rust：迁移到 Python、Go 或自己的 Agent
+
+读完上一节，不应该得出“Codex 有一个 Rust 专用技巧”，而应该看到三个与语言无关的接口：
+
+```text
+build(cards: [{id, search_text, schema}]) -> index
+search(index, query, top_k) -> ranked_ids
+load(cards, ranked_ids) -> callable_schemas
+```
+
+Codex 用 `Vec<ToolSearchInfo>` 保存卡片、用 Rust `bm25` crate 排名、用数组下标取回 Schema。换一种语言只是在替换容器和库：
+
+| 实现环境 | Tool 卡片 | BM25 排名 | 命中后加载 |
+| --- | --- | --- | --- |
+| Rust / Codex | `Vec<ToolSearchInfo>` | `bm25` crate | `search_infos[id]` |
+| Python Agent | list / dataclass / dict | 任意 BM25 库或搜索服务 | `cards[id]["schema"]` |
+| Go Agent | `[]ToolCard` struct | 任意 Go BM25 实现或搜索服务 | `cards[id].Schema` |
+| 多服务架构 | 数据库或 Tool Registry | 独立检索服务 | 通过 Tool ID 拉取 Schema |
+
+真正需要复刻的是数据契约，不是源码写法：
+
+1. 为每个 Tool 生成高质量 `search_text`，至少包含名称、动作、对象、参数和风险词；
+2. 让 BM25 返回有序 Top-K ID，而不是“包含关键词”的无序布尔集合；
+3. 用 ID 取回完整、可验证的 Schema，并把它写进 Agent 的后续状态；
+4. 记录命中率、误召回、最终调用成功率和新增往返延迟，再决定 K 和是否增加向量召回。
+
+因此，哪怕业务 Agent 完全由 Python 或 Go 编写，也可以照搬这个设计。BM25 的公式、输入卡片和 Top-K 输出不会因为编程语言改变；Rust 只是 Codex 选择的一种实现载体。
+
 ## 为什么这个场景选 BM25 很合理
 
 源码明确告诉我们“用了什么”，没有留下“一定因为以下五点”的设计备忘录。结合数据形态做工程推断，BM25 很适合 Tool Discovery：
@@ -409,7 +486,62 @@ create_event create event Create a calendar event title start_time end_time
 
 对于很小、以技术日志为主的本地 Memory，先从 BM25 开始完全合理；它会比当前子串列表多出一层有效排序。随着自然语言转述、跨语言和矛盾记忆增加，再升级为混合检索。这里的结论是通用架构建议，**不是在声称 Codex 当前已经这样实现。**
 
-## 最值得带走的五点
+## 开源 Codex 可以换模型，但要替换三层契约
+
+准确的说法不是“把 GPT-5.6 改成 DeepSeek、GLM 或 Kimi”，而是：**保留 Codex 的 Agent Runtime，把它背后的模型与 Provider 替换掉。** Codex CLI、SDK 和 App Server 等核心组件开源，模型调用又被隔离在 Provider 层，因此沙箱、审批、Tool Registry、MCP、会话历史和执行循环可以继续复用。
+
+最小控制循环与具体模型品牌无关：
+
+```text
+用户任务 + 会话状态 + Tool Schemas
+              ↓
+        Model Provider
+              ↓
+      Tool Call / Agent Text
+              ↓
+   Codex Runtime 执行、审批、回写
+              └──────────────→ 下一轮模型请求
+```
+
+但模型替换不是只改一行 `model = "..."`。至少要对齐三层契约：
+
+| 适配层 | 必须对齐什么 | 没对齐时的表现 |
+| --- | --- | --- |
+| Transport | `base_url`、鉴权、Header、流式连接、重试 | 连不上、401、流中断 |
+| Wire protocol | Responses input items、Tool Call/Output、流式事件与错误格式 | 能聊天但 Tool 循环断裂 |
+| Capability | 上下文长度、结构化调用、并行 Tool、推理字段、Tool Mode 与 Search | 请求能跑，但 Agent 表现退化或功能消失 |
+
+官方配置支持自定义 `model_provider`。如果业务网关已经提供兼容的 Responses Endpoint，最短路径类似：
+
+```toml
+model = "your-business-model"
+model_provider = "business_gateway"
+
+[model_providers.business_gateway]
+name = "Business model gateway"
+base_url = "https://llm-gateway.example.com/v1"
+env_key = "BUSINESS_LLM_API_KEY"
+wire_api = "responses"
+```
+
+这里必须结合本文固定版本加一句重要限制：`rust-v0.147.0` 的 [`WireApi`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/model-provider-info/src/lib.rs#L49-L79) 只接受 `responses`，并明确拒绝 `wire_api = "chat"`。因此接入 DeepSeek、GLM、Kimi 或其他业务模型时：
+
+- 若服务端完整兼容 Responses、流式事件和 Tool Calling，可从自定义 Provider 配置开始；
+- 若只有 Chat-Completions 风格接口，需要一个把 Responses 双向翻译成厂商协议的网关，或直接修改开源的 Provider/Client 适配层；
+- “接口能返回文字”不等于 Agent 已适配完成，必须用真实 Tool Call、Tool Output、长上下文、错误恢复和并行调用做评测。
+
+还有一个不明显但很关键的源码行为：未知模型名会落到 [`fallback model metadata`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/models-manager/src/model_info.rs#L137-L180)。这个保守默认会关闭 `supports_search_tool`、Responses Lite、Code Mode Only 和并行 Tool Call。也就是说，换模型后普通 Direct Tool 循环可能先跑起来，但 GPT-5.6 的特殊优化**不会自动继承**。要恢复它们，需要扩展模型目录或能力配置，并用评测证明新模型确实能可靠完成这些协议动作。
+
+对业务团队来说，最快且风险最低的迁移顺序是：
+
+1. 先让新模型通过 Responses 适配层完成文本与少量 Direct Tool 闭环；
+2. 验证参数 Schema、Tool Call/Output 配对、流式中断和上下文压缩；
+3. 用业务任务集比较成功率、成本和延迟，而不是只看聊天效果；
+4. 再逐步打开并行 Tool、Deferred Search、Code Mode 等高级能力。
+
+这才是开源 Agent 框架的真正复用价值：不必重写成熟的执行与治理底座，只替换模型传输和能力边界，并把业务 Tool、策略、Memory 与评测加在自己可控的层上。
+
+## 最值得带走的七点
 
 第一，第一次请求不是“把所有 Tool 全塞给模型”，而是一个由 Exposure、Tool Mode、Provider 与 Feature 共同计算出的接口面。
 
@@ -421,6 +553,10 @@ create_event create event Create a calendar event title start_time end_time
 
 第五，BM25 是有排序能力的关键词检索。它很适合 Tool Schema，也适合 Memory 的精确词法召回；完整 Memory 更适合 metadata、BM25、向量召回和重排共同工作。
 
+第六，BM25 与 `search_text → ranked IDs → Schema` 是语言无关的契约，可以在 Rust、Python、Go 或独立检索服务中复现。
+
+第七，开源 Codex 允许替换 Model Provider，但要同时对齐 Transport、Responses 线协议和模型能力；替换模型不会自动继承 GPT-5.6 的 Tool Search 与 Code Mode 元数据。
+
 ## 源码索引
 
 - [GPT-5.6 Sol 模型能力与 Tool Mode](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/models-manager/models.json#L4-L22)
@@ -429,6 +565,8 @@ create_event create event Create a calendar event title start_time end_time
 - [GPT-5.5 相邻模型条目没有选择 Code Mode Only](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/models-manager/models.json#L341-L359)
 - [OpenAI Tool Search 官方指南：Deferred Loading、调用时序与未来轮次复用](https://developers.openai.com/api/docs/guides/tools-tool-search)
 - [OpenAI Programmatic Tool Calling 官方指南](https://developers.openai.com/api/docs/guides/tools-programmatic-tool-calling)
+- [Codex 自定义 Model Provider 官方配置](https://learn.chatgpt.com/docs/config-file/config-advanced#custom-model-providers)
+- [Codex 开源组件边界](https://learn.chatgpt.com/docs/open-source)
 - [Tool Registry、Exposure 与首轮可见 Spec 规划](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/spec_plan.rs#L319-L486)
 - [核心 Tool 的条件化注册](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/spec_plan.rs#L818-L1118)
 - [Responses Lite 的 `additional_tools` 请求封装](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/client.rs#L849-L885)
@@ -442,6 +580,8 @@ create_event create event Create a calendar event title start_time end_time
 - [`bm25` 2.3.2 默认分词器的切词、归一、停用词与词干化](https://github.com/Michael-JB/bm25/blob/8ef726045b41702e148d8996d344f3500844fde1/src/default_tokenizer.rs#L263-L289)
 - [Codex Memory Tool 当前的子串查询语义](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/ext/memories/src/tools/search.rs#L28-L62)
 - [Codex Memory 本地搜索与结果排序实现](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/ext/memories/src/local/search.rs#L17-L88)
+- [稳定版只接受 Responses Wire API，并拒绝旧 `chat` 配置](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/model-provider-info/src/lib.rs#L49-L79)
+- [未知模型怎样落到保守的 fallback capability metadata](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/models-manager/src/model_info.rs#L137-L180)
 
 > 源码核对日期：2026-08-09。稳定版固定到 `be6e8eac`，同时核对了当日 `main` 的 `646f7c0a`；BM25 crate 固定到 `v2.3.2` 的 `8ef72604`。Tool Exposure 与模型目录会继续演进，排查具体环境时应以实际请求和对应 commit 为准。
 

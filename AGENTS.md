@@ -15,6 +15,14 @@
 - Source depth must not be removed to make an article accessible. Instead,
   provide the conceptual stairs needed to reach it. No internal identifier may
   carry an unexplained architectural claim.
+- Derive the architecture from first-principle constraints before presenting
+  repository details. State the smallest causal chain, identify which details
+  are essential versus replaceable, and translate important techniques into
+  reusable input/output/state contracts.
+- For reusable algorithms or framework patterns, show how they transfer across
+  application languages or providers. For model replacement, distinguish
+  transport, wire protocol, capability metadata, and eval compatibility; do
+  not describe a model as drop-in based only on a matching endpoint shape.
 - Chinese and English editions must preserve the same claims, caveats, code,
   examples, version scope, and visual meaning.
 - Technical images are evidence-bearing content. Validate their labels and

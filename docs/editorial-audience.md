@@ -44,10 +44,34 @@ Every deep technical article must let the core reader answer:
 4. Which part is confirmed by source, which part is inference, and which part
    is only an illustrative example?
 5. Where can the reader verify every material implementation claim?
+6. Which details are architectural contracts, and which are replaceable
+   choices of language, library, model, provider, or repository structure?
+7. What design can the reader reuse in a Python, TypeScript, Java, Go, or
+   otherwise different Agent stack?
 
 Rust or project-specific names are evidence, not explanations. A sentence such
 as “`ToolSearchHandlerCache` reuses the index” is incomplete until the article
 first explains what is cached, why reuse is safe, and when it is rebuilt.
+
+## First-principles and transfer rules
+
+- Begin from unavoidable constraints such as finite context, protocol
+  boundaries, state transitions, latency, cost, and failure modes. Do not begin
+  from the project's chosen class or function names.
+- State the smallest causal chain that still explains the system before adding
+  implementation detail.
+- Explicitly tell readers which details they must retain and which they can
+  initially omit or replace.
+- Translate every important project-specific technique into a reusable
+  contract: inputs, outputs, state, invariants, and trade-offs.
+- If an algorithm is language-independent, show how the same design maps to at
+  least one common application language or service architecture. Never imply
+  that a Rust crate, Python package, or framework owns the algorithm.
+- When discussing an open-source Agent, distinguish framework reuse from model
+  compatibility. Cover transport, wire protocol, capability metadata, and
+  eval requirements before calling another model “drop-in.”
+- Explain efficiency with a simple cost or scaling model when possible, and
+  include the condition under which the optimization stops being worthwhile.
 
 ## Required teaching order
 
@@ -56,13 +80,17 @@ Use this order unless the subject genuinely demands another one:
 1. Lead with the outcome and version scope.
 2. State prerequisites and what the reader does not need to know.
 3. Introduce a small glossary or architecture map before dense internal terms.
-4. Explain the behavior in product or protocol language.
-5. Show pseudocode or a data-flow diagram.
-6. Show the real source with a plain-language reading guide.
-7. Walk one concrete input through the full path to its observable output.
-8. Separate implementation facts, engineering inference, examples, and known
+4. Derive the architecture from first-principle constraints and name the
+   minimal causal chain.
+5. Explain the behavior in product or protocol language.
+6. Show pseudocode or a data-flow diagram.
+7. Map the design to another language, provider, or application stack when it
+   is reusable.
+8. Show the real source with a plain-language reading guide.
+9. Walk one concrete input through the full path to its observable output.
+10. Separate implementation facts, engineering inference, examples, and known
    limitations.
-9. End with takeaways and pinned source links.
+11. End with transferable takeaways and pinned source links.
 
 Do not use this order:
 
@@ -133,6 +161,11 @@ claims.
 - [ ] The first screen states version scope and the most important caveat.
 - [ ] A reader who knows Tool Calling but not Rust can understand the first
       architecture section without opening another tab.
+- [ ] The article states the minimum first-principle chain and marks which
+      source details are essential versus replaceable.
+- [ ] At least one project-specific technique is translated into a reusable
+      Agent design, including cross-language or cross-provider boundaries when
+      relevant.
 - [ ] Internal terms are defined before they carry the explanation.
 - [ ] Pseudocode or a diagram precedes nontrivial source excerpts.
 - [ ] One input is traced end to end.

@@ -1,6 +1,6 @@
 ---
-title: "How Codex Layers First-Turn Tools: exec, the tool_search Gap, and BM25"
-description: "A Rust-optional source tour of Codex rust-v0.147.0 covering GPT-5.6 first-turn tools, request context, the Tool Search lifecycle, Code Mode Only, and BM25 for tools and memory."
+title: "How Codex Layers First-Turn Tools: First Principles, tool_search, BM25, and Model Replacement"
+description: "A source-grounded tour of Codex rust-v0.147.0, starting from finite context and interface contracts, then deriving Tool Search, portable BM25 retrieval for Rust/Python/Go, and custom model-provider boundaries."
 date: 2026-08-08
 lastmod: 2026-08-09
 audience_profile: "agent-engineer-source-transition"
@@ -14,7 +14,7 @@ ShowReadingTime: true
 ---
 
 {{< lead >}}
-Think of Codex's first request as airport check-in. The model does not receive a separate ticket for every counter. It gets a few top-level entrypoints; many concrete tools sit behind the `exec` gate, while others can be discovered later. You do not need Rust: this article first establishes the system roles, then uses pseudocode and source to answer where Tools enter the request, when search runs, how long results survive, and whether BM25 fits Memory retrieval.
+Think of Codex's first request as airport check-in. Context is finite, so the model should not receive a separate ticket for every counter; it gets a few entrances and a searchable catalog. This article starts from that unavoidable constraint, then explains where Tools live, how N schemas become K, how BM25 transfers to Python/Go Agents, and how open-source Codex can connect to a business model.
 {{< /lead >}}
 
 This article is pinned to stable [`rust-v0.147.0`](https://github.com/openai/codex/releases/tag/rust-v0.147.0), released on August 7, 2026, at commit [`be6e8eac`](https://github.com/openai/codex/commit/be6e8eac029b183056b7e4402879f15d2c85f61b). I also rechecked `main` at commit [`646f7c0a`](https://github.com/openai/codex/commit/646f7c0a91b8e327d263335da68ae8ef212895ce) on August 9. Two conclusions matter up front:
@@ -28,8 +28,39 @@ The default reader understands that an LLM can call tools and has seen ordinary 
 
 Two reading routes are available:
 
-- **Architecture route:** read the glossary, airport diagram, Tool Search runtime sequence, BM25 metaphor, and takeaways.
+- **Architecture route:** read the first principles, airport diagram, Tool Search runtime sequence, cross-language transfer, and model replacement.
 - **Source route:** continue through pseudocode, Rust correspondence, the end-to-end query, and the source index.
+
+## Start With Four First Principles
+
+Erase the Rust function names, OpenAI protocol names, and GPT-5.6 model labels for a moment. A tool-using Agent still cannot escape four facts:
+
+1. **A model can choose only interfaces it can see.** A Handler whose Schema never enters the request effectively does not exist for the model.
+2. **Context is a finite, priced workbench.** More Tools mean more schemas resent each turn, increasing cost, latency, and the space for mistaken choices.
+3. **Retrieval exists to reduce the choice space.** Selecting K relevant Tools from N candidates before model judgment is usually more reliable than asking the model to read N manuals at once.
+4. **The Agent Runtime and model meet through contracts.** If requests, Tool Calls, Tool Outputs, and state transitions align, the runtime, retrieval algorithm, programming language, and model Provider can all be replaced.
+
+The minimum architecture in this article is therefore one chain:
+
+```text
+finite context
+  → all Tool Schemas cannot remain resident
+  → expose a few entrances and a searchable catalog
+  → retrieve Top-K complete Schemas
+  → model calls a Tool
+  → Runtime executes and writes the result back into state
+```
+
+Once that chain is clear, it becomes easy to decide what must stay and what can be removed:
+
+| What appears in the source | Must understand? | Why |
+| --- | --- | --- |
+| Direct / Deferred / Hidden state transitions | Yes | They determine what the model sees and when |
+| `search_text → ranked IDs → Schema` data flow | Yes | This retrieval contract transfers to any Agent |
+| Provider input/output and capability contracts | Yes | They determine whether a model can be replaced safely |
+| Rust iterators, concrete type names, and paths | Not initially | They are project implementation, not architectural law |
+| The `bm25` crate and array-index trick | Replaceable | Python, Go, or a search service can implement the same interface |
+| The current GPT-5.6 Tool list | Version snapshot only | Model, environment, and Feature changes recompute it |
 
 ## A Small Terminology Map
 
@@ -181,6 +212,24 @@ later turns: create_event remains callable
 The source proves a configuration fact: GPT-5.6 Sol, Terra, and Luna in the stable model catalog all declare `tool_mode: "code_mode_only"` and Responses Lite; the adjacent GPT-5.5 entry does not. The code treats this as **model capability metadata and a protocol compatibility contract**. There is no comment or design document saying, “5.6 is smarter, therefore enable it.” API-level `tool_search` is not exclusive to 5.6 either: the official guide lists support for GPT-5.4 and later.
 
 The following is an explicitly labeled engineering inference, not a source quotation. Code Mode Only asks the model to write valid JavaScript inside `exec`, follow Tool Schemas, manage asynchronous work and failures, and filter or compress results within one cell. Stronger coding, reasoning, and tool-use training are clearly enabling conditions. Activation also depends on targeted post-training, evaluation thresholds, provider protocol support, and rollout policy. **“A stronger model makes this viable” is reasonable; “raw strength is the only reason” is not established.**
+
+## What N Schemas Becoming K Actually Saves
+
+Suppose an Agent connects N Tools and each complete Schema averages S tokens. Sending everything directly makes the tool portion of one request approximately:
+
+```text
+Full cost ≈ N × S
+```
+
+Deferred loading keeps only a search entrance and short catalog resident, then loads K hits:
+
+```text
+Deferred cost ≈ catalog_summary + search_tool + K × S
+```
+
+When `K ≪ N`, the saving is not only tokens. The model sees fewer similar names and parameter combinations, making final Tool selection easier. Strictly speaking, `tool_search` does not increase intelligence inside the model weights. It improves effective Agent intelligence by **reducing noise, presenting the right information, and splitting one large decision into two smaller decisions.**
+
+This is not free in every case. Search adds a Model → Tool → Model round trip and can miss a relevant Tool. If the Agent has a dozen Tools and uses most of them every turn, direct exposure may be faster. If it has hundreds or thousands and needs only a few per task, Deferred + Top-K becomes much more attractive. That design judgment transfers without Codex or Rust.
 
 ## BM25 Does Not Abandon Keywords; It Ranks Them
 
@@ -359,6 +408,34 @@ There is one final performance detail. [`ToolSearchHandlerCache`](https://github
 
 To follow the exact source path, read [`append_tool_search_executor()`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/spec_plan.rs#L1165-L1185), [`ToolSearchHandler`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/handlers/tool_search.rs#L76-L197), and the [`ToolSearchEntry` / `search_text` builders](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/tools/src/tool_search.rs#L12-L150) in that order.
 
+## BM25 Is Not a Rust Feature: Porting It to Python, Go, or Your Agent
+
+The lesson above should not be “Codex has a Rust-specific trick.” It should reveal three language-independent interfaces:
+
+```text
+build(cards: [{id, search_text, schema}]) -> index
+search(index, query, top_k) -> ranked_ids
+load(cards, ranked_ids) -> callable_schemas
+```
+
+Codex stores cards in `Vec<ToolSearchInfo>`, ranks them with a Rust `bm25` crate, and recovers schemas by array index. Another language only changes the container and library:
+
+| Environment | Tool cards | BM25 ranking | Load after a hit |
+| --- | --- | --- | --- |
+| Rust / Codex | `Vec<ToolSearchInfo>` | `bm25` crate | `search_infos[id]` |
+| Python Agent | list / dataclass / dict | Any BM25 library or search service | `cards[id]["schema"]` |
+| Go Agent | `[]ToolCard` struct | Any Go BM25 implementation or search service | `cards[id].Schema` |
+| Multi-service system | Database or Tool Registry | Separate retrieval service | Fetch Schema by Tool ID |
+
+The reusable part is the data contract, not the source syntax:
+
+1. Generate high-quality `search_text` for every Tool, including its name, action, object, parameters, and risk terms.
+2. Return ranked Top-K IDs from BM25, not an unordered boolean set of “contains keyword” matches.
+3. Resolve IDs into complete, validated schemas and write them into subsequent Agent state.
+4. Measure recall, false retrievals, eventual call success, and added round-trip latency before choosing K or adding vector recall.
+
+A business Agent written entirely in Python or Go can therefore reuse this design. The BM25 equation, card inputs, and Top-K output do not change with the programming language; Rust is simply Codex's implementation vehicle.
+
 ## Why BM25 Is a Sensible Engineering Choice Here
 
 The source establishes what Codex uses; it does not contain a design memo claiming the following exact rationale. As an engineering inference from the corpus and execution path, BM25 fits tool discovery well:
@@ -409,7 +486,62 @@ metadata filters for user / project / time
 
 For a small local Memory dominated by technical logs, starting with BM25 is entirely reasonable; it adds meaningful ranking over the current substring list. As paraphrase, multilingual use, and contradictory memories grow, hybrid retrieval becomes more valuable. This is a general architecture recommendation—**not a claim that Codex already implements this pipeline.**
 
-## Five Takeaways
+## Open-Source Codex Can Change Models, but Three Contracts Must Change Together
+
+The precise claim is not “turn GPT-5.6 into DeepSeek, GLM, or Kimi.” It is: **keep the Codex Agent Runtime and replace the model and Provider behind it.** Core components such as Codex CLI, SDK, and App Server are open source, while model transport is isolated behind the Provider layer. The sandbox, approvals, Tool Registry, MCP, conversation history, and execution loop can therefore remain reusable.
+
+The minimum control loop is independent of a model brand:
+
+```text
+user task + conversation state + Tool Schemas
+                    ↓
+              Model Provider
+                    ↓
+            Tool Call / Agent Text
+                    ↓
+       Codex Runtime executes, approves, records
+                    └────────────────→ next model request
+```
+
+Model replacement is not only a one-line `model = "..."` edit. At least three contracts must align:
+
+| Adaptation layer | What must align | Symptom when it does not |
+| --- | --- | --- |
+| Transport | `base_url`, authentication, headers, streaming, retries | Connection, 401, or broken-stream failures |
+| Wire protocol | Responses input items, Tool Call/Output, stream events, and errors | Text works but the Tool loop breaks |
+| Capability | Context size, structured calls, parallel Tools, reasoning fields, Tool Mode, and Search | Requests run but Agent quality or features disappear |
+
+The official configuration supports a custom `model_provider`. If a business gateway already exposes a compatible Responses endpoint, the shortest path looks like:
+
+```toml
+model = "your-business-model"
+model_provider = "business_gateway"
+
+[model_providers.business_gateway]
+name = "Business model gateway"
+base_url = "https://llm-gateway.example.com/v1"
+env_key = "BUSINESS_LLM_API_KEY"
+wire_api = "responses"
+```
+
+One pinned-version restriction is essential: the [`WireApi`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/model-provider-info/src/lib.rs#L49-L79) in `rust-v0.147.0` accepts only `responses` and explicitly rejects `wire_api = "chat"`. Therefore, when integrating DeepSeek, GLM, Kimi, or another business model:
+
+- If the server fully supports Responses, streaming events, and Tool Calling, start with a custom Provider configuration.
+- If it exposes only a Chat-Completions-style API, use a gateway that translates Responses bidirectionally into the vendor protocol, or modify the open-source Provider/Client adapter.
+- “The endpoint returns text” is not proof of Agent compatibility; evaluate real Tool Calls, Tool Outputs, long context, recovery, and parallel calls.
+
+Another subtle source behavior matters: an unknown model slug receives [`fallback model metadata`](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/models-manager/src/model_info.rs#L137-L180). Those conservative defaults disable `supports_search_tool`, Responses Lite, Code Mode Only, and parallel Tool Calls. A basic Direct Tool loop may work first, but GPT-5.6-specific optimizations **do not transfer automatically**. Restoring them requires extending model metadata or capability configuration and proving through evals that the replacement model handles those protocol actions reliably.
+
+The fastest low-risk migration order for a business team is:
+
+1. Make the replacement model close a text-plus-small-Direct-Tool loop through a Responses adapter.
+2. Validate parameter schemas, Tool Call/Output pairing, stream interruption, and context compaction.
+3. Compare success rate, cost, and latency on business tasks—not only chat quality.
+4. Enable parallel Tools, Deferred Search, and Code Mode incrementally.
+
+That is the real reuse value of an open-source Agent framework: retain a mature execution and governance foundation, replace model transport and capability boundaries, then add business Tools, policy, Memory, and evals in layers you control.
+
+## Seven Takeaways
 
 First, the initial request does not “send every tool to the model.” Exposure, Tool Mode, provider capabilities, environment state, and feature gates jointly compute the interface.
 
@@ -421,6 +553,10 @@ Fourth, Code Mode Only demands stronger coding and orchestration capabilities, b
 
 Fifth, BM25 is ranked keyword retrieval. It fits Tool Schemas and exact lexical Memory recall; a complete Memory system benefits from metadata, BM25, vector recall, and reranking together.
 
+Sixth, BM25 and the `search_text → ranked IDs → Schema` flow form a language-independent contract that can be reproduced in Rust, Python, Go, or a separate retrieval service.
+
+Seventh, open-source Codex permits Model Provider replacement, but Transport, the Responses wire protocol, and model capabilities must align together. Replacing a model does not automatically inherit GPT-5.6 Tool Search or Code Mode metadata.
+
 ## Source Index
 
 - [GPT-5.6 Sol capabilities and Tool Mode](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/models-manager/models.json#L4-L22)
@@ -429,6 +565,8 @@ Fifth, BM25 is ranked keyword retrieval. It fits Tool Schemas and exact lexical 
 - [The adjacent GPT-5.5 entry does not select Code Mode Only](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/models-manager/models.json#L341-L359)
 - [Official OpenAI Tool Search guide: deferred loading, call sequence, and reuse in future turns](https://developers.openai.com/api/docs/guides/tools-tool-search)
 - [Official OpenAI Programmatic Tool Calling guide](https://developers.openai.com/api/docs/guides/tools-programmatic-tool-calling)
+- [Official Codex custom Model Provider configuration](https://learn.chatgpt.com/docs/config-file/config-advanced#custom-model-providers)
+- [Codex open-source component boundaries](https://learn.chatgpt.com/docs/open-source)
 - [Tool registry, exposure, and model-visible spec planning](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/spec_plan.rs#L319-L486)
 - [Conditional registration of core tools](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/tools/spec_plan.rs#L818-L1118)
 - [Responses Lite `additional_tools` request framing](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/core/src/client.rs#L849-L885)
@@ -442,6 +580,8 @@ Fifth, BM25 is ranked keyword retrieval. It fits Tool Schemas and exact lexical 
 - [`bm25` 2.3.2 tokenizer splitting, normalization, stop words, and stemming](https://github.com/Michael-JB/bm25/blob/8ef726045b41702e148d8996d344f3500844fde1/src/default_tokenizer.rs#L263-L289)
 - [Current substring-query semantics of the Codex Memory Tool](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/ext/memories/src/tools/search.rs#L28-L62)
 - [Codex Memory local search and result ordering](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/ext/memories/src/local/search.rs#L17-L88)
+- [The stable release accepts only the Responses Wire API and rejects old `chat` configuration](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/model-provider-info/src/lib.rs#L49-L79)
+- [How an unknown model receives conservative fallback capability metadata](https://github.com/openai/codex/blob/be6e8eac029b183056b7e4402879f15d2c85f61b/codex-rs/models-manager/src/model_info.rs#L137-L180)
 
 > Source checked on August 9, 2026. The stable release is pinned to `be6e8eac`; the same-day `main` check is pinned to `646f7c0a`; the BM25 crate is pinned to `v2.3.2` commit `8ef72604`. Tool exposure and model catalogs continue to evolve; debug a specific environment against its actual request and exact commit.
 
