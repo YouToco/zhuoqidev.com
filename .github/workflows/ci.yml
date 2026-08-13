@@ -20,7 +20,9 @@ jobs:
           persist-credentials: false
 
       - name: Validate shell syntax
-        run: bash -n scripts/install-aliyun.sh scripts/renew-cert.sh
+        run: >-
+          bash -n scripts/install-aliyun.sh scripts/renew-cert.sh
+          scripts/cleanup-runner-storage.sh
 
       - name: Run certificate automation tests
         run: python3 -m unittest discover -s tests -p "test_*.py" -v

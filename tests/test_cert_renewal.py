@@ -8,6 +8,7 @@ RENEW_WORKFLOW = ROOT / ".github" / "workflows" / "cert-renew.yml"
 CI_WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
 INSTALL_SCRIPT = ROOT / "scripts" / "install-aliyun.sh"
 RENEW_SCRIPT = ROOT / "scripts" / "renew-cert.sh"
+CLEANUP_SCRIPT = ROOT / "scripts" / "cleanup-runner-storage.sh"
 
 CHECKOUT_SHA = "de0fac2e4500dabe0009e67214ff5f5447ce83dd"
 ALIYUN_SHA256 = (
@@ -31,7 +32,9 @@ class CertificateWorkflowTests(unittest.TestCase):
         self.assertRegex(workflow, r"permissions:\n  contents: read\n")
         self.assertIn("group: zhuoqidev-certificate-renewal", workflow)
         self.assertIn("cancel-in-progress: false", workflow)
-        self.assertIn("runs-on: ubuntu-24.04", workflow)
+        self.assertIn(
+            "runs-on: [self-hosted, Linux, X64, zhuoqidev-cert]", workflow
+        )
         self.assertIn("environment: production-certificate", workflow)
 
     def test_workflow_pins_checkout_and_uses_only_secrets(self) -> None:
@@ -49,6 +52,7 @@ class CertificateWorkflowTests(unittest.TestCase):
 
         self.assertIn(f"actions/checkout@{CHECKOUT_SHA}", workflow)
         self.assertIn("bash -n scripts/install-aliyun.sh scripts/renew-cert.sh", workflow)
+        self.assertIn("scripts/cleanup-runner-storage.sh", workflow)
         self.assertIn("python3 -m unittest discover", workflow)
 
 
@@ -108,6 +112,18 @@ class CertificateScriptTests(unittest.TestCase):
         self.assertIn("--SearchMode COMBINATION", script)
         self.assertIn("assert_dns_challenge_removed _acme-challenge", script)
         self.assertIn("assert_dns_challenge_removed _acme-challenge.www", script)
+
+    def test_runner_storage_cleanup_is_scoped_and_age_bounded(self) -> None:
+        script = CLEANUP_SCRIPT.read_text(encoding="utf-8")
+
+        self.assertIn("/opt/actions-runner-zhuoqidev-cert", script)
+        self.assertIn('runner_root != "/opt/actions-runner-zhuoqidev-cert"', script)
+        self.assertIn('diag_dir="$runner_root/_diag"', script)
+        self.assertIn('temp_dir="$runner_root/_work/_temp"', script)
+        self.assertIn("-mtime +30", script)
+        self.assertIn("-mmin +2880", script)
+        self.assertNotIn("/opt/vane", script)
+        self.assertNotIn("actions-runner-vane-deploy", script)
 
 
 if __name__ == "__main__":
