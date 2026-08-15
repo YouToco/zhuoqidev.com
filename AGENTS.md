@@ -58,4 +58,6 @@
 - Run `python3 -m unittest discover -s tests -p "test_*.py" -v` after workflow
   changes. The tests enforce the currently verified immutable checkout SHA and
   the absence of CI/CD workflows. Site builds and releases run locally through
-  `scripts/deploy-local.sh`; only certificate renewal remains in GitHub Actions.
+  `scripts/deploy-local.sh`, which publishes the same exact build to Alibaba
+  Cloud OSS/CDN and Cloudflare Pages; only certificate renewal remains in
+  GitHub Actions.

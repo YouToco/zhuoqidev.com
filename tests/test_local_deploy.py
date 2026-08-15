@@ -4,6 +4,9 @@ import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "deploy-local.sh"
+THEME_PACKAGE = ROOT / "themes" / "blowfish" / "package.json"
+THEME_CONFIG = ROOT / "themes" / "blowfish" / "config.toml"
+CUSTOM_HEAD = ROOT / "layouts" / "partials" / "head.html"
 
 
 class LocalDeployTests(unittest.TestCase):
@@ -19,6 +22,28 @@ class LocalDeployTests(unittest.TestCase):
             script,
         )
         self.assertIn("shasum -a 256 --check --status", script)
+
+    def test_blowfish_is_pinned_and_supports_the_hugo_version(self) -> None:
+        script = self.script()
+        package = THEME_PACKAGE.read_text(encoding="utf-8")
+        config = THEME_CONFIG.read_text(encoding="utf-8")
+
+        self.assertIn("blowfish_version=2.105.0", script)
+        self.assertIn(
+            "blowfish_sha=4afcd32b9950f16afbd686175b0f49a906d87626",
+            script,
+        )
+        self.assertIn('"version": "2.105.0"', package)
+        self.assertIn('min = "0.158.0"', config)
+        self.assertIn('max = "0.164.0"', config)
+
+    def test_custom_head_uses_the_current_blowfish_fuse_bundle(self) -> None:
+        head = CUSTOM_HEAD.read_text(encoding="utf-8")
+
+        self.assertIn('resources.Get "lib/fuse/fuse.min.cjs"', head)
+        self.assertIn('resources.FromString "lib/fuse/fuse.min.js"', head)
+        self.assertIn('replace $fuseRaw.Content "module.exports=" "window.Fuse="', head)
+        self.assertIn('{{ partial "language-redirect.html" . }}', head)
 
     def test_release_requires_clean_synced_main(self) -> None:
         script = self.script()
@@ -36,7 +61,7 @@ class LocalDeployTests(unittest.TestCase):
         self.assertIn("public/llms.txt", script)
         self.assertIn("public/en/llms.txt", script)
 
-    def test_publish_mirrors_oss_and_refreshes_cdn(self) -> None:
+    def test_publish_mirrors_oss_and_refreshes_both_providers(self) -> None:
         script = self.script()
         sync_command = script[
             script.index("aliyun oss sync"):script.index("refresh_paths=")
@@ -48,10 +73,14 @@ class LocalDeployTests(unittest.TestCase):
         self.assertIn("--disable-ignore-error", script)
         self.assertIn("aliyun cdn RefreshObjectCaches", script)
         self.assertIn("--ObjectType Directory", script)
+        self.assertIn("wrangler pages deployment list", script)
+        self.assertIn("wrangler pages deploy public/", script)
+        self.assertIn('--commit-hash "$commit_sha"', script)
+        self.assertIn("cloudflare_url=https://zhuoqidev.pages.dev", script)
         self.assertIn("deploy-manifest.json", script)
         self.assertIn('--connect-to "$primary_domain:443:$primary_edge:443"', script)
         self.assertIn('--connect-to "$san_domain:443:$san_edge:443"', script)
-        self.assertIn('primary_sha == "$commit_sha" && $san_sha == "$commit_sha"', script)
+        self.assertIn('cloudflare_sha == "$commit_sha"', script)
 
 
 if __name__ == "__main__":
