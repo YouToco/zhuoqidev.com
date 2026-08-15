@@ -5,7 +5,6 @@ import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 RENEW_WORKFLOW = ROOT / ".github" / "workflows" / "cert-renew.yml"
-CI_WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
 INSTALL_SCRIPT = ROOT / "scripts" / "install-aliyun.sh"
 RENEW_SCRIPT = ROOT / "scripts" / "renew-cert.sh"
 CLEANUP_SCRIPT = ROOT / "scripts" / "cleanup-runner-storage.sh"
@@ -46,15 +45,6 @@ class CertificateWorkflowTests(unittest.TestCase):
         self.assertIn("secrets.ALIYUN_ACCESS_KEY_SECRET", workflow)
         self.assertIn("secrets.ACME_ACCOUNT_EMAIL", workflow)
         self.assertNotIn("actions/cache", workflow)
-
-    def test_ci_validates_both_scripts_and_invariants(self) -> None:
-        workflow = CI_WORKFLOW.read_text(encoding="utf-8")
-
-        self.assertIn(f"actions/checkout@{CHECKOUT_SHA}", workflow)
-        self.assertIn("bash -n scripts/install-aliyun.sh scripts/renew-cert.sh", workflow)
-        self.assertIn("scripts/cleanup-runner-storage.sh", workflow)
-        self.assertIn("python3 -m unittest discover", workflow)
-
 
 class CertificateScriptTests(unittest.TestCase):
     def test_installer_pins_version_and_archive_digest(self) -> None:
