@@ -6,5 +6,6 @@ Thumbs.db
 __pycache__/
 *.py[cod]
 .wrangler/
+.local-tools/
 zhuoqidev-project-status.md
 urls.txt
