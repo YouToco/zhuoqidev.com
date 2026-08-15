@@ -38,8 +38,12 @@ class LocalDeployTests(unittest.TestCase):
 
     def test_publish_mirrors_oss_and_refreshes_cdn(self) -> None:
         script = self.script()
+        sync_command = script[
+            script.index("aliyun oss sync"):script.index("refresh_paths=")
+        ]
 
         self.assertIn('aliyun oss sync public/ "oss://${oss_bucket}/"', script)
+        self.assertNotIn("--profile", sync_command)
         self.assertIn("--delete", script)
         self.assertIn("--disable-ignore-error", script)
         self.assertIn("aliyun cdn RefreshObjectCaches", script)

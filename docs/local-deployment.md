@@ -8,9 +8,9 @@ The repository-scoped VPS workflow remains only for certificate renewal.
 ## Prerequisites
 
 - macOS with `curl`, `pkgutil`, Git, Python 3, and the Alibaba Cloud CLI.
-- The `default` Alibaba Cloud CLI profile, or the profile named by
-  `ALIYUN_PROFILE`, must be authenticated for OSS synchronization, CDN refresh,
-  and STS identity checks.
+- The `default` Alibaba Cloud CLI profile must be authenticated for OSS
+  synchronization, CDN refresh, and STS identity checks. The OSS plugin bundled
+  with Aliyun CLI 3.4.8 does not accept the newer global `--profile` flag.
 - The local `main` branch must be clean and exactly match `origin/main`.
 
 No credential is read from this repository. The script downloads Hugo Extended

@@ -10,7 +10,7 @@ hugo_url="https://github.com/gohugoio/hugo/releases/download/v${hugo_version}/${
 hugo_sha256=ffa5333f0733b21a5c2501cf6fa8b6a99ef3f1953d047f5dc9b47f7cc35da768
 tool_root="$repo_root/.local-tools"
 hugo_bin="$tool_root/hugo-${hugo_version}/hugo"
-aliyun_profile=${ALIYUN_PROFILE:-default}
+aliyun_profile=default
 oss_bucket=${OSS_BUCKET:-zhuoqidev}
 oss_endpoint=${OSS_ENDPOINT:-oss-cn-shenzhen.aliyuncs.com}
 aliyun_region=${ALIYUN_REGION:-cn-shenzhen}
@@ -124,7 +124,6 @@ aliyun sts GetCallerIdentity \
   --RegionId "$aliyun_region" >/dev/null
 
 aliyun oss sync public/ "oss://${oss_bucket}/" \
-  --profile "$aliyun_profile" \
   --endpoint "$oss_endpoint" \
   --region "$aliyun_region" \
   --delete \
