@@ -6,8 +6,8 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
 
-CHECKOUT_SHA = "de0fac2e4500dabe0009e67214ff5f5447ce83dd"
-CHECKOUT_TAG = "v6.0.2"
+CHECKOUT_SHA = "3d3c42e5aac5ba805825da76410c181273ba90b1"
+CHECKOUT_TAG = "v7.0.1"
 class GitHubActionsVersionTests(unittest.TestCase):
     def workflow_text(self) -> str:
         return "\n".join(
@@ -27,10 +27,10 @@ class GitHubActionsVersionTests(unittest.TestCase):
 
         self.assertNotRegex(text, r"actions/checkout@v\d+(?:\s|$)")
 
-    def test_only_certificate_renewal_remains_automated(self) -> None:
+    def test_expected_workflows_are_present(self) -> None:
         workflows = sorted(path.name for path in WORKFLOWS.glob("*.y*ml"))
 
-        self.assertEqual(["cert-renew.yml"], workflows)
+        self.assertEqual(["cert-renew.yml", "ci.yml", "deploy.yml"], workflows)
 
     def test_every_action_is_immutable_and_release_labeled(self) -> None:
         text = self.workflow_text()
