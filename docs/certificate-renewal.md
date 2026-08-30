@@ -7,7 +7,7 @@ The repository renews the domestic Alibaba Cloud CDN certificate for
 ## Behavior
 
 - Runs every Monday at 03:17 UTC and can also be started manually.
-- Runs on the repository-scoped `zhuoqidev-cert` self-hosted runner on the VPS.
+- Runs on the GitHub-hosted `ubuntu-latest` runner.
 - Reads the certificate currently bound to both CDN domains.
 - Exits without mutation when both certificates have more than 30 days left.
 - Otherwise issues one Let's Encrypt ECC certificate containing both DNS names
@@ -18,22 +18,6 @@ The repository renews the domestic Alibaba Cloud CDN certificate for
 - Keeps the ACME account, certificate, private key, and Alibaba Cloud CLI
   configuration only under `RUNNER_TEMP`. No certificate private key is cached
   or committed.
-
-## Runner storage
-
-The runner is installed under `/opt/actions-runner-zhuoqidev-cert` with a
-dedicated system account. It does not share a home, work directory, or service
-account with Vane. The workflow does not use `actions/cache`, build the site, or
-upload artifacts. `actions/checkout` reuses one shallow working copy, and the
-renewal script removes its per-run ACME directory on exit.
-
-`zhuoqidev-cert-runner-cleanup.timer` runs daily. It removes only diagnostic
-files older than 30 days and files under this runner's `_work/_temp` directory
-that are older than two days. It deliberately retains the single checkout and
-does not reference any Vane path.
-
-The service drop-in in `ops/systemd/zhuoqidev-cert-runner-hardening.conf`
-keeps the runner unprivileged and prevents it from gaining capabilities.
 
 ## Required GitHub Actions secrets
 
