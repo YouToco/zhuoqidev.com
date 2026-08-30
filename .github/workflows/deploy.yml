@@ -64,10 +64,19 @@ jobs:
       - name: Install pinned Alibaba Cloud CLI
         run: bash scripts/install-aliyun.sh
 
-      - name: Sync site to Aliyun OSS
+      - name: Configure Alibaba Cloud CLI profile
         env:
           ALIYUN_ACCESS_KEY_ID: ${{ secrets.ALIYUN_ACCESS_KEY_ID }}
           ALIYUN_ACCESS_KEY_SECRET: ${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}
+        run: |
+          "$RUNNER_TEMP/aliyun-3.4.10/aliyun" configure set \
+            --profile default \
+            --mode AK \
+            --access-key-id "$ALIYUN_ACCESS_KEY_ID" \
+            --access-key-secret "$ALIYUN_ACCESS_KEY_SECRET" \
+            --region cn-shenzhen
+
+      - name: Sync site to Aliyun OSS
         run: |
           "$RUNNER_TEMP/aliyun-3.4.10/aliyun" oss sync public/ oss://zhuoqidev/ \
             --endpoint oss-cn-shenzhen.aliyuncs.com \
@@ -86,12 +95,10 @@ jobs:
           command: pages deploy public/ --project-name=zhuoqidev --branch main --commit-hash ${{ github.sha }} --commit-dirty=false
 
       - name: Refresh Aliyun CDN cache
-        env:
-          ALIYUN_ACCESS_KEY_ID: ${{ secrets.ALIYUN_ACCESS_KEY_ID }}
-          ALIYUN_ACCESS_KEY_SECRET: ${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}
         run: |
           refresh_paths=$(printf '%s/\n%s/\n' "https://zhuoqidev.com" "https://www.zhuoqidev.com")
           result=$("$RUNNER_TEMP/aliyun-3.4.10/aliyun" cdn RefreshObjectCaches \
+            --profile default \
             --ObjectPath "$refresh_paths" \
             --ObjectType Directory \
             --Force true)
