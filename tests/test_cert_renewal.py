@@ -7,7 +7,6 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 RENEW_WORKFLOW = ROOT / ".github" / "workflows" / "cert-renew.yml"
 INSTALL_SCRIPT = ROOT / "scripts" / "install-aliyun.sh"
 RENEW_SCRIPT = ROOT / "scripts" / "renew-cert.sh"
-CLEANUP_SCRIPT = ROOT / "scripts" / "cleanup-runner-storage.sh"
 
 CHECKOUT_SHA = "3d3c42e5aac5ba805825da76410c181273ba90b1"
 ALIYUN_SHA256 = (
@@ -100,18 +99,6 @@ class CertificateScriptTests(unittest.TestCase):
         self.assertIn("--SearchMode COMBINATION", script)
         self.assertIn("assert_dns_challenge_removed _acme-challenge", script)
         self.assertIn("assert_dns_challenge_removed _acme-challenge.www", script)
-
-    def test_runner_storage_cleanup_is_scoped_and_age_bounded(self) -> None:
-        script = CLEANUP_SCRIPT.read_text(encoding="utf-8")
-
-        self.assertIn("/opt/actions-runner-zhuoqidev-cert", script)
-        self.assertIn('runner_root != "/opt/actions-runner-zhuoqidev-cert"', script)
-        self.assertIn('diag_dir="$runner_root/_diag"', script)
-        self.assertIn('temp_dir="$runner_root/_work/_temp"', script)
-        self.assertIn("-mtime +30", script)
-        self.assertIn("-mmin +2880", script)
-        self.assertNotIn("/opt/vane", script)
-        self.assertNotIn("actions-runner-vane-deploy", script)
 
 
 if __name__ == "__main__":

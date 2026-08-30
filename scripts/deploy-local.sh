@@ -101,7 +101,6 @@ fi
 bash -n \
   scripts/install-aliyun.sh \
   scripts/renew-cert.sh \
-  scripts/cleanup-runner-storage.sh \
   scripts/deploy-local.sh
 python3 -m unittest discover -s tests -p "test_*.py" -v
 

@@ -32,7 +32,7 @@ jobs:
             "4afcd32b9950f16afbd686175b0f49a906d87626"
 
       - name: Validate shell syntax
-        run: bash -n scripts/install-aliyun.sh scripts/renew-cert.sh scripts/cleanup-runner-storage.sh scripts/deploy-local.sh
+        run: bash -n scripts/install-aliyun.sh scripts/renew-cert.sh scripts/deploy-local.sh
 
       - name: Run tests
         run: python3 -m unittest discover -s tests -p "test_*.py" -v
