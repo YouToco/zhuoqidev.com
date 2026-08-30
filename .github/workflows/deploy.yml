@@ -18,8 +18,6 @@ jobs:
     name: Build and publish (Aliyun OSS + Cloudflare Pages)
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    env:
-      ALIYUN_BIN: ${{ runner.temp }}/aliyun-3.4.10/aliyun
     steps:
       - name: Check out exact revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -71,7 +69,7 @@ jobs:
           ALIYUN_ACCESS_KEY_ID: ${{ secrets.ALIYUN_ACCESS_KEY_ID }}
           ALIYUN_ACCESS_KEY_SECRET: ${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}
         run: |
-          "$ALIYUN_BIN" oss sync public/ oss://zhuoqidev/ \
+          "$RUNNER_TEMP/aliyun-3.4.10/aliyun" oss sync public/ oss://zhuoqidev/ \
             --endpoint oss-cn-shenzhen.aliyuncs.com \
             --region cn-shenzhen \
             --delete \
@@ -93,7 +91,7 @@ jobs:
           ALIYUN_ACCESS_KEY_SECRET: ${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}
         run: |
           refresh_paths=$(printf '%s/\n%s/\n' "https://zhuoqidev.com" "https://www.zhuoqidev.com")
-          result=$("$ALIYUN_BIN" cdn RefreshObjectCaches \
+          result=$("$RUNNER_TEMP/aliyun-3.4.10/aliyun" cdn RefreshObjectCaches \
             --ObjectPath "$refresh_paths" \
             --ObjectType Directory \
             --Force true)
