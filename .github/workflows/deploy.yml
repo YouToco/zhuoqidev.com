@@ -1,0 +1,142 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Serialize deploys: never run two publishes of the same branch at once.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and publish (Aliyun OSS + Cloudflare Pages)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ALIYUN_BIN: ${{ runner.temp }}/aliyun-3.4.10/aliyun
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@2752ce1d29631191ea3f27c23495fa06139a5b78 # v3.2.1
+        with:
+          hugo-version: "0.161.1"
+          extended: true
+
+      - name: Verify Blowfish submodule is pinned
+        run: |
+          test "$(git -C themes/blowfish rev-parse HEAD)" = \
+            "4afcd32b9950f16afbd686175b0f49a906d87626"
+
+      - name: Validate shell syntax
+        run: bash -n scripts/install-aliyun.sh scripts/renew-cert.sh scripts/cleanup-runner-storage.sh scripts/deploy-local.sh
+
+      - name: Run tests
+        run: python3 -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Build Hugo site
+        run: hugo --minify --cleanDestinationDir
+
+      - name: Verify build outputs
+        run: |
+          test -s public/index.html
+          test -s public/llms.txt
+          test -s public/en/llms.txt
+          grep -q "https://zhuoqidev.com/posts/" public/llms.txt
+          grep -q "https://zhuoqidev.com/en/posts/" public/en/llms.txt
+
+      - name: Write deploy manifest
+        run: |
+          printf '{"commit":"%s","built_at":"%s"}\n' \
+            "${{ github.sha }}" \
+            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            > public/deploy-manifest.json
+
+      - name: Install pinned Alibaba Cloud CLI
+        run: bash scripts/install-aliyun.sh
+
+      - name: Sync site to Aliyun OSS
+        env:
+          ALIYUN_ACCESS_KEY_ID: ${{ secrets.ALIYUN_ACCESS_KEY_ID }}
+          ALIYUN_ACCESS_KEY_SECRET: ${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}
+        run: |
+          "$ALIYUN_BIN" oss sync public/ oss://zhuoqidev/ \
+            --endpoint oss-cn-shenzhen.aliyuncs.com \
+            --region cn-shenzhen \
+            --delete \
+            --update \
+            --force \
+            --disable-ignore-error
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: "4.127.1"
+          command: pages deploy public/ --project-name=zhuoqidev --branch main --commit-hash ${{ github.sha }} --commit-dirty=false
+
+      - name: Refresh Aliyun CDN cache
+        env:
+          ALIYUN_ACCESS_KEY_ID: ${{ secrets.ALIYUN_ACCESS_KEY_ID }}
+          ALIYUN_ACCESS_KEY_SECRET: ${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}
+        run: |
+          refresh_paths=$(printf '%s/\n%s/\n' "https://zhuoqidev.com" "https://www.zhuoqidev.com")
+          result=$("$ALIYUN_BIN" cdn RefreshObjectCaches \
+            --ObjectPath "$refresh_paths" \
+            --ObjectType Directory \
+            --Force true)
+          task_id=$(printf '%s' "$result" \
+            | python3 -c 'import json,sys; print(json.load(sys.stdin).get("RefreshTaskId",""))')
+          test -n "$task_id" || {
+            echo "Alibaba Cloud returned no CDN refresh task id" >&2
+            exit 1
+          }
+          echo "CDN refresh accepted as task $task_id"
+
+      - name: Verify every provider serves the new commit
+        run: |
+          commit_sha="${{ github.sha }}"
+          primary_edge="zhuoqidev.com.queniuaa.com"
+          san_edge="www.zhuoqidev.com.w.kunlunaq.com"
+          for attempt in $(seq 1 36); do
+            primary=$(curl --fail --silent --show-error \
+              --connect-to "zhuoqidev.com:443:${primary_edge}:443" \
+              -H 'Cache-Control: no-cache' \
+              "https://zhuoqidev.com/deploy-manifest.json?verify=${commit_sha}" \
+              | python3 -c 'import json,sys; print(json.load(sys.stdin).get("commit",""))' \
+              2>/dev/null || true)
+            san=$(curl --fail --silent --show-error \
+              --connect-to "www.zhuoqidev.com:443:${san_edge}:443" \
+              -H 'Cache-Control: no-cache' \
+              "https://www.zhuoqidev.com/deploy-manifest.json?verify=${commit_sha}" \
+              | python3 -c 'import json,sys; print(json.load(sys.stdin).get("commit",""))' \
+              2>/dev/null || true)
+            cloudflare=$(curl --fail --silent --show-error \
+              -H 'Cache-Control: no-cache' \
+              "https://zhuoqidev.pages.dev/deploy-manifest.json?verify=${commit_sha}" \
+              | python3 -c 'import json,sys; print(json.load(sys.stdin).get("commit",""))' \
+              2>/dev/null || true)
+            if [[ $primary == "$commit_sha" && \
+                  $san == "$commit_sha" && \
+                  $cloudflare == "$commit_sha" ]]; then
+              echo "published and verified $commit_sha on Alibaba Cloud CDN and Cloudflare Pages"
+              exit 0
+            fi
+            if [[ $attempt -lt 36 ]]; then
+              sleep 5
+            fi
+          done
+          echo "providers did not all serve $commit_sha within 180 seconds" >&2
+          exit 1
