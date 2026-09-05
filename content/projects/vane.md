@@ -12,6 +12,7 @@ showComments: false
 **见微 Vane** 是我独立设计并开发的 AI 个性化信息推送系统——它持续从多个信源采集内容，用 LLM 按用户画像打分筛选，再通过飞书把"值得看的"推给你，并从反馈中学习、不断校准画像。从产品设计、系统架构到上线运维，一个人全部走通。
 
 {{< button href="https://vane.zhuoqidev.com" target="_blank" rel="noopener" >}}🔗 在线体验 Vane{{< /button >}}
+{{< button href="https://github.com/YouToco/vane" target="_blank" rel="noopener" >}}🐙 GitHub 源码{{< /button >}}
 
 ## 它解决什么
 
@@ -47,4 +48,4 @@ showComments: false
 
 ---
 
-*自研项目，暂未开源。*
+*自研项目，源码已公开于 [GitHub](https://github.com/YouToco/vane)。*

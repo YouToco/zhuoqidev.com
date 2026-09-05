@@ -12,6 +12,7 @@ showComments: false
 **Vane** is an AI-powered personalized feed system I designed and built solo. It continuously ingests content from multiple sources, scores and filters it with an LLM against your profile, then pushes what's worth reading via Feishu — learning from your feedback to keep refining that profile. From product design and system architecture to production ops, one person end to end.
 
 {{< button href="https://vane.zhuoqidev.com" target="_blank" rel="noopener" >}}🔗 Live Demo{{< /button >}}
+{{< button href="https://github.com/YouToco/vane" target="_blank" rel="noopener" >}}🐙 GitHub{{< /button >}}
 
 ## The Problem
 
@@ -47,4 +48,4 @@ In an age of information overload, RSS feeds, news sites, and web updates pile u
 
 ---
 
-*Self-built project, not currently open-source.*
+*Self-built project, source available on [GitHub](https://github.com/YouToco/vane).*
