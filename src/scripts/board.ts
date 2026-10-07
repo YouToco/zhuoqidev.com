@@ -31,6 +31,10 @@ if (board) {
       const ox = p.offsetLeft;
       const oy = p.offsetTop;
       let moved = false;
+      // Lean into the drag: the faster the card moves sideways, the more it tilts (CSS --tilt).
+      let lastX = e.clientX;
+      let lastT = e.timeStamp;
+      let tilt = 0;
       p.setPointerCapture(e.pointerId);
       p.style.zIndex = String(++z);
       const move = (ev: PointerEvent) => {
@@ -39,6 +43,11 @@ if (board) {
         if (!moved && Math.hypot(dx, dy) < 4) return;
         moved = true;
         p.classList.add("dragging");
+        const dt = Math.max(8, ev.timeStamp - lastT);
+        tilt = tilt * 0.7 + Math.max(-9, Math.min(9, ((ev.clientX - lastX) / dt) * 6)) * 0.3;
+        lastX = ev.clientX;
+        lastT = ev.timeStamp;
+        p.style.setProperty("--tilt", tilt.toFixed(2));
         const maxX = board.clientWidth - p.offsetWidth;
         p.style.left = `${Math.max(0, Math.min(maxX, ox + dx))}px`;
         p.style.top = `${Math.max(0, oy + dy)}px`;
@@ -46,6 +55,7 @@ if (board) {
       const up = () => {
         p.removeEventListener("pointermove", move);
         p.classList.remove("dragging");
+        p.style.removeProperty("--tilt");
         if (moved) {
           const all = store.get<Record<string, Spot>>(KEY) ?? {};
           all[p.id] = { x: p.offsetLeft, y: p.offsetTop };

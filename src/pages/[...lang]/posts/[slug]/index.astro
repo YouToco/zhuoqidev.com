@@ -105,6 +105,7 @@ const jsonLd = {
   <div class="progress" aria-hidden="true" slot="before"></div>
   <a class="chip-btn hide-sm" href={url(lang, "/")} slot="topbar">{L.backHome}</a>
 
+  <div class="read-progress" aria-hidden="true"></div>
   <main class="post-layout">
     <nav class="toc card" aria-label={L.toc}>
       <span class="kicker">{L.toc}</span>
@@ -143,7 +144,7 @@ const jsonLd = {
         }
         <span class="m">{L.length(stats.count, stats.minutes)}</span>
       </div>
-      <h1 class="post-title">
+      <h1 class="post-title" data-vt>
         {main}
         {
           sub && (
@@ -209,13 +210,13 @@ const jsonLd = {
               {older ? (
                 <a class="card" href={postUrl(lang, slugOf(older))} rel="prev">
                   <span class="kicker">{L.prev}</span>
-                  <b>{splitTitle(older.data.title).main}</b>
+                  <b data-vt>{splitTitle(older.data.title).main}</b>
                 </a>
               ) : <span />}
               {newer && (
                 <a class="card next" href={postUrl(lang, slugOf(newer))} rel="next">
                   <span class="kicker">{L.next}</span>
-                  <b>{splitTitle(newer.data.title).main}</b>
+                  <b data-vt>{splitTitle(newer.data.title).main}</b>
                 </a>
               )}
             </nav>

@@ -91,7 +91,7 @@ const jsonLd = {
       {
         A.writing.map((w) => (
           <li class="card">
-            <a href={url(lang, w.href)}>{w.title}</a>
+            <a href={url(lang, w.href)} data-vt>{w.title}</a>
             <p>{w.note}</p>
           </li>
         ))

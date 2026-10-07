@@ -62,6 +62,68 @@ const ogImage = Astro.props.ogImage ?? new URL("/og-default.png", Astro.site).hr
         if (window.self !== window.top && window.top.location.origin === location.origin) document.documentElement.classList.add("embedded");
       } catch {}
     </script>
+    <script is:inline>
+      // Page-to-page transitions (CSS @view-transition in global.css). The title you click glides
+      // into the next page's headline, and a post's headline glides back into its card. Titles are
+      // marked data-vt; exactly one per page gets the shared name, or the browser skips the effect.
+      // Lives in <head> because pagereveal fires before deferred scripts run.
+      (function () {
+        if (!("onpagereveal" in window)) return;
+        var NAME = "vt-title";
+        var path = function (u) {
+          try {
+            var x = new URL(u, location.href);
+            return x.origin === location.origin ? x.pathname : null;
+          } catch (e) {
+            return null;
+          }
+        };
+        var target = function (el) {
+          var a = el.closest("a") || el.querySelector("a");
+          return a && path(a.href);
+        };
+        var mark = function (el, vt) {
+          el.style.viewTransitionName = NAME;
+          vt.finished.finally(function () {
+            el.style.viewTransitionName = "";
+          });
+        };
+        var heading = function () {
+          return document.querySelector("h1[data-vt]");
+        };
+        var clicked = null;
+        addEventListener("click", function (e) {
+          var a = e.target.closest && e.target.closest("a");
+          clicked = a && (a.matches("[data-vt]") ? a : a.querySelector("[data-vt]"));
+        }, true);
+        addEventListener("pageswap", function (e) {
+          if (!e.viewTransition || !e.activation) return;
+          var to = path(e.activation.entry.url);
+          var el = clicked && target(clicked) === to ? clicked : heading();
+          if (el) mark(el, e.viewTransition);
+        });
+        addEventListener("pagereveal", function (e) {
+          if (!e.viewTransition) return;
+          var el = heading();
+          if (!el) {
+            var nav = window.navigation && navigation.activation && navigation.activation.from;
+            var from = path(nav ? nav.url : document.referrer);
+            // The largest visible title linking to the page we came from.
+            var best = 0;
+            document.querySelectorAll("[data-vt]").forEach(function (c) {
+              if (!from || target(c) !== from) return;
+              var r = c.getBoundingClientRect();
+              var area = r.bottom > 0 && r.top < innerHeight ? r.width * r.height : 0;
+              if (area > best) {
+                best = area;
+                el = c;
+              }
+            });
+          }
+          if (el) mark(el, e.viewTransition);
+        });
+      })();
+    </script>
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
     <meta name="author" content={s.author} />
