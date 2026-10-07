@@ -2,6 +2,7 @@
 // A 1200×630 social card rendered as a page at build time; scripts/og-images.mjs screenshots it
 // into og.png next to the article and then deletes the page, so it is never deployed.
 import { htmlLang, type Lang } from "../i18n";
+import Fonts from "./Fonts.astro";
 import { site } from "../site";
 import "../styles/global.css";
 
@@ -24,7 +25,7 @@ const size = units > 30 ? 52 : units > 20 ? 60 : 72;
   <head>
     <meta charset="utf-8" />
     <meta name="robots" content="noindex" />
-    <link rel="stylesheet" href="/fonts.css" />
+    <Fonts />
     <title>{title}</title>
   </head>
   <body class="og-card dotgrid">

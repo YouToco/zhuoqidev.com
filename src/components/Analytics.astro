@@ -18,10 +18,15 @@ import { analytics } from "../site";
     };
     gtag("js", new Date());
     gtag("config", a.google);
-    add("https://www.googletagmanager.com/gtag/js?id=" + a.google);
-    add("https://hm.baidu.com/hm.js?" + a.baidu);
-    add("https://static.cloudflareinsights.com/beacon.min.js", {
-      "data-cf-beacon": JSON.stringify({ token: a.cloudflare }),
-    });
+    // The trackers (about 200 KB) wait for the page's own load so they never compete with it.
+    var start = function () {
+      add("https://www.googletagmanager.com/gtag/js?id=" + a.google);
+      add("https://hm.baidu.com/hm.js?" + a.baidu);
+      add("https://static.cloudflareinsights.com/beacon.min.js", {
+        "data-cf-beacon": JSON.stringify({ token: a.cloudflare }),
+      });
+    };
+    if (document.readyState === "complete") start();
+    else addEventListener("load", start, { once: true });
   }
 </script>

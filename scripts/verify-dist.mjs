@@ -103,6 +103,13 @@ for (const [url, html] of pages) {
   const og = /<meta property="og:image" content="([^"]+)"/.exec(html)?.[1];
   if (!og) fail(`${url}: no og:image`);
   else if (og.startsWith(SITE) && !resolvePath(og.slice(SITE.length))) fail(`${url}: og:image ${og} does not exist`);
+  // display-font subsets inlined by scripts/subset-fonts.mjs
+  if (html.includes("/fonts.css")) fail(`${url}: still links /fonts.css`);
+  const fontStyle = /<style data-zq-fonts>([\s\S]*?)<\/style>/.exec(html)?.[1];
+  if (!/http-equiv="refresh"/.test(html) && !fontStyle) fail(`${url}: no <style data-zq-fonts>`);
+  for (const m of (fontStyle ?? "").matchAll(/url\((\/[^)]+)\)/g)) {
+    if (!existsSync(join(DIST, m[1]))) fail(`${url}: font subset ${m[1]} does not exist`);
+  }
 }
 
 // 6. search index and leftovers
