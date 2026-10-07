@@ -29,9 +29,9 @@ from a workstation when GitHub Actions is unavailable.
 - Node.js at the version in `.nvmrc`, Git, Python 3, Google Chrome
   (`MERMAID_CHROME` overrides the path; macOS is detected automatically) and CJK
   fonts (`fonts-noto-cjk` on Linux).
-- Alibaba Cloud CLI 3.4.x with an authenticated `default` profile for OSS sync,
-  `cp`, CDN refresh and STS identity checks. The OSS plugin bundled with
-  the 3.4 series does not accept the global `--profile` flag on OSS commands.
+- Alibaba Cloud CLI at the version `scripts/install-aliyun.sh` pins (3.5.1), with
+  an authenticated `default` profile for OSS sync, `cp`, CDN refresh and STS
+  identity checks. OSS commands run without `--profile`, so they use `default`.
 - Wrangler authenticated through `CLOUDFLARE_API_TOKEN` and
   `CLOUDFLARE_ACCOUNT_ID`, with access to the `zhuoqidev` Pages project.
 - For `--deploy`, a clean local `main` that exactly matches `origin/main`.

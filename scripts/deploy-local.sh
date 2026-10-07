@@ -105,7 +105,7 @@ if [[ $mode == build ]]; then
 fi
 
 command -v aliyun >/dev/null || {
-  echo "aliyun CLI 3.4.x is required (see scripts/install-aliyun.sh)" >&2
+  echo "aliyun CLI is required; scripts/install-aliyun.sh pins the version CI uses" >&2
   exit 1
 }
 command -v wrangler >/dev/null || {
