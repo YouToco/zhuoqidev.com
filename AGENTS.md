@@ -45,7 +45,7 @@
   both languages: the build fails on a missing edition.
 - Write portable Markdown, not framework components: GitHub alerts
   (`> [!NOTE]`), `![alt](./image.png "caption")` for figures, ```` ```mermaid ````
-  fences (rendered to SVG at build time) and ```` ```html demo height=320 ````
+  fences (shown as hand-drawn Excalidraw sketches, see below) and ```` ```html demo height=320 ````
   fences for live CSS demos. The same source is served to agents as `index.md`.
 - `npm run build` runs `astro build`, subsets the CJK display fonts per page
   (`scripts/subset-fonts.mjs`), screenshots the social cards
@@ -68,6 +68,18 @@
 - Mermaid diagrams and social cards render in Google Chrome
   (`/usr/bin/google-chrome`, override with `MERMAID_CHROME`) and need CJK fonts
   (`fonts-noto-cjk` on Linux) so Chinese labels are measured correctly.
+- Diagrams are drawn ahead of time, not at build time: after adding or editing a
+  ```` ```mermaid ```` fence, run `npm run diagrams` and commit what it writes.
+  Each fence gets `diagrams/<id>.excalidraw` (the editable scene) and
+  `public/diagrams/<id>.svg` (what the page shows), where the id is a hash of the
+  fence text (`src/lib/markdown/diagram-id.ts`); the Markdown keeps the Mermaid
+  text for `index.md`. `npm run verify` fails while any fence lacks a drawing.
+  To touch up a drawing by hand, open its `.excalidraw` file on excalidraw.com,
+  save it back over the file and run `npm run diagrams` again (it re-exports the
+  SVG); `-- --force` redraws everything from Mermaid and discards such edits. The
+  generator lives in `tools/diagrams/` with its own dependencies (installed on
+  first run, never in CI); mermaid-to-excalidraw cannot draw mindmaps, so
+  `tools/diagrams/mindmap.js` lays those out itself.
 - After changing a remark/rehype plugin or Markdown config, delete
   `node_modules/.astro/data-store.json`; the content layer otherwise reuses the
   previously rendered HTML.

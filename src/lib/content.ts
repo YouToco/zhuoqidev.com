@@ -1,7 +1,10 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import type { ImageMetadata } from "astro";
 import { getImage } from "astro:assets";
 import { getCollection, type CollectionEntry } from "astro:content";
 import { type Lang, LANGS, url } from "../i18n";
+import { diagramId } from "./markdown/diagram-id";
 
 export type Post = CollectionEntry<"posts">;
 export type Project = CollectionEntry<"projects">;
@@ -139,7 +142,7 @@ export function firstImage(post: Post): ImageMetadata | undefined {
 }
 
 /**
- * Large copies of a post's images for the click-to-zoom viewer, keyed by file stem
+ * Large copies of a post's images and diagrams for the click-to-zoom viewer, keyed by file stem
  * (the stem survives in Astro's hashed output names, so the page script can match them).
  */
 export async function zoomSources(post: Post, site: URL): Promise<Record<string, string>> {
@@ -147,6 +150,11 @@ export async function zoomSources(post: Post, site: URL): Promise<Record<string,
   for (const m of (post.body ?? "").matchAll(/!\[[^\]]*\]\(\.\/([^\s)]+)/g)) {
     const img = postImage(slugOf(post), m[1]!);
     if (img) out[m[1]!.replace(/\.[^.]+$/, "")] = new URL(await imageUrl(img, 1600, site)).pathname;
+  }
+  // hand-drawn diagrams are vector, so the viewer shows the same file larger
+  for (const m of (post.body ?? "").matchAll(/^```mermaid[^\n]*\n([\s\S]*?)^```/gm)) {
+    const id = diagramId(m[1]!);
+    if (existsSync(join(process.cwd(), "public/diagrams", `${id}.svg`))) out[id] = `/diagrams/${id}.svg`;
   }
   return out;
 }

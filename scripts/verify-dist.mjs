@@ -100,6 +100,8 @@ for (const [url, html] of pages) {
     if (!/\salt="/.test(tag)) fail(`${url}: <img> without alt: ${tag.slice(0, 80)}`);
     if (!/\swidth="/.test(tag) || !/\sheight="/.test(tag)) fail(`${url}: <img> without width/height: ${tag.slice(0, 80)}`);
   }
+  // diagrams are hand-drawn ahead of time; rehype-mermaid only fills in blocks that were missed
+  if (/<svg[^>]*\sid="mermaid/.test(html)) fail(`${url}: a Mermaid diagram has no hand-drawn version: run npm run diagrams`);
   const og = /<meta property="og:image" content="([^"]+)"/.exec(html)?.[1];
   if (!og) fail(`${url}: no og:image`);
   else if (og.startsWith(SITE) && !resolvePath(og.slice(SITE.length))) fail(`${url}: og:image ${og} does not exist`);

@@ -10,7 +10,8 @@
     "build": "astro build && node scripts/subset-fonts.mjs && node scripts/og-images.mjs && pagefind --site dist",
     "preview": "astro preview",
     "check": "astro check",
-    "verify": "node scripts/verify-dist.mjs"
+    "verify": "node scripts/verify-dist.mjs",
+    "diagrams": "test -d tools/diagrams/node_modules || npm --prefix tools/diagrams ci --no-audit --no-fund; node tools/diagrams/generate.mjs"
   },
   "dependencies": {
     "@astrojs/markdown-remark": "7.3.2",
