@@ -3,18 +3,19 @@ import type { Lang } from "../i18n";
 /** Where each card sits on the desk (wide screens). Narrow screens stack them in source order. */
 export const layout: Record<string, string> = {
   hero: "left:2.5%;top:28px;width:620px;z-index:2",
+  portrait: "left:calc(74% + 41px);top:52px;width:150px;transform:rotate(4deg);z-index:5",
   doodle: "left:41%;top:146px;z-index:3",
-  sticky: "left:74%;top:72px;width:232px;transform:rotate(3deg);z-index:6",
+  sticky: "left:74%;top:262px;width:232px;transform:rotate(3deg);z-index:6",
   term: "left:2.5%;top:222px;width:340px;z-index:5",
   feature: "left:38.5%;top:216px;width:330px;z-index:7",
-  "series-0": "left:73%;top:330px;width:250px;z-index:4",
-  robot: "left:68%;top:600px;z-index:8",
-  "note-0": "left:3%;top:575px;width:310px;transform:rotate(-2deg);z-index:4",
-  "note-1": "left:38.5%;top:600px;width:290px;transform:rotate(1.5deg);z-index:4",
-  "series-1": "left:73%;top:710px;width:250px;transform:rotate(-1deg);z-index:4",
-  projects: "left:3%;top:810px;width:320px;z-index:4",
-  "note-2": "left:38.5%;top:860px;width:300px;transform:rotate(-1deg);z-index:4",
-  stamps: "left:73%;top:1000px;width:250px;z-index:4",
+  "series-0": "left:73%;top:520px;width:250px;z-index:4",
+  robot: "left:33%;top:1106px;z-index:8",
+  "note-0": "left:3%;top:586px;width:310px;transform:rotate(-2deg);z-index:4",
+  "note-1": "left:38.5%;top:660px;width:290px;transform:rotate(1.5deg);z-index:4",
+  "series-1": "left:73%;top:900px;width:250px;transform:rotate(-1deg);z-index:4",
+  projects: "left:3%;top:822px;width:320px;z-index:4",
+  "note-2": "left:38.5%;top:890px;width:300px;transform:rotate(-1deg);z-index:4",
+  stamps: "left:73%;top:1150px;width:250px;z-index:4",
   coffee: "left:62%;top:1080px;z-index:8",
 };
 

@@ -1,4 +1,5 @@
 ---
+import Polaroid from "../../../components/Polaroid.astro";
 import { about } from "../../../data/about";
 import { type Lang, langParams, url } from "../../../i18n";
 import Base from "../../../layouts/Base.astro";
@@ -31,6 +32,7 @@ const jsonLd = {
 <Base lang={lang} title={A.title} description={A.description} path="/about/" section="about" jsonLd={jsonLd} bodyClass="dotgrid">
   <main class="about" id="main">
     <section class="about-hero">
+      <Polaroid lang={lang} width={150} class="about-portrait" />
       <h1>From <span class="mark">demo</span> to production.</h1>
       <div class="who">{A.who}</div>
       <div class="intro">

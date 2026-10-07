@@ -3,7 +3,8 @@
 import { store } from "./store";
 
 type Spot = { x: number; y: number };
-const KEY = "zq-board-v1";
+// v2: the desk was rearranged around the portrait (2026-10-07); older saved spots no longer fit.
+const KEY = "zq-board-v2";
 const board = document.getElementById("board");
 
 if (board) {

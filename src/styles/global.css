@@ -192,7 +192,7 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 .index .agent-links a { color: var(--ink-2); }
 
 .board-wrap { position: relative; overflow: hidden; }
-.board { position: relative; height: 1170px; min-width: 980px; }
+.board { position: relative; height: 1290px; min-width: 980px; }
 .pin { position: absolute; touch-action: none; user-select: none; transition: box-shadow .2s var(--ease); }
 .pin.dragging { cursor: grabbing; z-index: 30 !important; box-shadow: 0 24px 48px -18px rgba(28, 34, 48, .45); }
 .pin[data-drag] { cursor: grab; }
@@ -284,6 +284,14 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
   transition: scale .2s var(--ease), rotate .2s var(--ease), box-shadow .2s var(--ease);
 }
 .sticker:hover { scale: 1.12; rotate: -4deg; }
+/* Instant photo: stays white in both themes, like the paper it is printed on. */
+.polaroid { margin: 0; padding: 10px 10px 0; background: var(--sheet); border-radius: 3px; box-shadow: 0 1px 0 rgba(28, 34, 48, .05), 0 16px 30px -16px rgba(28, 34, 48, .45); }
+.polaroid img { display: block; width: 100%; height: auto; border-radius: 1px; }
+.polaroid figcaption { padding: 7px 2px 9px; text-align: center; font: 400 22px/1.2 var(--f-hand); color: #2b3242; }
+.polaroid figcaption:lang(zh) { font-family: var(--f-hand-zh); font-size: 20px; }
+.pin.polaroid { transition: scale .2s var(--ease), box-shadow .2s var(--ease); }
+.pin.polaroid:hover { scale: 1.04; }
+.about-portrait { position: relative; width: 170px; margin: 0 auto 34px; rotate: -3deg; text-align: center; }
 .doodle { pointer-events: none; }
 .doodle text { font-family: var(--f-hand); font-size: 22px; fill: var(--seal); }
 
@@ -510,7 +518,7 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
   .pin.sticky { transform: rotate(-1deg) !important; }
   #hero { order: -2; }
   #feature { order: -1; }
-  .doodle, .sticker, .board-tools { display: none; }
+  .doodle, .sticker, .board-tools, #portrait { display: none; }
   .hero h1 { font-size: 42px; white-space: normal; }
   .cols, .proj-grid { grid-template-columns: 1fr; }
 }
