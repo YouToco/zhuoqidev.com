@@ -122,20 +122,17 @@ Cursor 1.2 adding mandatory user approval for Memories, and Devin defaulting to 
 
 ## The Decision Tree
 
-```
-How much knowledge data do you have?
-├── <10 Markdown files, <200 lines total
-│   └── Plain text context (CLAUDE.md / Cursor Rules)
-│       Why: zero latency, git-friendly, zero noise
-│
-├── 10–100 docs, clear structure
-│   └── LLM Wiki (Claude Projects / GPTs Knowledge)
-│       Why: structured navigation, on-demand loading, human-reviewable
-│
-└── >100 docs, or semantic search is essential
-    └── RAG (Mem0 / Zep / custom vector DB)
-        Prerequisite: you've verified "shove it all in the prompt" doesn't actually fit
-        Heads-up: RAG's maintenance burden is 10x the other two approaches
+```mermaid
+flowchart LR
+    %% layout: tree
+    Q(["How much knowledge data do you have?"])
+    Q --> A["<10 Markdown files<br><200 lines total"] --> A1["Plain text context<br>CLAUDE.md / Cursor Rules<br>Why: zero latency, git-friendly, zero noise"]
+    Q --> B["10–100 docs<br>clear structure"] --> B1["LLM Wiki<br>Claude Projects / GPTs Knowledge<br>Why: structured navigation, on-demand loading,<br>human-reviewable"]
+    Q --> C[">100 docs, or semantic<br>search is essential"] --> C1["RAG<br>Mem0 / Zep / custom vector DB<br>Prerequisite: you've verified “shove it all in the prompt”<br>doesn't actually fit<br>Heads-up: RAG's maintenance burden is 10x the other two"]
+    classDef q fill:#fff3bf,stroke:#f08c00
+    classDef pick fill:#d3f9d8,stroke:#2f9e44
+    class Q q
+    class A1,B1,C1 pick
 ```
 
 ---

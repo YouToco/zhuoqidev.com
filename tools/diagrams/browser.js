@@ -4,6 +4,7 @@
 import { parseMermaidToExcalidraw } from "@excalidraw/mermaid-to-excalidraw";
 import { convertToExcalidrawElements, exportToSvg, restoreElements } from "@excalidraw/excalidraw";
 import { mindmapElements } from "./mindmap.js";
+import { treeLayout } from "./tree.js";
 
 // mermaid-to-excalidraw 2.2.2 looks subgraphs up by [id='S1'], but Mermaid 11.17 renders them as
 // id="<diagram>-S1", so every flowchart with a subgraph fell back to a bitmap. Retry that one
@@ -56,7 +57,12 @@ window.fromMermaid = async (source) => {
       if (!/[^\x00-\x7f]/.test(m[1])) continue;
       src = src.replace(new RegExp(`(^|[\\s>|&])${m[1]}(?=$|[\\s[-])`, "gm"), `$1sg_${n++}`);
     }
-    const parsed = await parseMermaidToExcalidraw(src, { themeVariables: { fontSize: "16px" } });
+    // Mermaid sizes the boxes, so let it measure in the hand fonts (loaded by warmFonts above) and
+    // break lines only where the source has <br>; otherwise labels wrap or overflow their boxes.
+    const parsed = await parseMermaidToExcalidraw(src, {
+      themeVariables: { fontSize: "16px", fontFamily: "Excalifont, Xiaolai" },
+      flowchart: { curve: "linear", wrappingWidth: 640, nodeSpacing: 26, rankSpacing: 44 },
+    });
     // Mermaid sized the boxes for <br> line breaks; Excalidraw needs real newlines.
     for (const e of parsed.elements) {
       if (e.label?.text) e.label.text = e.label.text.replace(BR, "\n");
@@ -64,7 +70,8 @@ window.fromMermaid = async (source) => {
       if (e.name) e.name = e.name.replace(BR, "\n");
     }
     if (parsed.elements.some((e) => e.type === "image")) throw new Error("the converter fell back to a bitmap for this diagram");
-    elements = convertToExcalidrawElements(parsed.elements, { regenerateIds: false });
+    const skeleton = /^\s*%%\s*layout:\s*tree\s*$/m.test(source) ? treeLayout(parsed.elements) : parsed.elements;
+    elements = convertToExcalidrawElements(skeleton, { regenerateIds: false });
     files = parsed.files ?? null;
   }
   const scene = {

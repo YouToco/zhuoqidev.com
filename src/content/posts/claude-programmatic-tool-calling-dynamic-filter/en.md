@@ -47,12 +47,16 @@ Michael Ridland, writing on the [Team 400 blog](https://team400.ai/blog/2026-03-
 
 PTC's paradigm shift: **Instead of Claude requesting tools one at a time and having results return to its context, Claude writes Python code that orchestrates all tool calls internally. Only the final `stdout` enters the context window.**
 
-```
-Traditional: Prompt → Claude → Tool 1 → Result 1 → Claude → Tool 2 → Result 2 → Claude → Answer
-             (3 tools = 3 inference passes, 3× intermediate results in context)
-
-PTC:         Prompt → Claude → writes Python → code calls Tool 1, 2, 3 → stdout → Claude → Answer
-             (3 tools = 1 inference pass, only final output in context)
+```mermaid
+flowchart TB
+    T["Traditional<br>3 tools = 3 inference passes<br>3× intermediate results in context"] --> t0["Prompt"] --> t1["Claude"] --> t2["Tool 1"] --> t3["Result 1"] --> t4["Claude"] --> t5["Tool 2"] --> t6["Result 2"] --> t7["Claude"] --> t8["Answer"]
+    P["PTC<br>3 tools = 1 inference pass<br>only final output in context"] --> p0["Prompt"] --> p1["Claude"] --> p2["writes Python"] --> p3["code calls Tool 1, 2, 3"] --> p4["stdout"] --> p5["Claude"] --> p6["Answer"]
+    classDef head fill:#fff3bf,stroke:#f08c00
+    classDef ctx fill:#ffe3e3,stroke:#e03131
+    classDef out fill:#d3f9d8,stroke:#2f9e44
+    class T,P head
+    class t3,t6 ctx
+    class p4 out
 ```
 
 The concept is simple, but its implications are profound — **it moves orchestration logic from the model's "reasoning chain" into a "code execution environment."** Loops, conditionals, data transformations, and error handling all become explicit code rather than implicit model reasoning. Masaki Hirokawa of Claude Lab, in his [production guide](https://claudelab.net/en/articles/api-sdk/claude-api-programmatic-tool-calling-production-guide), summarizes:
@@ -227,10 +231,15 @@ Anthropic's [official blog post](https://claude.com/blog/improved-web-search-wit
 
 Dynamic Filtering is essentially PTC principles applied natively to web search — let Claude write Python to pre-process search results:
 
-```
-Traditional: Query → Search API → 10 raw HTML pages → all enter context → Claude reasons
-
-Dynamic Filtering: Query → Search API → 10 raw HTML pages → Claude writes code to extract key data → filtered summary enters context → Claude reasons
+```mermaid
+flowchart TB
+    Q["Query"] --> S["Search API"] --> H["10 raw HTML pages"]
+    H -->|"Traditional"| A1["all enter context"] --> A2["Claude reasons"]
+    H -->|"Dynamic Filtering"| B1["Claude writes code to extract key data"] --> B2["filtered summary enters context"] --> B3["Claude reasons"]
+    classDef ctx fill:#ffe3e3,stroke:#e03131
+    classDef out fill:#d3f9d8,stroke:#2f9e44
+    class A1 ctx
+    class B2 out
 ```
 
 ### Benchmark Results

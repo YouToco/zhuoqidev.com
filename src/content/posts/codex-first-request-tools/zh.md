@@ -519,14 +519,11 @@ coalesce_loadable_tool_specs(
 
 于是完整数据流就是：
 
-```text
-搜索后再给的工具
-  → 可搜索文字 + 完整工具说明
-  → 带数字编号的 BM25 卡片
-  → 排名靠前的编号
-  → 按编号取回完整工具说明
-  → 合并同一工具组
-  → 放进下一次模型请求
+```mermaid
+flowchart TD
+    A["搜索后再给的工具"] --> B["可搜索文字 + 完整工具说明"] --> C["带数字编号的 BM25 卡片"] --> D["排名靠前的编号"] --> E["按编号取回完整工具说明"] --> F["合并同一工具组"] --> G["放进下一次模型请求"]
+    classDef out fill:#d3f9d8,stroke:#2f9e44
+    class G out
 ```
 
 ![Codex tool_search 从 Deferred Tool、ToolSearchInfo、Document usize、bm25 crate 到 tool_search_output 的完整数据流](./tool-search-data-flow-v1-zh.png "这张源码路线图把边界画开：步骤 1–3 和 5–6 是 Codex 胶水代码，步骤 4 才是外部 bm25 2.3.2 crate。底部的 ID [7, 2, 11] 是明确标注的示意值，不是实测排名或分数。")
@@ -650,15 +647,14 @@ Codex 用 Rust 列表保存卡片、用 `bm25` 库排名、用数字编号取回
 
 最小控制循环与具体模型品牌无关：
 
-```text
-用户任务 + 会话记录 + 工具说明
-              ↓
-          模型接入层
-              ↓
-        工具调用 / 文字回答
-              ↓
-   Codex 执行、请求确认、记录结果
-              └──────────────→ 下一轮模型请求
+```mermaid
+flowchart TD
+    A["用户任务 + 会话记录 + 工具说明"] --> B["模型接入层"]
+    B --> C["工具调用 / 文字回答"]
+    C --> D["Codex 执行、请求确认、记录结果"]
+    D -->|"下一轮模型请求"| B
+    classDef swap fill:#e5dbff,stroke:#6741d9
+    class B swap
 ```
 
 但模型替换不是只改一行 `model = "..."`。至少要保证三层能够对上：
