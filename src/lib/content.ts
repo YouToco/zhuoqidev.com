@@ -138,5 +138,18 @@ export function firstImage(post: Post): ImageMetadata | undefined {
   return m ? postImage(slugOf(post), m[1]!) : undefined;
 }
 
+/**
+ * Large copies of a post's images for the click-to-zoom viewer, keyed by file stem
+ * (the stem survives in Astro's hashed output names, so the page script can match them).
+ */
+export async function zoomSources(post: Post, site: URL): Promise<Record<string, string>> {
+  const out: Record<string, string> = {};
+  for (const m of (post.body ?? "").matchAll(/!\[[^\]]*\]\(\.\/([^\s)]+)/g)) {
+    const img = postImage(slugOf(post), m[1]!);
+    if (img) out[m[1]!.replace(/\.[^.]+$/, "")] = new URL(await imageUrl(img, 1600, site)).pathname;
+  }
+  return out;
+}
+
 /** Title for lists and cards. */
 export const shortTitle = (p: Post) => p.data.short ?? splitTitle(p.data.title).main;

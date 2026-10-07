@@ -2,10 +2,9 @@
 import { getCollection, render } from "astro:content";
 import { type Lang, LANGS, other, t, url } from "../../../../i18n";
 import Base from "../../../../layouts/Base.astro";
+import { numberedByAuthor } from "../../../../lib/markdown/numbering";
 import {
-  firstImage,
   getPosts,
-  imageUrl,
   inlineMd,
   postUrl,
   type Post,
@@ -14,6 +13,7 @@ import {
   splitTitle,
   termSlug,
   ymd,
+  zoomSources,
 } from "../../../../lib/content";
 import { SITE_URL, site, social } from "../../../../site";
 
@@ -38,6 +38,7 @@ const L = t[lang];
 const slug = slugOf(post);
 const { Content, headings } = await render(post);
 const toc = headings.filter((h) => h.depth === 2 && h.slug !== "footnote-label");
+const ownNumbers = numberedByAuthor(toc.map((h) => h.text));
 const { main, sub } = splitTitle(post.data.title);
 const stats = readingStats(post.body ?? "", lang);
 const mdBytes = new TextEncoder().encode(post.body ?? "").length;
@@ -55,9 +56,10 @@ const idx = posts.findIndex((p) => p.id === post.id);
 const older = prev ?? (series.length ? undefined : posts[idx + 1]);
 const newer = next ?? (series.length ? undefined : posts[idx - 1]);
 
-const cover = firstImage(post);
-const ogImage = cover ? await imageUrl(cover, 1200, Astro.site!) : undefined;
+const zoom = await zoomSources(post, Astro.site!);
 const canonical = new URL(postUrl(lang, slug), SITE_URL).href;
+// Social card rendered from src/pages/og-cards/ by scripts/og-images.mjs.
+const ogImage = new URL("og.png", canonical).href;
 const alt = (await getCollection("posts")).some((p) => p.id === `${slug}/${other(lang)}`);
 const jsonLd = {
   "@context": "https://schema.org",
@@ -70,7 +72,7 @@ const jsonLd = {
   "@id": canonical,
   mainEntityOfPage: canonical,
   url: canonical,
-  image: ogImage ?? new URL("/og-default.png", SITE_URL).href,
+  image: ogImage,
   keywords: post.data.tags.join(", "),
   author: { "@type": "Person", name: site[lang].author, url: new URL(url(lang, "/about/"), SITE_URL).href, sameAs: [social.github, social.x] },
   publisher: { "@type": "Person", name: site[lang].author },
@@ -111,7 +113,7 @@ const jsonLd = {
           toc.map((h, i) => (
             <li>
               <a href={`#${h.slug}`}>
-                <span class="n">{String(i + 1).padStart(2, "0")}</span>
+                {!ownNumbers && <span class="n">{String(i + 1).padStart(2, "0")}</span>}
                 <span>{h.text}</span>
               </a>
             </li>
@@ -120,8 +122,8 @@ const jsonLd = {
       </ol>
     </nav>
 
-    <article class="paper card" id="main">
-      <div class="crumb">~/posts/<b>{slug}</b>.md</div>
+    <article class="paper card" id="main" data-pagefind-body>
+      <div class="crumb" data-pagefind-ignore>~/posts/<b>{slug}</b>.md</div>
       <div class="meta-row">
         {
           post.data.series && (
@@ -131,7 +133,7 @@ const jsonLd = {
           )
         }
         {post.data.categories.map((c) => <a class="tag red" href={url(lang, `/categories/${termSlug(c)}/`)}>{c}</a>)}
-        <span class="m"><time datetime={ymd(post.data.date)}>{ymd(post.data.date)}</time></span>
+        <span class="m"><time datetime={ymd(post.data.date)} data-pagefind-meta="date">{ymd(post.data.date)}</time></span>
         {
           post.data.updated && ymd(post.data.updated) !== ymd(post.data.date) && (
             <span class="m">
@@ -176,7 +178,7 @@ const jsonLd = {
       }
       {
         toc.length > 2 && (
-          <details class="toc-inline">
+          <details class="toc-inline" data-pagefind-ignore>
             <summary>{L.toc}</summary>
             <ol>
               {toc.map((h) => (
@@ -197,13 +199,13 @@ const jsonLd = {
         <div class="tags-row">
           {post.data.tags.map((tag) => <a class="tag" href={url(lang, `/tags/${termSlug(tag)}/`)}>#{tag}</a>)}
         </div>
-        <div class="agent-box">
+        <div class="agent-box" data-pagefind-ignore>
           <span><b>$</b> {L.forAgents}<a href="index.md" type="text/markdown">index.md</a>（{L.mdNote(Math.max(1, Math.round(mdBytes / 1024)))}）</span>
           <button class="chip-btn" type="button" data-copy-md="index.md" hidden>{L.copyMd}</button>
         </div>
         {
           (older || newer) && (
-            <nav class="series-nav" aria-label={post.data.series ?? L.posts}>
+            <nav class="series-nav" data-pagefind-ignore aria-label={post.data.series ?? L.posts}>
               {older ? (
                 <a class="card" href={postUrl(lang, slugOf(older))} rel="prev">
                   <span class="kicker">{L.prev}</span>
@@ -221,7 +223,7 @@ const jsonLd = {
         }
         {
           series.length > 0 && (
-            <p class="series-all">
+            <p class="series-all" data-pagefind-ignore>
               <a href={url(lang, `/series/${termSlug(post.data.series!)}/`)}>{L.seriesAll(post.data.series!, series.length)}</a>
             </p>
           )
@@ -236,6 +238,18 @@ const jsonLd = {
     </aside>
   </div>
 </Base>
+
+{
+  Object.keys(zoom).length > 0 && (
+    <>
+      <script type="application/json" id="zoom-map" set:html={JSON.stringify(zoom)} />
+      <dialog class="zoom" aria-label={L.zoomOpen}>
+        <form method="dialog"><button class="chip-btn" type="submit">{L.zoomClose} ✕</button></form>
+        <img alt="" decoding="async" />
+      </dialog>
+    </>
+  )
+}
 
 <script>
   import "../../../../scripts/post";

@@ -19,8 +19,14 @@ const enPath = lang === "en" ? path : (altPath ?? "/");
   </a>
   <span class="spacer"></span>
   <slot />
+  <a class="chip-btn" href={url(lang, "/search/")} data-search-link aria-keyshortcuts="/" aria-label={t[lang].search}>
+    <svg class="i" width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"></circle><path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path></svg><span class="hide-sm" aria-hidden="true"> {t[lang].search}</span>
+  </a>
   <a class="chip-btn hide-sm" href={url(lang, "/index.xml")}>RSS</a>
   <a class="chip-btn hide-sm" href={url(lang, "/llms.txt")}>llms.txt</a>
+  <button class="chip-btn theme-toggle" type="button" hidden data-dark={t[lang].themeDark} data-light={t[lang].themeLight}>
+    <span aria-hidden="true">☾</span>
+  </button>
   <nav class="lang" aria-label={t[lang].langNav}>
     <a href={url("zh", zhPath)} hreflang="zh-CN" lang="zh-CN" aria-current={lang === "zh" ? "page" : undefined}>中</a>
     <a href={url("en", enPath)} hreflang="en" lang="en" aria-current={lang === "en" ? "page" : undefined}>EN</a>

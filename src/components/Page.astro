@@ -8,14 +8,16 @@ interface Props {
   title: string;
   crumb: string;
   date?: Date | undefined;
+  /** Include this page in the site search index. */
+  searchable?: boolean | undefined;
 }
-const { title, crumb, date } = Astro.props;
+const { title, crumb, date, searchable } = Astro.props;
 const { main, sub } = splitTitle(title);
 ---
 
 <div class="page-wrap">
-  <article class="paper card" id="main">
-    <div class="crumb">{crumb}</div>
+  <article class="paper card" id="main" data-pagefind-body={searchable ? "" : undefined}>
+    <div class="crumb" data-pagefind-ignore>{crumb}</div>
     {date && <div class="meta-row"><span class="m"><time datetime={ymd(date)}>{ymd(date)}</time></span></div>}
     <h1 class="post-title">
       {main}

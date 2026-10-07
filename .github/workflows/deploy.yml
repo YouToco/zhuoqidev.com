@@ -16,50 +16,54 @@ concurrency:
 jobs:
   deploy:
     name: Build and publish (Aliyun OSS + Cloudflare Pages)
-    runs-on: ubuntu-latest
+    # A manual dispatch from any other branch would publish unreviewed work to production.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     steps:
       - name: Check out exact revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          submodules: recursive
-          fetch-depth: 0
           persist-credentials: false
 
-      - name: Setup Hugo
-        uses: peaceiris/actions-hugo@2752ce1d29631191ea3f27c23495fa06139a5b78 # v3.2.1
+      # No dependency cache here: the publishing job never restores state written by PR runs.
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          hugo-version: "0.161.1"
-          extended: true
+          node-version-file: .nvmrc
 
-      - name: Verify Blowfish submodule is pinned
+      # Mermaid diagrams and social cards are laid out in headless Chrome at build time;
+      # the runner image ships Chrome but no CJK fonts, which would shift every Chinese label.
+      - name: Install CJK fonts
         run: |
-          test "$(git -C themes/blowfish rev-parse HEAD)" = \
-            "4afcd32b9950f16afbd686175b0f49a906d87626"
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends fonts-noto-cjk
+          google-chrome --version
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Validate shell syntax
         run: bash -n scripts/install-aliyun.sh scripts/renew-cert.sh scripts/deploy-local.sh
 
-      - name: Run tests
+      - name: Run repository tests
         run: python3 -m unittest discover -s tests -p "test_*.py" -v
 
-      - name: Build Hugo site
-        run: hugo --minify --cleanDestinationDir
+      - name: Type-check
+        run: npm run check
 
-      - name: Verify build outputs
-        run: |
-          test -s public/index.html
-          test -s public/llms.txt
-          test -s public/en/llms.txt
-          grep -q "https://zhuoqidev.com/posts/" public/llms.txt
-          grep -q "https://zhuoqidev.com/en/posts/" public/en/llms.txt
+      - name: Build site
+        run: npm run build
+
+      - name: Verify build output
+        run: npm run verify
 
       - name: Write deploy manifest
         run: |
           printf '{"commit":"%s","built_at":"%s"}\n' \
             "${{ github.sha }}" \
             "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            > public/deploy-manifest.json
+            > dist/deploy-manifest.json
 
       - name: Install pinned Alibaba Cloud CLI
         run: bash scripts/install-aliyun.sh
@@ -78,21 +82,41 @@ jobs:
 
       - name: Sync site to Aliyun OSS
         run: |
-          "$RUNNER_TEMP/aliyun-3.4.10/aliyun" oss sync public/ oss://zhuoqidev/ \
+          "$RUNNER_TEMP/aliyun-3.4.10/aliyun" oss sync dist/ oss://zhuoqidev/ \
             --endpoint oss-cn-shenzhen.aliyuncs.com \
             --region cn-shenzhen \
+            --exclude "_headers" \
             --delete \
             --update \
             --force \
             --disable-ignore-error
 
+      # OSS guesses types from the extension but omits the charset (and has no type for .md),
+      # so Chinese llms.txt and per-post index.md would render as mojibake in browsers.
+      - name: Set text content types on Aliyun OSS
+        run: |
+          set_type() {
+            "$RUNNER_TEMP/aliyun-3.4.10/aliyun" oss set-meta oss://zhuoqidev/ \
+              "Content-Type:$2" \
+              --include "$1" \
+              --endpoint oss-cn-shenzhen.aliyuncs.com \
+              --region cn-shenzhen \
+              --update \
+              --recursive \
+              --force \
+              --disable-ignore-error
+          }
+          set_type "*.md" "text/markdown; charset=utf-8"
+          set_type "*.txt" "text/plain; charset=utf-8"
+          set_type "*.webmanifest" "application/manifest+json"
+
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
+        uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: "4.127.1"
-          command: pages deploy public/ --project-name=zhuoqidev --branch main --commit-hash ${{ github.sha }} --commit-dirty=false
+          wranglerVersion: "4.148.0"
+          command: pages deploy dist/ --project-name=zhuoqidev --branch main --commit-hash ${{ github.sha }} --commit-dirty=false
 
       - name: Refresh Aliyun CDN cache
         run: |
@@ -145,3 +169,22 @@ jobs:
           done
           echo "providers did not all serve $commit_sha within 180 seconds" >&2
           exit 1
+
+      - name: Verify text content types on both providers
+        run: |
+          check_type() {
+            local url=$1 want=$2 got
+            got=$(curl --fail --silent --show-error --head "$url" \
+              | tr -d '\r' | awk 'tolower($1)=="content-type:" {sub(/^[^:]*: */, ""); print}')
+            if [[ ${got,,} != "${want,,}"* ]]; then
+              echo "$url answered Content-Type '$got', expected '$want'" >&2
+              exit 1
+            fi
+            echo "$url → $got"
+          }
+          oss=https://zhuoqidev.oss-cn-shenzhen.aliyuncs.com
+          cf=https://zhuoqidev.pages.dev
+          for base in "$oss" "$cf"; do
+            check_type "$base/llms.txt" "text/plain; charset=utf-8"
+            check_type "$base/posts/managed-agents-outcomes-dreaming/index.md" "text/markdown; charset=utf-8"
+          done

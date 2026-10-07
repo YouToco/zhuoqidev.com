@@ -1,5 +1,0 @@
-{{ $isEn := in .RelPermalink "/en/" }}
-<span title="{{ cond $isEn "Reading time" (i18n "article.reading_time_title") }}">
-  {{- if $isEn }}{{ printf "%d min" .ReadingTime }}{{ else }}{{ i18n "article.reading_time" .ReadingTime | markdownify | emojify }}{{ end -}}
-</span>
-{{- /* Trim EOF */ -}}

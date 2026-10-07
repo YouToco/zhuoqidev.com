@@ -1,0 +1,11 @@
+# Cloudflare Pages response headers. The deploy step sets the same text types on Aliyun OSS.
+# Plain-text twins for agents: declare the charset so Chinese text never renders as mojibake.
+/*.md
+  Content-Type: text/markdown; charset=utf-8
+
+/*.txt
+  Content-Type: text/plain; charset=utf-8
+
+# Build output under /_astro/ is content-hashed, so it can be cached forever.
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable

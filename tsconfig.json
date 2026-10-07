@@ -6,13 +6,7 @@
   ],
   "exclude": [
     "dist",
-    "public",
-    "themes",
-    "resources",
-    "assets",
-    "layouts",
-    "static",
-    "content"
+    "public"
   ],
   "compilerOptions": {
     "types": [

@@ -49,6 +49,13 @@ const ogImage = Astro.props.ogImage ?? new URL("/og-default.png", Astro.site).hr
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script is:inline>
+      // Apply a stored day/night choice before first paint; without one the CSS follows the system.
+      try {
+        const theme = JSON.parse(localStorage.getItem("zq-theme"));
+        if (theme === "dark" || theme === "light") document.documentElement.dataset.theme = theme;
+      } catch {}
+    </script>
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
     <meta name="author" content={s.author} />
@@ -63,7 +70,8 @@ const ogImage = Astro.props.ogImage ?? new URL("/og-default.png", Astro.site).hr
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
-    <meta name="theme-color" content="#fbf8f1" />
+    <meta name="theme-color" content="#fbf8f1" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#14161b" media="(prefers-color-scheme: dark)" />
 
     <meta property="og:site_name" content={s.title} />
     <meta property="og:title" content={title ?? s.title} />
@@ -89,5 +97,8 @@ const ogImage = Astro.props.ogImage ?? new URL("/og-default.png", Astro.site).hr
     <Footer lang={lang} />
     <Dock lang={lang} section={section} />
     <Analytics />
+    <script>
+      import "../scripts/site";
+    </script>
   </body>
 </html>

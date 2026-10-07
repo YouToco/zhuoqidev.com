@@ -1,7 +1,9 @@
 import type { Element, ElementContent, Root } from "hast";
+import { toText } from "hast-util-to-text";
 import { visit } from "unist-util-visit";
 import type { VFile } from "vfile";
 import { fileLang } from "./lang";
+import { numberedByAuthor } from "./numbering";
 
 const el = (tagName: string, properties: Element["properties"], children: ElementContent[] = []): Element => ({
   type: "element",
@@ -21,11 +23,16 @@ const COLUMN = 652;
  * - tables get a horizontally scrollable wrapper;
  * - build-time Mermaid SVGs get a figure frame;
  * - local images get the column width so their srcset is sized for it;
- * - a paragraph made of one emphasised sentence is marked as an editorial note.
+ * - a paragraph made of one emphasised sentence is marked as an editorial note;
+ * - h2s of an article that numbers its own sections opt out of the automatic §01 counter.
  */
 export function rehypeProse() {
   return (tree: Root, file: VFile) => {
     const lang = fileLang(file);
+    const h2s = tree.children.filter((n): n is Element => n.type === "element" && n.tagName === "h2");
+    if (numberedByAuthor(h2s.map((h) => toText(h)))) {
+      for (const h of h2s) h.properties.className = ["own-number"];
+    }
     visit(tree, "element", (node, index, parent) => {
       if (!parent || index === undefined) return;
       // Shiki emits raw `class` / `data-language` keys rather than hast's camel-cased ones.

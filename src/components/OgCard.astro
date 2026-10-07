@@ -1,0 +1,67 @@
+---
+// A 1200×630 social card rendered as a page at build time; scripts/og-images.mjs screenshots it
+// into og.png next to the article and then deletes the page, so it is never deployed.
+import { htmlLang, type Lang } from "../i18n";
+import { site } from "../site";
+import "../styles/global.css";
+
+interface Props {
+  lang: Lang;
+  title: string;
+  sub?: string | undefined;
+  tags?: string[] | undefined;
+  foot: string;
+  tagline: string;
+}
+const { lang, title, sub, tags = [], foot, tagline } = Astro.props;
+// Long titles step down so they stay within three lines.
+const units = [...title].reduce((n, ch) => n + (/[⺀-鿿＀-￯]/.test(ch) ? 1 : 0.55), 0);
+const size = units > 30 ? 52 : units > 20 ? 60 : 72;
+---
+
+<!doctype html>
+<html lang={htmlLang[lang]} data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="robots" content="noindex" />
+    <link rel="stylesheet" href="/fonts.css" />
+    <title>{title}</title>
+  </head>
+  <body class="og-card dotgrid">
+    <header>
+      <span class="seal" aria-hidden="true">卓琪</span>
+      <span><b>{site[lang].title}</b><small>zhuoqidev.com</small></span>
+    </header>
+    <div class="og-tags">{tags.map((t, i) => <span class:list={["tag", { red: i === 0 }]}>{t}</span>)}</div>
+    <h1 style={`font-size:${size}px`}><span>{title}</span></h1>
+    {sub && <p class="og-sub">{sub}</p>}
+    <footer>
+      <span class="og-hand">{tagline}</span>
+      <span class="og-foot">{foot}</span>
+    </footer>
+    <span class="tape og-tape"></span>
+  </body>
+</html>
+
+<style is:global>
+  .og-card {
+    position: relative; box-sizing: border-box; width: 1200px; height: 630px; margin: 0; overflow: hidden;
+    display: flex; flex-direction: column; padding: 56px 72px 52px;
+  }
+  .og-card::after {
+    content: ""; position: absolute; inset: 22px; border: 1.5px solid var(--line); border-radius: 22px; pointer-events: none;
+  }
+  .og-card header { display: flex; align-items: center; gap: 16px; }
+  .og-card header .seal { width: 54px; height: 54px; font-size: 19px; }
+  .og-card header b { display: block; font: 700 26px/1.1 var(--f-serif); }
+  .og-card header small { font: 400 15px/1.4 var(--f-mono); color: var(--ink-3); }
+  .og-tags { display: flex; gap: 10px; margin: 44px 0 18px; min-height: 30px; }
+  .og-tags .tag { font-size: 16px; padding: 6px 12px; }
+  .og-card h1 { margin: 0; font-family: var(--f-serif); font-weight: 900; line-height: 1.28; color: var(--ink); max-width: 1000px; }
+  .og-card h1 span { background: linear-gradient(transparent 62%, var(--hi) 62%, var(--hi) 90%, transparent 90%); box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+  .og-sub { margin: 18px 0 0; max-width: 980px; font: 700 28px/1.45 var(--f-serif); color: var(--ink-2); }
+  .og-card footer { margin-top: auto; display: flex; align-items: baseline; justify-content: space-between; gap: 24px; }
+  .og-hand { font: 500 34px/1 var(--f-hand); color: var(--blue); }
+  .og-foot { font: 400 17px/1 var(--f-mono); color: var(--ink-3); }
+  .og-tape { position: absolute; top: 18px; right: 120px; width: 150px; height: 34px; transform: rotate(4deg); }
+</style>

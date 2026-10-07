@@ -68,3 +68,36 @@ if (bar && article) {
   window.addEventListener("scroll", update, { passive: true });
   update();
 }
+
+// Click an article image to see it large. Figures render at the column width; the viewer loads
+// a 1600w copy (the same file the Markdown export links to).
+const zoomMap = document.getElementById("zoom-map");
+const dialog = document.querySelector<HTMLDialogElement>("dialog.zoom");
+if (zoomMap && dialog && typeof dialog.showModal === "function") {
+  const big = JSON.parse(zoomMap.textContent ?? "{}") as Record<string, string>;
+  const view = dialog.querySelector("img")!;
+  const label = dialog.getAttribute("aria-label") ?? "";
+  for (const img of document.querySelectorAll<HTMLImageElement>(".prose img")) {
+    const name = (img.getAttribute("src") ?? "").split("/").pop() ?? "";
+    const stem = Object.keys(big).find((k) => name.startsWith(`${k}.`));
+    if (!stem) continue;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "zoom-btn";
+    btn.setAttribute("aria-label", `${label}: ${img.alt}`);
+    img.replaceWith(btn);
+    btn.append(img);
+    btn.addEventListener("click", () => {
+      view.src = big[stem]!;
+      view.alt = img.alt;
+      dialog.showModal();
+    });
+  }
+  // A click on the backdrop (outside the picture) closes the viewer.
+  dialog.addEventListener("click", (e) => {
+    if (e.target === dialog) dialog.close();
+  });
+  dialog.addEventListener("close", () => view.removeAttribute("src"));
+}
+
+export {};

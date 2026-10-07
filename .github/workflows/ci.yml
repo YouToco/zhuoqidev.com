@@ -10,40 +10,42 @@ permissions:
 jobs:
   build:
     name: Build and test
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
     steps:
       - name: Check out exact revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          submodules: recursive
-          fetch-depth: 0
           persist-credentials: false
 
-      - name: Setup Hugo
-        uses: peaceiris/actions-hugo@2752ce1d29631191ea3f27c23495fa06139a5b78 # v3.2.1
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          hugo-version: "0.161.1"
-          extended: true
+          node-version-file: .nvmrc
+          cache: npm
 
-      - name: Verify Blowfish submodule is pinned
+      # Mermaid diagrams and social cards are laid out in headless Chrome at build time;
+      # the runner image ships Chrome but no CJK fonts, which would shift every Chinese label.
+      - name: Install CJK fonts
         run: |
-          test "$(git -C themes/blowfish rev-parse HEAD)" = \
-            "4afcd32b9950f16afbd686175b0f49a906d87626"
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends fonts-noto-cjk
+          google-chrome --version
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Validate shell syntax
         run: bash -n scripts/install-aliyun.sh scripts/renew-cert.sh scripts/deploy-local.sh
 
-      - name: Run tests
+      - name: Run repository tests
         run: python3 -m unittest discover -s tests -p "test_*.py" -v
 
-      - name: Build Hugo site
-        run: hugo --minify --cleanDestinationDir
+      - name: Type-check
+        run: npm run check
 
-      - name: Verify build outputs
-        run: |
-          test -s public/index.html
-          test -s public/llms.txt
-          test -s public/en/llms.txt
-          grep -q "https://zhuoqidev.com/posts/" public/llms.txt
-          grep -q "https://zhuoqidev.com/en/posts/" public/en/llms.txt
+      - name: Build site
+        run: npm run build
+
+      - name: Verify build output
+        run: npm run verify

@@ -1,8 +1,6 @@
 dist/
 .astro/
 node_modules/
-resources/_gen/
-.hugo_build.lock
 .DS_Store
 Thumbs.db
 __pycache__/

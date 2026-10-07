@@ -26,7 +26,7 @@ const hasAlt = all.some((p) => slugOf(p) === slug && p.id !== project.id);
 ---
 
 <Base lang={lang} title={project.data.title} description={project.data.description} path={`/projects/${slug}/`} altPath={hasAlt ? `/projects/${slug}/` : null} section="projects" ogType="article" bodyClass="dotgrid">
-  <Page lang={lang} title={project.data.title} crumb={`~/projects/${slug}.md`} date={project.data.date}>
+  <Page lang={lang} title={project.data.title} crumb={`~/projects/${slug}.md`} date={project.data.date} searchable>
     <Content />
   </Page>
 </Base>

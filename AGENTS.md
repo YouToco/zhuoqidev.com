@@ -37,6 +37,34 @@
 - Technical images are evidence-bearing content. Validate their labels and
   implied behavior against the article; aesthetics never override accuracy.
 
+## Site stack (Astro 7 + TypeScript)
+
+- Articles live in `src/content/posts/<slug>/{zh,en}.md` with their images in the
+  same folder; projects and the privacy page follow the same layout under
+  `src/content/projects/` and `src/content/pages/`. Every article must exist in
+  both languages: the build fails on a missing edition.
+- Write portable Markdown, not framework components: GitHub alerts
+  (`> [!NOTE]`), `![alt](./image.png "caption")` for figures, ```` ```mermaid ````
+  fences (rendered to SVG at build time) and ```` ```html demo height=320 ````
+  fences for live CSS demos. The same source is served to agents as `index.md`.
+- `npm run build` runs `astro build`, screenshots the social cards
+  (`scripts/og-images.mjs`) and builds the Pagefind search index.
+  `npm run verify` then checks every legacy Hugo URL, internal link and anchor,
+  hreflang pair, JSON-LD block, image size and Markdown twin. `npm run check` is
+  the strict TypeScript gate. Run all three before pushing.
+- Mermaid diagrams and social cards render in Google Chrome
+  (`/usr/bin/google-chrome`, override with `MERMAID_CHROME`) and need CJK fonts
+  (`fonts-noto-cjk` on Linux) so Chinese labels are measured correctly.
+- After changing a remark/rehype plugin or Markdown config, delete
+  `node_modules/.astro/data-store.json`; the content layer otherwise reuses the
+  previously rendered HTML.
+- Never read `width`/`height` of an imported image directly in server code: it
+  marks the 4K original as used and copies it into `dist/`. Read them from
+  `img.clone` (see `imageUrl` in `src/lib/content.ts`).
+- URLs are a contract. Chinese pages live at the root and English pages under
+  `/en/`; old Hugo paths are kept as redirects (`src/lib/redirects.ts`, post
+  `aliases`, taxonomy pages) and listed in `tests/fixtures/hugo-urls.txt`.
+
 ## GitHub Actions dependency policy
 
 - Before adding or changing any `uses:` entry, query the action's official GitHub
@@ -46,18 +74,17 @@
 - Pin every action to its immutable full 40-character commit SHA and add the exact
   release tag as an inline comment. Do not use floating refs such as `@main`,
   `@v6`, or `@v5` in committed workflow files.
-- Re-check the official release at edit time. The versions below are a verified
-  baseline, not a permanent instruction to stay on them:
-  - `actions/checkout` v6.0.2:
-    `de0fac2e4500dabe0009e67214ff5f5447ce83dd`
+- Re-check the official release at edit time; the workflow tests pin the
+  currently verified SHAs (`tests/test_github_actions_versions.py`).
 - When upgrading an action, sweep every workflow for sibling references so the
   repository does not mix old and new runtimes.
 - Node 24 actions require a sufficiently recent Actions runner. GitHub-hosted
   runners are managed by GitHub; for self-hosted runners, verify the minimum
   runner version in the action's release notes before upgrading.
 - Run `python3 -m unittest discover -s tests -p "test_*.py" -v` after workflow
-  changes. The tests enforce the currently verified immutable checkout SHA and
-  the absence of CI/CD workflows. Site builds and releases run locally through
-  `scripts/deploy-local.sh`, which publishes the same exact build to Alibaba
-  Cloud OSS/CDN and Cloudflare Pages; only certificate renewal remains in
-  GitHub Actions.
+  changes. Pushing or merging to `main` runs `.github/workflows/deploy.yml`, which
+  builds once and publishes the same `dist/` to Alibaba Cloud OSS/CDN (mainland
+  China) and Cloudflare Pages (everywhere else), then verifies the exact commit on
+  both. Pull requests run `ci.yml` (build and checks only). The deploy job refuses
+  to run from any branch other than `main`. `scripts/deploy-local.sh` is the
+  manual fallback for the same release.

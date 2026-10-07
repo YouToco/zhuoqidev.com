@@ -4,7 +4,8 @@
 //  2. every internal link, image and #anchor resolves
 //  3. <html lang> matches the URL's language; hreflang alternates exist and point back
 //  4. article text is in the static HTML (readable without JavaScript) and has a Markdown twin
-//  5. JSON-LD parses; images carry alt, width and height
+//  5. JSON-LD parses; images carry alt, width and height; social cards exist
+//  6. the search index was built and the card pages were removed
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
@@ -47,8 +48,9 @@ let links = 0;
 for (const [url, html] of pages) {
   const redirect = isRedirect(html);
 
-  // 2. internal links, images and anchors
-  for (const m of html.matchAll(/\s(href|src)="([^"]+)"/g)) {
+  // 2. internal links, images and anchors (inline scripts hold templates, not links)
+  const markup = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, "");
+  for (const m of markup.matchAll(/\s(href|src)="([^"]+)"/g)) {
     let target = decode(m[2]);
     if (/^(mailto:|tel:|data:|javascript:)/.test(target)) continue;
     if (target.startsWith(SITE)) target = target.slice(SITE.length) || "/";
@@ -94,10 +96,18 @@ for (const [url, html] of pages) {
   }
   for (const m of html.matchAll(/<img\b[^>]*>/g)) {
     const tag = m[0];
+    if (!/\ssrc="/.test(tag)) continue; // placeholder filled by script (image viewer)
     if (!/\salt="/.test(tag)) fail(`${url}: <img> without alt: ${tag.slice(0, 80)}`);
     if (!/\swidth="/.test(tag) || !/\sheight="/.test(tag)) fail(`${url}: <img> without width/height: ${tag.slice(0, 80)}`);
   }
+  const og = /<meta property="og:image" content="([^"]+)"/.exec(html)?.[1];
+  if (!og) fail(`${url}: no og:image`);
+  else if (og.startsWith(SITE) && !resolvePath(og.slice(SITE.length))) fail(`${url}: og:image ${og} does not exist`);
 }
+
+// 6. search index and leftovers
+if (!existsSync(join(DIST, "pagefind", "pagefind.js"))) fail("dist/pagefind/ is missing: run pagefind --site dist");
+if (existsSync(join(DIST, "og-cards"))) fail("dist/og-cards/ was not removed: run scripts/og-images.mjs");
 
 // 4. article bodies are in the HTML and have Markdown twins
 const text = (html) =>
