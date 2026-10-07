@@ -50,6 +50,7 @@ class GitHubActionsVersionTests(unittest.TestCase):
                 self.assertIn("fonts-noto-cjk", text)
                 self.assertIn("npm ci", text)
                 self.assertIn("npm run check", text)
+                self.assertIn("npm test", text)
                 self.assertIn("npm run build", text)
                 self.assertIn("npm run verify", text)
                 self.assertNotIn("hugo", text.lower())
@@ -71,7 +72,20 @@ class GitHubActionsVersionTests(unittest.TestCase):
     def test_expected_workflows_are_present(self) -> None:
         workflows = sorted(path.name for path in WORKFLOWS.glob("*.y*ml"))
 
-        self.assertEqual(["cert-renew.yml", "ci.yml", "deploy.yml"], workflows)
+        self.assertEqual(["cert-renew.yml", "ci.yml", "deploy.yml", "stats-cn.yml"], workflows)
+
+    def test_mainland_stats_import_is_scheduled_and_safe(self) -> None:
+        text = (WORKFLOWS / "stats-cn.yml").read_text(encoding="utf-8")
+
+        self.assertIn("schedule:", text)
+        self.assertIn("node-version-file: .nvmrc", text)
+        self.assertIn("node scripts/stats-cn.ts --day", text)
+        # Runs harmlessly until the token exists, and never splices user input into the script.
+        self.assertIn("if [[ -z $STATS_ADMIN_TOKEN ]]", text)
+        run_blocks = re.findall(r"run: \|\n((?:\s{10}.*\n?)+)", text)
+        self.assertTrue(run_blocks)
+        for block in run_blocks:
+            self.assertNotIn("${{", block)
 
     def test_every_action_is_immutable_and_release_labeled(self) -> None:
         text = self.workflow_text()

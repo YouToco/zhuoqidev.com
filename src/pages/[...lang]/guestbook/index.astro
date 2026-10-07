@@ -1,0 +1,70 @@
+---
+// Guestbook: the form and the wall are static; the notes come from functions/api/guestbook.ts.
+import { type Lang, langParams, t, url } from "../../../i18n";
+import Base from "../../../layouts/Base.astro";
+import { COLORS, MAX_BODY, MAX_NAME } from "../../../../server/guestbook";
+
+export const getStaticPaths = langParams;
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const L = t[lang];
+const G = L.gb;
+---
+
+<Base lang={lang} title={L.guestbook} description={G.description} path="/guestbook/" bodyClass="dotgrid">
+  <main class="shelf guestbook" id="main">
+    <header class="shelf-head">
+      <div class="crumb">~/guestbook/ <b>ls notes/</b></div>
+      <h1>✦ {L.guestbook}</h1>
+      <p>{G.intro}</p>
+    </header>
+
+    <form
+      class="gb-form card"
+      data-gb-form
+      data-lang={lang}
+      data-max={MAX_BODY}
+      data-msg={JSON.stringify({ sending: G.sending, sent: G.sent, errors: G.errors, pending: G.pending, anonymous: G.anonymous, loading: G.loading, empty: G.empty, loadFailed: G.loadFailed })}
+    >
+      <span class="tape"></span>
+      <label class="sr-only" for="gb-body">{G.bodyLabel}</label>
+      <textarea id="gb-body" name="body" rows="4" required placeholder={G.placeholder}></textarea>
+      <div class="gb-row">
+        <label class="gb-name">
+          <span>{G.nameLabel}</span>
+          <input name="name" maxlength={MAX_NAME} autocomplete="nickname" placeholder={G.namePlaceholder} />
+        </label>
+        <fieldset class="gb-colors">
+          <legend class="sr-only">{G.colorLabel}</legend>
+          {
+            COLORS.map((c, i) => (
+              <label class:list={["gb-swatch", c]}>
+                <input type="radio" name="color" value={c} checked={i === 0} />
+                <span class="sr-only">{G.colors[c]}</span>
+              </label>
+            ))
+          }
+        </fieldset>
+        <span class="gb-count" data-gb-count>0 / {MAX_BODY}</span>
+        <button class="chip-btn gb-send" type="submit">{G.send}</button>
+      </div>
+      <div class="gb-hp" aria-hidden="true">
+        <label>Website <input name="website" tabindex="-1" autocomplete="off" /></label>
+      </div>
+      <p class="gb-status" role="status" aria-live="polite" data-gb-status></p>
+      <p class="gb-fine">{G.fine} <a href={url(lang, "/privacy/")}>{L.privacy}</a></p>
+    </form>
+    <noscript><p class="search-hint">{G.noJs}</p></noscript>
+
+    <h2 class="gb-wall-h">{G.wall}</h2>
+    <ul class="gb-wall" data-gb-wall>
+      <li class="gb-msg">{G.loading}</li>
+    </ul>
+  </main>
+</Base>
+
+<script>
+  import "../../../scripts/guestbook";
+</script>

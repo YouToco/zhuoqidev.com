@@ -52,6 +52,9 @@ jobs:
       - name: Type-check
         run: npm run check
 
+      - name: Unit-test Pages Functions and scripts
+        run: npm test
+
       - name: Build site
         run: npm run build
 

@@ -1,5 +1,18 @@
 {
-  // Cloudflare Pages project config
+  // Cloudflare Pages project config. With this file Wrangler, not the dashboard, owns the
+  // project's settings: bindings added in the dashboard are replaced on the next deploy.
+  "$schema": "https://unpkg.com/wrangler@4.148.0/config-schema.json",
   "name": "zhuoqidev",
-  "pages_build_output_dir": "dist"
+  "pages_build_output_dir": "dist",
+  "compatibility_date": "2026-10-07",
+  // Guestbook and visit counts (functions/, migrations/). The id is filled in once the database
+  // exists; `wrangler pages dev` keeps a local copy under .wrangler/ whatever the id says.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "zhuoqidev-stats",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ]
 }

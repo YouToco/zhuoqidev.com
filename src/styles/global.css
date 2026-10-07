@@ -901,6 +901,52 @@ html.booting .board > .pin { animation-play-state: paused; }
 @keyframes vt-out { to { opacity: 0; translate: 0 -12px; } }
 @keyframes vt-in { from { opacity: 0; translate: 0 20px; } }
 
+/* ---------- 留言板（src/scripts/guestbook.ts） ---------- */
+/* Notes are paper: the same light colours and dark ink in both themes, like the sticky on the desk. */
+.gb-form { position: relative; display: grid; gap: 12px; padding: 22px 22px 16px; }
+.gb-form textarea {
+  width: 100%; min-height: 110px; resize: vertical; padding: 12px 14px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--paper); color: var(--ink); font: 400 16px/1.6 var(--f-sans);
+}
+.gb-form textarea:focus-visible, .gb-name input:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+.gb-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
+.gb-name { display: flex; align-items: center; gap: 8px; font: 400 13px/1 var(--f-mono); color: var(--ink-2); }
+.gb-name input {
+  width: 11em; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--paper); color: var(--ink); font: 400 14px/1.2 var(--f-sans);
+}
+.gb-colors { display: flex; gap: 8px; margin: 0; padding: 0; border: 0; }
+.gb-swatch { position: relative; width: 26px; height: 26px; border-radius: 6px; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .14); }
+.gb-swatch input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+.gb-swatch:has(input:checked) { outline: 2px solid var(--ink); outline-offset: 2px; }
+.gb-swatch:has(input:focus-visible) { outline: 2px dashed var(--blue); outline-offset: 2px; }
+.gb-count { margin-left: auto; font: 400 12px/1 var(--f-mono); color: var(--ink-3); }
+.gb-count.over { color: var(--seal); }
+.gb-send { padding: 9px 18px; border-style: solid; border-color: var(--blue); color: var(--blue); }
+.gb-send:disabled { opacity: .6; cursor: progress; }
+.gb-hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.gb-status { margin: 0; min-height: 1.4em; font: 500 13px/1.4 var(--f-sans); color: var(--ink-2); }
+.gb-fine { margin: 0; font: 400 12px/1.6 var(--f-mono); color: var(--ink-3); }
+.gb-wall-h { margin: 44px 4px 18px; font: 400 30px/1.2 var(--f-hand); color: var(--seal); }
+.gb-wall-h:lang(zh) { font-family: var(--f-hand-zh); }
+.gb-wall { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 22px; align-items: start; }
+.gb-note, .gb-swatch.yellow { background: #ffe88a; }
+.gb-note.pink, .gb-swatch.pink { background: #ffd4dd; }
+.gb-note.blue, .gb-swatch.blue { background: #d5e6ff; }
+.gb-note.green, .gb-swatch.green { background: #d6f1cf; }
+.gb-note {
+  --tilt: 0deg; position: relative; padding: 20px 18px 14px; border-radius: 4px; rotate: var(--tilt);
+  color: #2b2410; box-shadow: 0 16px 24px -16px rgba(80, 60, 0, .45);
+  transition: rotate .45s var(--spring), translate .45s var(--spring);
+}
+.gb-note:hover { rotate: 0deg; translate: 0 -3px; }
+.gb-note p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: 400 16px/1.65 var(--f-sans); }
+.gb-foot { display: flex; justify-content: space-between; gap: 10px; margin-top: 12px; font: 400 11px/1.5 var(--f-mono); color: #5c5232; }
+.gb-note.pending { outline: 2px dashed rgba(43, 36, 16, .35); outline-offset: -6px; }
+.gb-pending { display: block; margin-bottom: 8px; font: 500 11px/1.4 var(--f-mono); color: #8a3a22; }
+.gb-msg { grid-column: 1 / -1; font: 400 13px/1.6 var(--f-mono); color: var(--ink-3); }
+@media (prefers-reduced-motion: reduce) { .gb-note { rotate: 0deg; transition: none; } }
+
 /* Scroll-driven: a reading progress bar, a top bar that lifts off the page, blocks that rise into
    view, the goodbye laptop opening its lid, desk stars drifting slower than the page. Browsers
    without scroll timelines just show everything as it is. Written as longhands on purpose: the CSS

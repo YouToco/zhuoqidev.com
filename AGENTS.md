@@ -90,6 +90,37 @@
   `/en/`; old Hugo paths are kept as redirects (`src/lib/redirects.ts`, post
   `aliases`, taxonomy pages) and listed in `tests/fixtures/hugo-urls.txt`.
 
+## Guestbook and visit counts (Pages Functions + D1)
+
+- The site stays static; the only server code is `functions/` (Cloudflare Pages Functions) with one
+  D1 database (binding `DB`, schema in `migrations/`). Shared code lives in `server/`: `bots.ts` is
+  dependency-free so both the Functions and Node scripts use it. Node runs the `.ts` files directly
+  (`npm test` = `node --test`); `npm run check` also type-checks `functions/` + `server/` against
+  `@cloudflare/workers-types` (`functions/tsconfig.json`).
+- Two hosting lines, two ways of counting. Overseas visitors reach Cloudflare Pages, where
+  `functions/_middleware.ts` counts crawler page requests by User-Agent (line `cf`). Mainland visitors
+  reach Aliyun CDN, which never runs Functions, so `.github/workflows/stats-cn.yml` runs
+  `scripts/stats-cn.ts` every morning to count crawlers in Aliyun's CDN logs (line `cn`). People are
+  counted on both lines by the page beacon in `src/components/Analytics.astro` (POST `/api/hit`),
+  by Cloudflare's IP location; no IP is stored and visitor hashes use a salt deleted the next day.
+- The published pages call the API on `https://api.zhuoqidev.com` (`api` / `apiBase` in `src/site.ts`):
+  a CNAME to `zhuoqidev.pages.dev` on every DNS line plus a custom domain on the Pages project, so
+  readers on the mainland line reach it too. Local previews and `*.pages.dev` call their own origin.
+- `public/_routes.json` keeps static assets out of Functions (assets are free and unmetered;
+  Function calls count against the free 100,000 requests a day). The project is set to "fail open",
+  so if the allowance runs out pages are still served and only the counts and guestbook stop.
+- `/admin/` (served by `functions/admin/index.ts`, page in `server/admin.html`) shows the counts and
+  the guestbook review queue; it and `/api/admin/*` need the `ADMIN_TOKEN` Pages secret. Guestbook
+  notes are text only, stay `pending` until approved there, and are rendered with `textContent` on
+  both the wall and the admin page. Keep it that way.
+- Local run: `npm run build`, put `ADMIN_TOKEN=<32+ random characters>` in `.dev.vars` (git-ignored),
+  then `npm run dev:functions` (global `wrangler`; applies migrations to a local D1 under `.wrangler/`)
+  and open http://localhost:8788/. `node scripts/stats-cn.ts --day YYYY-MM-DD --dry-run` prints a
+  mainland day's crawler counts without storing them.
+- New migrations go in `migrations/` and are applied to the real database with
+  `wrangler d1 migrations apply DB --remote` before the deploy that needs them.
+- Anything that changes what is collected or shown must update both privacy pages.
+
 ## GitHub Actions dependency policy
 
 - Before adding or changing any `uses:` entry, query the action's official GitHub
