@@ -78,8 +78,8 @@ export const about: Record<
       { title: "为什么我们从 Celery 迁移到 Temporal", href: "/posts/why-temporal-not-celery/", note: "生产环境 Agent 流水线的工作流引擎选型，来自逐条踩坑的一线实践，而非文档对比。" },
       { title: "一个 Agent 记忆选型框架", href: "/posts/memory-choice-framework/", note: "RAG / LLM Wiki / 纯文本三条记忆路线的成本、延迟、精度与可维护性权衡，附决策树。" },
     ],
-    contactHead: "联系方式",
-    contactNote: "如果你也在做 AI 应用、Agent 工程或相关基础设施，欢迎通过以上方式联系我。",
+    contactHead: "来聊聊",
+    contactNote: "也在折腾 AI 应用、Agent 工程，或者它们底下那层基础设施？上面哪个渠道都行，打个招呼就好。",
     wechat: "微信二维码",
   },
   en: {
@@ -134,8 +134,8 @@ export const about: Record<
       { title: "Why We Migrated from Celery to Temporal", href: "/posts/why-temporal-not-celery/", note: "Workflow-engine selection for a production Agent pipeline, drawn from hitting each pitfall in the field rather than comparing docs." },
       { title: "An Agent Memory Selection Framework", href: "/posts/memory-choice-framework/", note: "Cost, latency, precision, and maintainability trade-offs across RAG / LLM Wiki / plain-text memory, with a decision tree." },
     ],
-    contactHead: "Contact",
-    contactNote: "If you're working on AI applications, Agent engineering, or the infrastructure around them, feel free to reach out through any channel above.",
+    contactHead: "Say hi",
+    contactNote: "Tinkering with AI apps, Agent engineering, or the infrastructure underneath them too? Any channel above works — just say hi.",
     wechat: "WeChat QR code",
   },
 };

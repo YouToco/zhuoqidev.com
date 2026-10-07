@@ -28,6 +28,16 @@ if (toggle) {
   systemDark.addEventListener("change", paintToggle);
 }
 
+// Inside a window on the desk, links that leave the site open in a new tab rather than in the window.
+if (root.classList.contains("embedded")) {
+  for (const a of document.querySelectorAll<HTMLAnchorElement>("a[href]")) {
+    if (a.origin !== location.origin) {
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+    }
+  }
+}
+
 // "/" opens search from anywhere except while typing.
 const searchLink = document.querySelector<HTMLAnchorElement>("[data-search-link]");
 addEventListener("keydown", (e) => {
