@@ -3,8 +3,9 @@ import { analytics } from "../site";
 ---
 
 <script is:inline define:vars={{ a: analytics }}>
-  // Only the published site reports traffic; local builds and previews stay out of the stats.
-  if (/(^|\.)zhuoqidev\.com$/.test(location.hostname)) {
+  // Only the published site reports traffic; local builds and previews stay out of the stats, and so
+  // do pages opened in a window on the desk (the desk itself already counted the visit).
+  if (/(^|\.)zhuoqidev\.com$/.test(location.hostname) && !document.documentElement.classList.contains("embedded")) {
     var add = function (src, attrs) {
       var s = document.createElement("script");
       s.async = true;

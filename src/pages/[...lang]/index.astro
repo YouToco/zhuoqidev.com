@@ -22,6 +22,14 @@ const notes = B.notes.map((n) => ({ ...n, post: bySlug.get(n.slug)! }));
 const stickyPost = bySlug.get(B.sticky.slug)!;
 const years = [...new Set(posts.map((p) => p.data.date.getUTCFullYear()))];
 const md = (d: Date) => ymd(d).slice(5);
+// Desk icons: each opens its page in a window on the desk (src/scripts/windows.ts).
+const icons = [
+  { name: "posts/", href: url(lang, "/posts/"), kind: "folder" },
+  { name: "projects/", href: url(lang, "/projects/"), kind: "folder" },
+  { name: "about.md", href: url(lang, "/about/"), kind: "md" },
+  { name: "latest.md", href: postUrl(lang, slugOf(latest)), kind: "md" },
+  { name: "llms.txt", href: url(lang, "/llms.txt"), kind: "txt" },
+];
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -40,7 +48,7 @@ const jsonLd = {
       // First visit on a wide screen: hold the desk behind a short boot screen (src/scripts/boot.ts).
       // The timer is a safety net in case that script never runs.
       try {
-        if (!localStorage.getItem("zq-booted") && matchMedia("(min-width: 1001px) and (prefers-reduced-motion: no-preference)").matches) {
+        if (window.self === window.top && !localStorage.getItem("zq-booted") && matchMedia("(min-width: 1001px) and (prefers-reduced-motion: no-preference)").matches) {
           const root = document.documentElement;
           root.classList.add("booting");
           root.dataset.bootFailsafe = String(setTimeout(() => root.classList.remove("booting"), 7000));
@@ -97,6 +105,7 @@ const jsonLd = {
     <main class="board-wrap dotgrid" id="main">
       <div class="board-tools">
         <span class="hint">{L.boardHint}</span>
+        <time class="clock" data-clock hidden></time>
         <button class="chip-btn" id="reset-board" type="button">{L.boardReset}</button>
       </div>
       <div class="board" id="board">
@@ -176,6 +185,7 @@ const jsonLd = {
           notes.map((n, i) => (
             <article class="pin card memo" id={`note-${i}`} data-drag style={layout[`note-${i}`]}>
               {i === 1 && <span class="tape blue" />}
+              <span class="big-n" aria-hidden="true">{String(i + 1).padStart(2, "0")}</span>
               <span class="kicker">
                 {n.label} · {md(n.post.data.date)}
               </span>
@@ -204,6 +214,38 @@ const jsonLd = {
         </section>
 
         <div class="pin sticker" id="coffee" data-drag style={layout.coffee} aria-hidden="true">☕</div>
+
+        <div class="pin desk-icons" id="icons" style={layout.icons}>
+        <ul aria-label={L.deskIcons}>
+          {
+            icons.map((i) => (
+              <li>
+                <a class="desk-icon" href={i.href} data-kind={i.kind}>
+                  <span class="glyph" aria-hidden="true">
+                    {i.kind === "folder" ? (
+                      <svg width="58" height="46" viewBox="0 0 58 46">
+                        <path class="back" d="M1 6a3 3 0 0 1 3-3h15l5 5h30a3 3 0 0 1 3 3v29a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3z" />
+                        <path class="front" d="M1 14h56v26a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3z" />
+                      </svg>
+                    ) : (
+                      <>
+                        <svg width="44" height="54" viewBox="0 0 44 54">
+                          <path class="page" d="M4 1h26l13 13v36a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3V4a3 3 0 0 1 3-3z" />
+                          <path class="fold" d="M30 1v10a3 3 0 0 0 3 3h10" />
+                          <path class="lines" d="M9 22h20M9 28h25M9 34h16" />
+                        </svg>
+                        <span class:list={["badge", i.kind]}>{i.kind}</span>
+                      </>
+                    )}
+                  </span>
+                  <span class="name">{i.name}</span>
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+        <p class="icons-hint" aria-hidden="true">{L.iconsHint}</p>
+        </div>
       </div>
     </main>
   </div>
@@ -212,4 +254,5 @@ const jsonLd = {
 <script>
   import "../../scripts/boot";
   import "../../scripts/board";
+  import "../../scripts/windows";
 </script>
