@@ -475,7 +475,8 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 .skip { position: absolute; left: -999px; top: 8px; z-index: 100; padding: 8px 12px; background: var(--ink); color: var(--paper); border-radius: 8px; }
 .skip:focus { left: 12px; }
 :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
-.site-footer { padding: 40px 20px 110px; text-align: center; font: 400 12px/1.9 var(--f-mono); color: var(--ink-3); border-top: 2px dashed var(--blue-line); background: var(--paper); }
+/* clip: the farewell terminal's ::after and the lid's 3D tilt must not widen the page on narrow screens */
+.site-footer { padding: 40px 20px 110px; text-align: center; font: 400 12px/1.9 var(--f-mono); color: var(--ink-3); border-top: 2px dashed var(--blue-line); background: var(--paper); overflow-x: clip; }
 .site-footer a { color: var(--ink-2); text-decoration: none; }
 .site-footer a:hover { color: var(--blue); }
 .site-footer .beian { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; margin-top: 6px; }
@@ -913,7 +914,6 @@ html.booting .board > .pin { animation-play-state: paused; }
     .prose :is(figure, .code, blockquote, .callout, table), .post-item, .proj, .writing li, .cols > div, .quote-card {
       animation-name: rise; animation-timing-function: linear; animation-fill-mode: both; animation-timeline: view(); animation-range: entry 0% entry 75%;
     }
-    .site-footer { overflow-x: clip; }
     .site-footer .laptop { transform-origin: 50% 100%; animation-name: lid-open; animation-timing-function: linear; animation-fill-mode: both; animation-timeline: view(); animation-range: entry 10% entry 100%; }
     .desk-stars { animation-name: drift; animation-timing-function: linear; animation-fill-mode: both; animation-timeline: scroll(root); }
   }
