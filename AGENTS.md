@@ -47,11 +47,24 @@
   (`> [!NOTE]`), `![alt](./image.png "caption")` for figures, ```` ```mermaid ````
   fences (rendered to SVG at build time) and ```` ```html demo height=320 ````
   fences for live CSS demos. The same source is served to agents as `index.md`.
-- `npm run build` runs `astro build`, screenshots the social cards
+- `npm run build` runs `astro build`, subsets the CJK display fonts per page
+  (`scripts/subset-fonts.mjs`), screenshots the social cards
   (`scripts/og-images.mjs`) and builds the Pagefind search index.
   `npm run verify` then checks every legacy Hugo URL, internal link and anchor,
-  hreflang pair, JSON-LD block, image size and Markdown twin. `npm run check` is
-  the strict TypeScript gate. Run all three before pushing.
+  hreflang pair, JSON-LD block, image size, font subset and Markdown twin.
+  `npm run check` is the strict TypeScript gate. Run all three before pushing.
+- Fonts: Inter, JetBrains Mono and Caveat (Latin) come from Astro's font API and
+  are inlined by `src/components/Fonts.astro`. The CJK display faces are not:
+  `"ZQ Serif"` (Noto Serif SC, weights 700/900) and `"ZQ Hand"` (Long Cang) are
+  cut per page to the characters that page draws in them and inlined as
+  `<style data-zq-fonts>`. Google's unicode-range slices cost 0.4–1.3 MB per page
+  and took mobile Lighthouse down to the 50s. Use those family names through
+  `--f-serif` / `--f-hand*` in CSS; text inserted at run time falls back to the
+  system serif (the search pages also lazy-load every title's characters). Source
+  fonts are pinned by commit and sha256 and cached in `node_modules/.cache/zq-fonts/`.
+- Accessibility is part of the bar: Lighthouse accessibility is 100 on every page
+  type. Small text needs 4.5:1 contrast in both themes, including text on the
+  dark code / terminal surfaces.
 - Mermaid diagrams and social cards render in Google Chrome
   (`/usr/bin/google-chrome`, override with `MERMAID_CHROME`) and need CJK fonts
   (`fonts-noto-cjk` on Linux) so Chinese labels are measured correctly.

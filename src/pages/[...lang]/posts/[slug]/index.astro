@@ -105,7 +105,7 @@ const jsonLd = {
   <div class="progress" aria-hidden="true" slot="before"></div>
   <a class="chip-btn hide-sm" href={url(lang, "/")} slot="topbar">{L.backHome}</a>
 
-  <div class="post-layout">
+  <main class="post-layout">
     <nav class="toc card" aria-label={L.toc}>
       <span class="kicker">{L.toc}</span>
       <ol>
@@ -236,7 +236,7 @@ const jsonLd = {
       {alt && <a class="chip-btn" href={postUrl(other(lang), slug)} hreflang={other(lang)}>{L.readOther}</a>}
       <a class="chip-btn" href="index.md" type="text/markdown">index.md</a>
     </aside>
-  </div>
+  </main>
 </Base>
 
 {

@@ -33,7 +33,7 @@ class LocalDeployTests(unittest.TestCase):
         package = json.loads(PACKAGE.read_text(encoding="utf-8"))
 
         self.assertEqual(
-            "astro build && node scripts/og-images.mjs && pagefind --site dist",
+            "astro build && node scripts/subset-fonts.mjs && node scripts/og-images.mjs && pagefind --site dist",
             package["scripts"]["build"],
         )
         self.assertEqual("node scripts/verify-dist.mjs", package["scripts"]["verify"])

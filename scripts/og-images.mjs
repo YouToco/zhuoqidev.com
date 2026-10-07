@@ -44,8 +44,9 @@ const server = createServer(async (req, res) => {
   const file = join(DIST, path.endsWith("/") ? `${path}index.html` : path);
   try {
     if (!file.startsWith(DIST)) throw new Error("outside dist");
+    const body = await readFile(file);
     res.writeHead(200, { "Content-Type": TYPES[extname(file)] ?? "application/octet-stream" });
-    res.end(await readFile(file));
+    res.end(body);
   } catch {
     res.writeHead(404).end();
   }

@@ -2,6 +2,7 @@
 import { fontData } from "astro:assets";
 import Analytics from "../components/Analytics.astro";
 import Dock from "../components/Dock.astro";
+import Fonts from "../components/Fonts.astro";
 import Footer from "../components/Footer.astro";
 import Topbar from "../components/Topbar.astro";
 import { htmlLang, type Lang, ogLocale, other, url } from "../i18n";
@@ -84,7 +85,7 @@ const ogImage = Astro.props.ogImage ?? new URL("/og-default.png", Astro.site).hr
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content={social.xHandle} />
 
-    <link rel="stylesheet" href="/fonts.css" />
+    <Fonts />
     {bodyFont.map((f) => <link rel="preload" href={f} as="font" type="font/woff2" crossorigin />)}
     {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
     <slot name="head" />

@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build && node scripts/og-images.mjs && pagefind --site dist",
+    "build": "astro build && node scripts/subset-fonts.mjs && node scripts/og-images.mjs && pagefind --site dist",
     "preview": "astro preview",
     "check": "astro check",
     "verify": "node scripts/verify-dist.mjs"
@@ -27,6 +27,7 @@
     "@types/mdast": "4.0.4",
     "@types/node": "24.19.1",
     "pagefind": "1.5.2",
+    "subset-font": "2.9.0",
     "typescript": "6.0.3"
   },
   "allowScripts": {

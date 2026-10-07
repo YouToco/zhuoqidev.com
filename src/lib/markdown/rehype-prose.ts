@@ -14,13 +14,17 @@ const el = (tagName: string, properties: Element["properties"], children: Elemen
 const text = (value: string): ElementContent => ({ type: "text", value });
 
 const COPY = { zh: "复制", en: "Copy" } as const;
+// github-dark-dimmed's comment colour is 4.49:1 on --term (#161a22); this shade is 4.88:1.
+const COMMENT = { from: /#768390/gi, to: "#7c8996" };
 const COLUMN = 652;
 
 /**
  * Presentation wrappers that the stylesheet hangs off:
  * - highlighted code blocks get a terminal-style frame with a language label and a copy button
- *   (the button ships `hidden` and is revealed by the page script, so no dead control without JS);
- * - tables get a horizontally scrollable wrapper;
+ *   (the button ships `hidden` and is revealed by the page script, so no dead control without JS),
+ *   and the theme's comment grey is lifted to pass WCAG AA on the frame's darker background;
+ * - tables get a horizontally scrollable wrapper, and a table with an empty corner cell labels its
+ *   rows with the first column (row headers, so screen readers announce what each cell is about);
  * - build-time Mermaid SVGs get a figure frame;
  * - local images get the column width so their srcset is sized for it;
  * - a paragraph made of one emphasised sentence is marked as an editorial note;
@@ -49,6 +53,9 @@ export function rehypeProse() {
           el("span", {}, [text(language === "plaintext" ? "text" : language)]),
           el("button", { className: ["copy"], type: "button", hidden: true }, [text(COPY[lang])]),
         ]);
+        visit(node, "element", (span) => {
+          if (typeof span.properties?.style === "string") span.properties.style = span.properties.style.replace(COMMENT.from, COMMENT.to);
+        });
         parent.children[index] = el("figure", { className: ["code"] }, [bar, node]);
         return "skip";
       }
@@ -67,6 +74,7 @@ export function rehypeProse() {
         return;
       }
       if (node.tagName === "table") {
+        rowHeaders(node);
         parent.children[index] = el("div", { className: ["table-wrap"] }, [node]);
         return "skip";
       }
@@ -77,4 +85,18 @@ export function rehypeProse() {
       return undefined;
     });
   };
+}
+
+const child = (node: Element, tagName: string) =>
+  node.children.find((c): c is Element => c.type === "element" && c.tagName === tagName);
+
+/** `| | A | B |` tables: the first column names the rows, so its cells become `<th scope="row">`. */
+function rowHeaders(table: Element) {
+  const corner = child(child(child(table, "thead") ?? table, "tr") ?? table, "th");
+  if (!corner || toText(corner).trim()) return;
+  for (const row of child(table, "tbody")?.children ?? []) {
+    if (row.type !== "element" || row.tagName !== "tr") continue;
+    const first = child(row, "td");
+    if (first) Object.assign(first, { tagName: "th", properties: { ...first.properties, scope: "row" } });
+  }
 }

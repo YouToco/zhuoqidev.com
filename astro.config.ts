@@ -69,24 +69,11 @@ export default defineConfig({
       cssVariable: "--font-caveat",
       weights: [500, 700],
       subsets: ["latin"],
-      // No fallbacks: the stylesheet chains Caveat with Long Cang for mixed Latin/CJK hand-written text.
+      // No fallbacks: the stylesheet chains Caveat with "ZQ Hand" (Long Cang) for mixed Latin/CJK hand-written text.
       fallbacks: [],
       optimizedFallbacks: false,
     },
-    {
-      provider: fontProviders.google(),
-      name: "Noto Serif SC",
-      cssVariable: "--font-serif-sc",
-      weights: [700, 900],
-      fallbacks: ["Songti SC", "STSong", "SimSun", "serif"],
-    },
-    {
-      provider: fontProviders.google(),
-      name: "Long Cang",
-      cssVariable: "--font-longcang",
-      weights: [400],
-      fallbacks: ["Kaiti SC", "STKaiti", "KaiTi", "cursive"],
-    },
+    // Noto Serif SC and Long Cang are subset per page after the build (scripts/subset-fonts.mjs).
   ],
   markdown: {
     syntaxHighlight: { type: "shiki", excludeLangs: ["mermaid", "math"] },

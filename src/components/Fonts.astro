@@ -1,0 +1,10 @@
+---
+// Inline @font-face rules for the Latin faces (Inter, JetBrains Mono, Caveat): about 8 KB, and no
+// render-blocking request. The CJK display faces ("ZQ Serif", "ZQ Hand") are subset per page by
+// scripts/subset-fonts.mjs after the build.
+import { Font } from "astro:assets";
+---
+
+<Font cssVariable="--font-inter" />
+<Font cssVariable="--font-mono" />
+<Font cssVariable="--font-caveat" />
