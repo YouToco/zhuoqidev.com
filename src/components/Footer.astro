@@ -1,24 +1,51 @@
 ---
+// Every page signs off with a little terminal session: see you, how to reach me, a fortune, exit.
+import { about } from "../data/about";
+import { board } from "../data/board";
 import { type Lang, t, url } from "../i18n";
+import { getPosts, postUrl, shortTitle, slugOf } from "../lib/content";
 import { beian, site, social } from "../site";
 
 interface Props {
   lang: Lang;
+  path: string;
 }
-const { lang } = Astro.props;
+const { lang, path } = Astro.props;
+const T = t[lang];
+const B = board[lang];
+const quoted = (await getPosts(lang)).find((p) => slugOf(p) === B.sticky.slug);
+// Two lines already on the site; each page always draws the same one, so nothing shifts after load.
+const fortunes = [
+  { text: B.sticky.quote, by: quoted ? `${B.sticky.from} ` : T.byeBy, title: quoted && shortTitle(quoted), href: quoted && postUrl(lang, B.sticky.slug) },
+  { text: about[lang].principle, by: T.byeBy, title: undefined, href: undefined },
+];
+const fortune = fortunes[[...path].reduce((n, c) => n + c.charCodeAt(0), 0) % fortunes.length]!;
+const q = lang === "zh" ? ["「", "」"] : ["“", "”"];
 ---
 
 <footer class="site-footer">
-  <a class="back-top" href="#"><span aria-hidden="true">↑</span>{t[lang].backToTop}</a>
-  <div class="links">
-    <span>© 2026 {site[lang].author}</span>
-    <a href={url(lang, "/index.xml")}>RSS</a>
-    <a href={url(lang, "/llms.txt")}>llms.txt</a>
-    <a href="/sitemap.xml">Sitemap</a>
-    <a href={social.github}>GitHub</a>
-    <a href={social.wechat} data-wechat>{t[lang].wechat}</a>
-    <a href={url(lang, "/privacy/")}>{t[lang].privacy}</a>
-    <span>{t[lang].builtWith}</span>
+  <a class="back-top" href="#"><span aria-hidden="true">↑</span>{T.backToTop}</a>
+  <div class="laptop">
+    <div class="terminal bye" data-bye>
+      <div class="bar"><i></i><i></i><i></i><span>{B.terminal.title}</span></div>
+      <div class="tty">
+        <p class="ln cmd"><span class="p">$</span> echo "see you"</p>
+        <p class="ln o">&gt; {T.byeSee}</p>
+        <p class="ln cmd gap"><span class="p">$</span> cat contact.md</p>
+        <p class="ln o">&gt; <a href={social.github}>GitHub</a> · <a href={social.x}>X</a> · <a href={social.telegram}>Telegram</a> · <a href={social.wechat} data-wechat>{T.wechat}</a> · <a href={url(lang, "/index.xml")}>RSS</a></p>
+        <p class="ln cmd gap"><span class="p">$</span> fortune</p>
+        <p class="ln o f">&gt; {q[0]}{fortune.text}{q[1]} {fortune.by}{fortune.href && <a href={fortune.href}>{fortune.title}</a>}</p>
+        <p class="ln cmd gap"><span class="p">$</span> exit</p>
+        <p class="ln o">&gt; <span class="y">[Process completed]</span></p>
+      </div>
+      <div class="bye-foot">
+        <span>© 2026 {site[lang].author}</span>
+        <a href={url(lang, "/llms.txt")}>llms.txt</a>
+        <a href="/sitemap.xml">Sitemap</a>
+        <a href={url(lang, "/privacy/")}>{T.privacy}</a>
+        <span>{T.builtWith}</span>
+      </div>
+    </div>
   </div>
   <div class="beian">
     <a href={`https://beian.mps.gov.cn/#/query/webSearch?code=${beian.gonganCode}`} target="_blank" rel="noreferrer">

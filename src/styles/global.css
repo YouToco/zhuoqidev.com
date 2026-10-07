@@ -97,7 +97,7 @@ a { color: inherit; }
   height: 60px; padding: 0 20px;
   background: var(--topbar);
   backdrop-filter: blur(8px);
-  border-bottom: 1px dashed var(--line);
+  border-bottom: 2px dashed var(--blue-line);
 }
 .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
 .seal {
@@ -145,9 +145,12 @@ a { color: inherit; }
 
 /* ---------- 通用卡片元素 ---------- */
 .card {
-  background: var(--card); border: 1px solid var(--line);
+  background: var(--card); border: 2px dashed var(--blue-line);
   border-radius: 14px; box-shadow: var(--shadow);
 }
+/* Cards you can open turn solid under the pointer; the reading sheet stays a plain page. */
+a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-style: solid; border-color: var(--blue); }
+.paper.card { border: 1px solid var(--line); }
 .tape {
   --t: 255, 214, 61;
   position: absolute; top: -9px; left: 50%;
@@ -170,7 +173,7 @@ a { color: inherit; }
 .home { display: grid; grid-template-columns: 270px 1fr; min-height: calc(100vh - 60px); }
 .index {
   position: sticky; top: 60px; height: calc(100vh - 60px); overflow: auto;
-  padding: 22px 18px 90px; border-right: 1px dashed var(--line); background: var(--paper);
+  padding: 22px 18px 90px; border-right: 2px dashed var(--blue-line); background: var(--paper);
 }
 .index h2 { font: 400 26px/1 var(--f-hand); color: var(--blue); margin: 0 0 14px; display: flex; align-items: baseline; gap: 8px; }
 .index h2 small { font: 400 11px/1 var(--f-mono); color: var(--ink-3); }
@@ -241,8 +244,8 @@ a { color: inherit; }
 
 .folder { padding: 0; overflow: visible; }
 .folder .tab {
-  position: absolute; top: -26px; left: 14px; height: 28px; padding: 6px 14px 0;
-  background: var(--card); border: 1px solid var(--line); border-bottom: none; border-radius: 10px 10px 0 0;
+  position: absolute; top: -28px; left: 12px; height: 30px; padding: 6px 14px 0;
+  background: var(--card); border: 2px dashed var(--blue-line); border-bottom: none; border-radius: 10px 10px 0 0;
   font: 500 12px/1 var(--f-mono); color: var(--ink-2);
 }
 .folder .in { padding: 18px 18px 12px; }
@@ -450,8 +453,7 @@ a { color: inherit; }
 .skip { position: absolute; left: -999px; top: 8px; z-index: 100; padding: 8px 12px; background: var(--ink); color: var(--paper); border-radius: 8px; }
 .skip:focus { left: 12px; }
 :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
-.site-footer { padding: 36px 20px 110px; text-align: center; font: 400 12px/1.9 var(--f-mono); color: var(--ink-3); border-top: 1px dashed var(--line); background: var(--paper); }
-.site-footer .links { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; }
+.site-footer { padding: 40px 20px 110px; text-align: center; font: 400 12px/1.9 var(--f-mono); color: var(--ink-3); border-top: 2px dashed var(--blue-line); background: var(--paper); }
 .site-footer a { color: var(--ink-2); text-decoration: none; }
 .site-footer a:hover { color: var(--blue); }
 .site-footer .beian { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; margin-top: 6px; }
@@ -496,7 +498,7 @@ a { color: inherit; }
 /* ---------- 窄屏 ---------- */
 @media (max-width: 1240px) {
   .home { grid-template-columns: 1fr; }
-  .index { position: static; height: auto; border-right: none; border-top: 1px dashed var(--line); order: 2; padding-bottom: 110px; }
+  .index { position: static; height: auto; border-right: none; border-top: 2px dashed var(--blue-line); order: 2; padding-bottom: 110px; }
   .post-layout { grid-template-columns: minmax(0, 780px); }
   .toc, .rail { display: none; }
   .margin-note { display: none; }
@@ -679,3 +681,62 @@ dialog.wechat h2 { margin: 0 0 16px; font: 400 30px/1.15 var(--f-hand-zh); color
 .site-footer a.back-top:hover { color: var(--ink); }
 .back-top span { font-size: 18px; animation: float-up 2s ease-in-out infinite; }
 @keyframes float-up { 0%, 100% { opacity: .5; translate: 0 0; } 50% { opacity: 1; translate: 0 -6px; } }
+
+/* A laptop: the terminal is its screen, a light slab with a thumb notch is its base. */
+.laptop { max-width: 600px; margin: 0 auto; }
+.laptop > .terminal { border: 10px solid #262a33; border-bottom-width: 14px; border-radius: 16px 16px 6px 6px; box-shadow: none; text-align: left; }
+.laptop::after {
+  content: ""; display: block; height: 12px; margin: 0 -7%; border-radius: 2px 2px 14px 14px;
+  background: radial-gradient(56px 5px at 50% 0, #9aa0aa 98%, transparent), linear-gradient(#e1e4e9, #aeb3bc);
+  box-shadow: 0 22px 26px -16px rgba(28, 34, 48, .45);
+}
+
+/* Shell sessions written as lines (the goodbye terminal and the boot screen). */
+.tty { padding: 18px 24px 16px; font: 400 13px/1.75 var(--f-mono); }
+.tty .ln { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.tty .ln.gap { margin-top: 14px; }
+.tty .ln.cmd { width: fit-content; color: #f2efe6; font-weight: 600; }
+.tty .ln.o { padding-left: 1.3em; }
+.armed:not(.play) .ln, .boot .tty:not(.play) .ln { opacity: 0; }
+.play .ln { animation: ln-in .3s var(--d, 0s) ease-out both; }
+.play .ln.cmd { animation: ln-type calc(var(--n, 12) * 30ms) var(--d, 0s) steps(var(--n, 12)) both; }
+@keyframes ln-in { from { opacity: 0; translate: 0 4px; } }
+@keyframes ln-type { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@media (max-width: 640px) {
+  .laptop > .terminal { border-width: 7px 7px 10px; }
+  .laptop::after { margin: 0 -10px; height: 10px; }
+  .tty { padding: 14px 16px 12px; font-size: 12.5px; }
+}
+
+/* Goodbye terminal: every page ends with see you, how to reach me, a fortune, exit. */
+.site-footer .laptop { margin-bottom: 30px; }
+.site-footer .bye a { color: var(--yellow); border-bottom: 1px dashed rgba(255, 224, 102, .45); }
+.site-footer .bye a:hover { color: var(--yellow); border-bottom-style: solid; }
+.bye .ln.f { color: #b7bfcf; }
+.bye-foot {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 14px; padding: 9px 16px 11px;
+  border-top: 1px solid rgba(255, 255, 255, .08); font: 400 11px/1.7 var(--f-mono); color: #8b93a4;
+}
+.site-footer .bye-foot a { color: #a9b0bf; border: 0; }
+.site-footer .bye-foot a:hover { color: var(--yellow); }
+
+/* Boot screen (homepage, first visit, wide screens; see src/scripts/boot.ts). */
+.boot { display: none; }
+html.booting { overflow: hidden; }
+html.booting .boot {
+  display: grid; place-items: center; align-content: center; gap: 30px; position: fixed; inset: 0; z-index: 300;
+  background: var(--paper) radial-gradient(var(--dot) 1px, transparent 1.2px) 0 0 / 22px 22px;
+}
+html.booting .board > .pin { animation-play-state: paused; }
+.boot .laptop { width: min(560px, 80vw); }
+.boot .terminal { box-shadow: 0 40px 70px -40px rgba(28, 34, 48, .55); }
+.boot-bar { display: inline-block; width: 220px; height: 9px; vertical-align: 0; border: 1px solid #3a404c; border-radius: 5px; overflow: hidden; }
+.boot-bar i { display: block; height: 100%; width: 0; background: var(--term-green); }
+.play .boot-bar i { animation: bar-fill .8s calc(var(--d, 0s) + .1s) var(--ease) forwards; }
+@keyframes bar-fill { to { width: 100%; } }
+.boot-skip { margin: 0; font: 400 12px/1 var(--f-mono); color: var(--ink-3); letter-spacing: .06em; }
+.boot.zoom { animation: boot-out .7s ease-in forwards; }
+.boot.zoom .laptop { animation: boot-zoom .7s cubic-bezier(.7, 0, .84, 0) forwards; }
+.boot.skip { animation: boot-out .25s ease-out forwards; }
+@keyframes boot-zoom { to { scale: 7; opacity: 0; } }
+@keyframes boot-out { 55% { opacity: 1; } to { opacity: 0; } }

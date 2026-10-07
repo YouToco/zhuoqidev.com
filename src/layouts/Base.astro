@@ -96,7 +96,7 @@ const ogImage = Astro.props.ogImage ?? new URL("/og-default.png", Astro.site).hr
     <slot name="before" />
     <Topbar lang={lang} path={path} altPath={altPath}><slot name="topbar" /></Topbar>
     <slot />
-    <Footer lang={lang} />
+    <Footer lang={lang} path={path} />
     <Dock lang={lang} section={section} />
     <WechatDialog lang={lang} />
     <Analytics />

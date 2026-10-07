@@ -34,6 +34,35 @@ const jsonLd = {
 ---
 
 <Base lang={lang} path="/" section="home" jsonLd={jsonLd}>
+  <Fragment slot="head">
+    <script is:inline>
+      // First visit on a wide screen: hold the desk behind a short boot screen (src/scripts/boot.ts).
+      // The timer is a safety net in case that script never runs.
+      try {
+        if (!localStorage.getItem("zq-booted") && matchMedia("(min-width: 1001px) and (prefers-reduced-motion: no-preference)").matches) {
+          const root = document.documentElement;
+          root.classList.add("booting");
+          root.dataset.bootFailsafe = String(setTimeout(() => root.classList.remove("booting"), 7000));
+        }
+      } catch {}
+    </script>
+  </Fragment>
+  <div class="boot" data-boot aria-hidden="true" slot="before">
+    <div class="laptop">
+      <div class="terminal">
+        <div class="bar"><i></i><i></i><i></i><span>{B.terminal.title}</span></div>
+        <div class="tty">
+          <p class="ln cmd"><span class="p">$</span> whoami</p>
+          <p class="ln o">&gt; {B.terminal.whoami}</p>
+          <p class="ln cmd gap"><span class="p">$</span> ls ~/desk</p>
+          <p class="ln o">&gt; {L.bootLs(posts.length, projects.length)}</p>
+          <p class="ln cmd gap"><span class="p">$</span> open zhuoqidev.com</p>
+          <p class="ln o">&gt; <span class="boot-bar"><i></i></span></p>
+        </div>
+      </div>
+    </div>
+    <p class="boot-skip">{L.bootSkip}</p>
+  </div>
   <div class="home">
     <aside class="index" aria-labelledby="idx-h">
       <h2 id="idx-h">✦ {L.allPosts} <small>{L.postsCount(posts.length)}</small></h2>
@@ -178,5 +207,6 @@ const jsonLd = {
 </Base>
 
 <script>
+  import "../../scripts/boot";
   import "../../scripts/board";
 </script>
