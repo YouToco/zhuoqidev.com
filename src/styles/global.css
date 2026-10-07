@@ -551,7 +551,8 @@ a { color: inherit; }
 html[lang="en"] { --f-hand-zh: var(--font-caveat), var(--font-longcang); }
 .about-hero .intro { max-width: 720px; margin: 26px auto 0; font-size: 15px; line-height: 1.85; color: var(--ink-2); }
 .about-hero .intro p { margin: 0 0 .6em; }
-.proj.certs { display: flex; justify-content: center; align-items: center; gap: 14px; }
+/* Spans the whole row: six project cards fill the grid, so the stamps sit underneath as one strip. */
+.proj.certs { grid-column: 1 / -1; display: flex; justify-content: center; align-items: center; gap: 14px; }
 .proj.certs abbr { text-decoration: none; cursor: help; }
 .writing { list-style: none; margin: 0 0 88px; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 .writing li { padding: 20px 22px; }

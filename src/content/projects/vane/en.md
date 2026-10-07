@@ -6,7 +6,9 @@ date: 2026-07-19
 
 **Vane** is an AI-powered personalized feed system I designed and built solo. It continuously ingests content from multiple sources, scores and filters it with an LLM against your profile, then pushes what's worth reading via Feishu — learning from your feedback to keep refining that profile. From product design and system architecture to production ops, one person end to end.
 
-[🔗 Live Demo](https://vane.zhuoqidev.com)
+> [!NOTE]
+> Vane has been paused since 2026-09 and the hosted service is shut down; the source code remains on GitHub. The rest of this page describes the system as it stood before the pause.
+
 [🐙 GitHub](https://github.com/YouToco/vane)
 
 ## The Problem
