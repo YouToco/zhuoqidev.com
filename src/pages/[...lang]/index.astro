@@ -2,6 +2,7 @@
 import { getProjects, getPosts, postUrl, shortTitle, slugOf, splitTitle, terms, ymd } from "../../lib/content";
 import { board, layout } from "../../data/board";
 import { type Lang, langParams, t, url } from "../../i18n";
+import Polaroid from "../../components/Polaroid.astro";
 import Base from "../../layouts/Base.astro";
 import { SITE_URL, site, social } from "../../site";
 
@@ -104,6 +105,8 @@ const jsonLd = {
           <p>{B.hero.tagline}</p>
           <div class="sub">{B.hero.sub}</div>
         </section>
+
+        <Polaroid lang={lang} width={130} class="pin" id="portrait" style={layout.portrait} drag />
 
         <svg class="pin doodle" style={layout.doodle} width="150" height="86" viewBox="0 0 150 86" aria-hidden="true">
           <text x="2" y="20">{B.doodle}</text>

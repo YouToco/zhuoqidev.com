@@ -1,0 +1,31 @@
+---
+// The pencil-sketch portrait as an instant photo: white frame, a strip of tape, a handwritten line.
+import { Image } from "astro:assets";
+import portrait from "../assets/portrait.jpg";
+import { type Lang, t } from "../i18n";
+
+interface Props {
+  lang: Lang;
+  width: number;
+  class?: string | undefined;
+  id?: string | undefined;
+  style?: string | undefined;
+  drag?: boolean | undefined;
+}
+const { lang, width, class: cls, id, style, drag } = Astro.props;
+const T = t[lang];
+---
+
+<figure class:list={["polaroid", cls]} id={id} style={style} data-drag={drag ? "" : undefined}>
+  <span class="tape" aria-hidden="true"></span>
+  <Image
+    src={portrait}
+    alt={T.portraitAlt}
+    widths={[width, width * 2, width * 3]}
+    sizes={`${width}px`}
+    loading="lazy"
+    decoding="async"
+    draggable="false"
+  />
+  <figcaption>{T.portraitCaption}</figcaption>
+</figure>
