@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { unified } from "@astrojs/markdown-remark";
 import { defineConfig, fontProviders } from "astro/config";
 import rehypeMermaid from "rehype-mermaid";
+import { rehypeHandDiagrams } from "./src/lib/markdown/rehype-hand-diagrams";
 import { rehypeProse } from "./src/lib/markdown/rehype-prose";
 import { remarkAlerts } from "./src/lib/markdown/remark-alerts";
 import { remarkDemo } from "./src/lib/markdown/remark-demo";
@@ -81,6 +82,8 @@ export default defineConfig({
     processor: unified({
       remarkPlugins: [remarkAlerts, remarkFigure, remarkDemo],
       rehypePlugins: [
+        // Hand-drawn versions first (`npm run diagrams`); rehype-mermaid draws whatever is left.
+        rehypeHandDiagrams,
         [
           rehypeMermaid,
           {

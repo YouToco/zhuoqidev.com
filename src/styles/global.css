@@ -413,6 +413,10 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 .diagram svg p { margin: 0; color: inherit; font-size: inherit; line-height: inherit; }
 .diagram svg strong { background: none; }
 .diagram foreignObject { overflow: visible; }
+/* hand-drawn diagrams (npm run diagrams): Excalidraw SVGs, opened large by the image viewer */
+.diagram.hand img { display: block; max-width: 100%; height: auto; margin-inline: auto; border-radius: 0; }
+/* wide drawings shrink to fit the column; on a padded paper let them use most of its gutters */
+@media (min-width: 641px) { .paper .prose .diagram.hand { margin-inline: -48px; padding: 14px 12px; } }
 
 .figure { margin: 1.8em 0; }
 .figure img { display: block; margin: 0 auto; border: 1px solid var(--line); background: #fff; }
