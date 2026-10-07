@@ -282,27 +282,31 @@ No column is all "best" — **and that's exactly what "neutral" means: there's n
 
 Everything above, compressed into one tree:
 
+```mermaid
+flowchart LR
+    %% layout: tree
+    Q(["Which tier are you on?"])
+    Q --> L1["Local / single-machine<br>privacy / prototype"]
+    Q --> L2["High-performance online service<br>one service, many users"]
+    Q --> L3["Data-center scale<br>one big model eats the whole cluster"]
+    L1 --> C1["Just want one command, daily use"] --> E1["Ollama"]
+    L1 --> C2["Squeezing CPU / edge<br>extreme quant"] --> E2["llama.cpp"]
+    L1 --> C3["A few lines to validate a model"] --> E3["HF transformers.pipeline"]
+    L1 --> C4["VRAM too small but must<br>run full 671B MoE"] --> E4["KTransformers"]
+    L2 --> C5["Unsure / want the widest<br>model coverage"] --> E5["vLLM (default to it)"]
+    L2 --> C6["Large MoE / DeepSeek<br>heavy multi-turn prefix"] --> E6["SGLang"]
+    L2 --> C7["Pure NVIDIA + peak perf<br>+ enterprise"] --> E7["TensorRT-LLM"]
+    L2 --> C8["Chinese models + strong<br>KV quant / low latency"] --> E8["LMDeploy"]
+    L3 --> C9["Don't just stare at the engine —<br>add an orchestration layer"] --> E9["NVIDIA Dynamo<br>PD disaggregation<br>+ Mooncake KV pool + EP<br>backend is still<br>vLLM / SGLang / TRT-LLM"]
+    classDef q fill:#fff3bf,stroke:#f08c00
+    classDef tier fill:#d0ebff,stroke:#1971c2
+    classDef engine fill:#d3f9d8,stroke:#2f9e44
+    class Q q
+    class L1,L2,L3 tier
+    class E1,E2,E3,E4,E5,E6,E7,E8,E9 engine
 ```
-Which tier are you on?
-│
-├── Local / single-machine / privacy / prototype
-│   ├── Just want one command, daily use ─────────► Ollama
-│   ├── Squeezing CPU / edge / extreme quant ─────► llama.cpp
-│   ├── A few lines to validate a model ──────────► HF transformers.pipeline
-│   └── VRAM too small but must run full 671B MoE ► KTransformers
-│
-├── High-performance online service (one service, many users)
-│   ├── Unsure / want the widest model coverage ──► vLLM (default to it)
-│   ├── Large MoE / DeepSeek / heavy multi-turn prefix ► SGLang
-│   ├── Pure NVIDIA + peak perf + enterprise ─────► TensorRT-LLM
-│   └── Chinese models + strong KV quant / low latency ► LMDeploy
-│
-└── Data-center scale / one big model eats the whole cluster
-    └── Don't just stare at the engine — add an orchestration layer ► NVIDIA Dynamo
-        (PD disaggregation + Mooncake KV pool + EP; backend is still vLLM/SGLang/TRT-LLM)
 
 ⚠️ Still considering TGI for production? — Don't. It's officially in maintenance mode; reroute to vLLM/SGLang.
-```
 
 ---
 

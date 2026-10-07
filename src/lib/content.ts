@@ -145,16 +145,22 @@ export function firstImage(post: Post): ImageMetadata | undefined {
  * Large copies of a post's images and diagrams for the click-to-zoom viewer, keyed by file stem
  * (the stem survives in Astro's hashed output names, so the page script can match them).
  */
-export async function zoomSources(post: Post, site: URL): Promise<Record<string, string>> {
-  const out: Record<string, string> = {};
+export async function zoomSources(post: Post, site: URL): Promise<Record<string, { src: string; srcset?: string }>> {
+  const out: Record<string, { src: string; srcset?: string }> = {};
+  const path = async (img: ImageMetadata, width: number) => new URL(await imageUrl(img, width, site)).pathname;
   for (const m of (post.body ?? "").matchAll(/!\[[^\]]*\]\(\.\/([^\s)]+)/g)) {
     const img = postImage(slugOf(post), m[1]!);
-    if (img) out[m[1]!.replace(/\.[^.]+$/, "")] = new URL(await imageUrl(img, 1600, site)).pathname;
+    if (!img) continue;
+    const src = await path(img, 1600);
+    // Zoomed in (or on a high-DPI screen) the viewer needs more pixels: the originals are 4K, so
+    // offer a 3200w copy too and let the browser pick by the size the image is shown at.
+    const large = Math.min(3200, (img as ImageMetadata & { clone: ImageMetadata }).clone.width);
+    out[m[1]!.replace(/\.[^.]+$/, "")] = large > 1600 ? { src, srcset: `${src} 1600w, ${await path(img, large)} ${large}w` } : { src };
   }
   // hand-drawn diagrams are vector, so the viewer shows the same file larger
   for (const m of (post.body ?? "").matchAll(/^```mermaid[^\n]*\n([\s\S]*?)^```/gm)) {
     const id = diagramId(m[1]!);
-    if (existsSync(join(process.cwd(), "public/diagrams", `${id}.svg`))) out[id] = `/diagrams/${id}.svg`;
+    if (existsSync(join(process.cwd(), "public/diagrams", `${id}.svg`))) out[id] = { src: `/diagrams/${id}.svg` };
   }
   return out;
 }

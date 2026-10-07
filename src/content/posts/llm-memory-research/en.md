@@ -576,19 +576,14 @@ The earlier figures define concepts and compare projects. This one is the **impl
 
 ### 8.1 Separate raw events from derived memory
 
-```text
-event_log (immutable, auditable)
-  ├─ conversation
-  ├─ tool_result
-  ├─ user_correction
-  └─ environment_observation
-
-derived_memory (mutable, invalidatable)
-  ├─ profile_fact
-  ├─ episodic_summary
-  ├─ entity_relation
-  ├─ procedure
-  └─ policy
+```mermaid
+flowchart LR
+    EL["event_log<br>immutable, auditable"] --> e1["conversation"] & e2["tool_result"] & e3["user_correction"] & e4["environment_observation"]
+    DM["derived_memory<br>mutable, invalidatable"] --> d1["profile_fact"] & d2["episodic_summary"] & d3["entity_relation"] & d4["procedure"] & d5["policy"]
+    classDef raw fill:#d0ebff,stroke:#1971c2
+    classDef derived fill:#e5dbff,stroke:#6741d9
+    class EL raw
+    class DM derived
 ```
 
 Every derived record should retain `source_event_ids`. When source data is deleted, the system can identify which summaries, embeddings, and graph edges must be rebuilt or revoked.
@@ -644,14 +639,11 @@ Use a Graphiti-style bitemporal model when facts change frequently. For simpler 
 
 A robust read path looks like:
 
-```text
-query
-  → scope / ACL filter
-  → exact + BM25 + vector + graph candidates
-  → recency / importance / validity rerank
-  → contradiction check
-  → token-budget packing
-  → provenance-preserving context
+```mermaid
+flowchart TD
+    A["query"] --> B["scope / ACL filter"] --> C["exact + BM25 + vector + graph candidates"] --> D["recency / importance / validity rerank"] --> E["contradiction check"] --> F["token-budget packing"] --> G["provenance-preserving context"]
+    classDef out fill:#d3f9d8,stroke:#2f9e44
+    class G out
 ```
 
 Similarity is only one signal.

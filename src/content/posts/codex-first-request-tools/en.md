@@ -519,14 +519,11 @@ Two details are easy to miss:
 
 The whole pipeline is therefore:
 
-```text
-Deferred Runtime
-  → ToolSearchInfo(search_text + LoadableToolSpec)
-  → BM25 Document<usize>
-  → ranked Top-K document IDs
-  → recover LoadableToolSpec
-  → coalesce Namespaces
-  → include in the next model request
+```mermaid
+flowchart TD
+    A["Deferred Runtime"] --> B["ToolSearchInfo<br>search_text + LoadableToolSpec"] --> C["BM25 Document#lt;usize#gt;"] --> D["ranked Top-K document IDs"] --> E["recover LoadableToolSpec"] --> F["coalesce Namespaces"] --> G["include in the next model request"]
+    classDef out fill:#d3f9d8,stroke:#2f9e44
+    class G out
 ```
 
 ![Complete Codex tool_search data flow from Deferred Tool through ToolSearchInfo, Document usize, the bm25 crate, and tool_search_output](./tool-search-data-flow-v1-en.png "The source boundary is explicit: steps 1–3 and 5–6 are Codex glue code; step 4 is the external bm25 2.3.2 crate. The IDs [7, 2, 11] are labeled as illustrative—not measured ranks or scores.")
@@ -650,15 +647,14 @@ The precise claim is not “turn GPT-5.6 into DeepSeek, GLM, or Kimi.” It is: 
 
 The minimum control loop is independent of a model brand:
 
-```text
-user task + conversation state + Tool Schemas
-                    ↓
-              Model Provider
-                    ↓
-            Tool Call / Agent Text
-                    ↓
-       Codex Runtime executes, approves, records
-                    └────────────────→ next model request
+```mermaid
+flowchart TD
+    A["user task + conversation state + Tool Schemas"] --> B["Model Provider"]
+    B --> C["Tool Call / Agent Text"]
+    C --> D["Codex Runtime executes, approves, records"]
+    D -->|"next model request"| B
+    classDef swap fill:#e5dbff,stroke:#6741d9
+    class B swap
 ```
 
 Model replacement is not only a one-line `model = "..."` edit. At least three contracts must align:

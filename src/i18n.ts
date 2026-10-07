@@ -86,6 +86,10 @@ export const t = {
     themeLight: "开灯",
     zoomOpen: "点开看大图",
     zoomClose: "关闭",
+    zoomIn: "放大",
+    zoomOut: "缩小",
+    zoomFit: "适应窗口",
+    zoomHint: "滚轮或双指缩放 · 拖动平移 · 双击切换",
   },
   en: {
     home: "Desk",
@@ -160,5 +164,9 @@ export const t = {
     themeLight: "Lights on",
     zoomOpen: "Open full-size image",
     zoomClose: "Close",
+    zoomIn: "Zoom in",
+    zoomOut: "Zoom out",
+    zoomFit: "Fit",
+    zoomHint: "Scroll or pinch to zoom · drag to pan · double-click to toggle",
   },
 } as const;
