@@ -30,7 +30,7 @@ jobs:
 
       - name: Check, renew, publish, and verify certificate
         env:
-          ALIYUN_BIN: ${{ runner.temp }}/aliyun-3.4.10/aliyun
+          ALIYUN_BIN: ${{ runner.temp }}/aliyun-3.5.1/aliyun
           ALIYUN_ACCESS_KEY_ID: ${{ secrets.ALIYUN_ACCESS_KEY_ID }}
           ALIYUN_ACCESS_KEY_SECRET: ${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}
           ACME_ACCOUNT_EMAIL: ${{ secrets.ACME_ACCOUNT_EMAIL }}

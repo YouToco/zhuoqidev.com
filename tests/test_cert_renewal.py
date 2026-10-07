@@ -10,7 +10,7 @@ RENEW_SCRIPT = ROOT / "scripts" / "renew-cert.sh"
 
 CHECKOUT_SHA = "3d3c42e5aac5ba805825da76410c181273ba90b1"
 ALIYUN_SHA256 = (
-    "b9edbcc21236f14bfeebbd5e272dde6f36fd946af5802fa677475ff69839ed84"
+    "3a9a45b9c7899228074135612d2b7ebbf32abb97826d825787cb454cd3011bdc"
 )
 ACME_COMMIT = "3661fd86b6304115e42f43910e6dd452ab9866d6"
 
@@ -47,10 +47,19 @@ class CertificateScriptTests(unittest.TestCase):
     def test_installer_pins_version_and_archive_digest(self) -> None:
         script = INSTALL_SCRIPT.read_text(encoding="utf-8")
 
-        self.assertIn("version=3.4.10", script)
+        self.assertIn("version=3.5.1", script)
         self.assertIn(ALIYUN_SHA256, script)
         self.assertIn("sha256sum --check --status", script)
         self.assertIn('actual_version=$("$install_dir/aliyun" version)', script)
+
+    def test_workflows_run_the_installed_cli_version(self) -> None:
+        # The installer unpacks into aliyun-<version>; a stale path would fail only at deploy time.
+        script = INSTALL_SCRIPT.read_text(encoding="utf-8")
+        version = re.search(r"^version=(\S+)$", script, re.MULTILINE)[1]
+        for name in ("cert-renew.yml", "deploy.yml"):
+            text = (RENEW_WORKFLOW.parent / name).read_text(encoding="utf-8")
+            with self.subTest(workflow=name):
+                self.assertEqual({version}, set(re.findall(r"aliyun-(\d+\.\d+\.\d+)/aliyun", text)))
 
     def test_renewal_is_gated_by_both_remote_expiries(self) -> None:
         script = RENEW_SCRIPT.read_text(encoding="utf-8")
