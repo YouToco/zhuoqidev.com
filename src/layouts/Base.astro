@@ -1,0 +1,93 @@
+---
+import { fontData } from "astro:assets";
+import Analytics from "../components/Analytics.astro";
+import Dock from "../components/Dock.astro";
+import Footer from "../components/Footer.astro";
+import Topbar from "../components/Topbar.astro";
+import { htmlLang, type Lang, ogLocale, other, url } from "../i18n";
+import { site, social } from "../site";
+import "../styles/global.css";
+
+export interface Props {
+  lang: Lang;
+  /** Page title without the site name. Omit on the home page. */
+  title?: string | undefined;
+  description?: string | undefined;
+  /** Path of this page without the language prefix, e.g. "/posts/foo/". */
+  path: string;
+  /** Path of the translated page; null when this page has no translation. */
+  altPath?: string | null | undefined;
+  section?: "home" | "posts" | "about" | "projects" | undefined;
+  ogType?: "website" | "article" | undefined;
+  ogImage?: string | undefined;
+  jsonLd?: Record<string, unknown> | undefined;
+  /** Markdown twin of this page, linked as rel=alternate type=text/markdown. */
+  markdown?: string | undefined;
+  bodyClass?: string | undefined;
+  noindex?: boolean | undefined;
+}
+
+const { lang, title, path, section, ogType = "website", jsonLd, markdown, bodyClass, noindex } = Astro.props;
+const altPath = Astro.props.altPath === undefined ? path : Astro.props.altPath;
+const s = site[lang];
+const description = Astro.props.description ?? s.description;
+const fullTitle = title ? `${title} · ${s.title}` : s.title;
+const canonical = new URL(url(lang, path), Astro.site).href;
+const alt = altPath === null ? null : new URL(url(other(lang), altPath), Astro.site).href;
+const zhHref = lang === "zh" ? canonical : alt;
+const enHref = lang === "en" ? canonical : alt;
+// Preload only the Latin body face; everything else loads on demand by unicode-range.
+const bodyFont = (fontData["--font-inter"] ?? [])
+  .filter((f) => f.weight === "400" && f.style === "normal")
+  .flatMap((f) => f.src.filter((s) => s.format === "woff2").map((s) => s.url))
+  .slice(0, 1);
+const ogImage = Astro.props.ogImage ?? new URL("/og-default.png", Astro.site).href;
+---
+
+<!doctype html>
+<html lang={htmlLang[lang]}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <meta name="author" content={s.author} />
+    {noindex && <meta name="robots" content="noindex" />}
+    <link rel="canonical" href={canonical} />
+    {zhHref && <link rel="alternate" hreflang="zh-CN" href={zhHref} />}
+    {enHref && <link rel="alternate" hreflang="en" href={enHref} />}
+    {zhHref && enHref && <link rel="alternate" hreflang="x-default" href={zhHref} />}
+    <link rel="alternate" type="application/rss+xml" title={s.title} href={url(lang, "/index.xml")} />
+    {markdown && <link rel="alternate" type="text/markdown" title="Markdown" href={markdown} />}
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#fbf8f1" />
+
+    <meta property="og:site_name" content={s.title} />
+    <meta property="og:title" content={title ?? s.title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:locale" content={ogLocale[lang]} />
+    {alt && <meta property="og:locale:alternate" content={ogLocale[other(lang)]} />}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content={social.xHandle} />
+
+    <link rel="stylesheet" href="/fonts.css" />
+    {bodyFont.map((f) => <link rel="preload" href={f} as="font" type="font/woff2" crossorigin />)}
+    {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
+    <slot name="head" />
+  </head>
+  <body class={bodyClass}>
+    <a class="skip" href="#main">{lang === "zh" ? "跳到正文" : "Skip to content"}</a>
+    <slot name="before" />
+    <Topbar lang={lang} path={path} altPath={altPath}><slot name="topbar" /></Topbar>
+    <slot />
+    <Footer lang={lang} />
+    <Dock lang={lang} section={section} />
+    <Analytics />
+  </body>
+</html>

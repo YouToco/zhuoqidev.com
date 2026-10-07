@@ -1,0 +1,46 @@
+---
+import { type Lang, langParams, t, url } from "../../../i18n";
+import Base from "../../../layouts/Base.astro";
+import { getProjects, slugOf, splitTitle, ymd } from "../../../lib/content";
+
+export const getStaticPaths = langParams;
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const L = t[lang];
+const projects = await getProjects(lang);
+const intro =
+  lang === "zh" ? "自己从零做出来、在线上跑过的东西。" : "Things I built from scratch and ran in production.";
+---
+
+<Base lang={lang} title={L.projects} path="/projects/" section="projects" bodyClass="dotgrid">
+  <main class="shelf" id="main">
+    <header class="shelf-head">
+      <div class="crumb">~/projects/ <b>ls</b></div>
+      <h1>✦ {L.projects}</h1>
+      <p>{intro}</p>
+    </header>
+    <ol class="post-list">
+      {
+        projects.map((p) => {
+          const { main, sub } = splitTitle(p.data.title);
+          return (
+            <li>
+              <article class="post-item card">
+                {p.data.date ? <time class="d" datetime={ymd(p.data.date)}>{ymd(p.data.date)}</time> : <span />}
+                <div>
+                  <h2>
+                    <a href={url(lang, `/projects/${slugOf(p)}/`)} class="stretch">{main}</a>
+                  </h2>
+                  {sub && <p class="sub">{sub}</p>}
+                  <p>{p.data.description}</p>
+                </div>
+              </article>
+            </li>
+          );
+        })
+      }
+    </ol>
+  </main>
+</Base>

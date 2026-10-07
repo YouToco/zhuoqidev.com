@@ -1,0 +1,108 @@
+---
+import { about } from "../../../data/about";
+import { type Lang, langParams, url } from "../../../i18n";
+import Base from "../../../layouts/Base.astro";
+import { inlineMd } from "../../../lib/content";
+import { SITE_URL, site, social } from "../../../site";
+
+export const getStaticPaths = langParams;
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const A = about[lang];
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "ProfilePage",
+  inLanguage: lang === "zh" ? "zh-CN" : "en",
+  url: new URL(url(lang, "/about/"), SITE_URL).href,
+  mainEntity: {
+    "@type": "Person",
+    name: site[lang].author,
+    alternateName: lang === "zh" ? "Liu ZhuoQi" : "刘卓琪",
+    jobTitle: site[lang].headline,
+    image: new URL("/images/avatar.jpg", SITE_URL).href,
+    sameAs: [social.github, social.x, social.telegram],
+    hasCredential: A.certs.map((c) => ({ "@type": "EducationalOccupationalCredential", name: c.name })),
+  },
+};
+---
+
+<Base lang={lang} title={A.title} description={A.description} path="/about/" section="about" jsonLd={jsonLd} bodyClass="dotgrid">
+  <main class="about" id="main">
+    <section class="about-hero">
+      <h1>From <span class="mark">demo</span> to production.</h1>
+      <div class="who">{A.who}</div>
+      <div class="intro">
+        {A.intro.map((p) => <p set:html={inlineMd(p)} />)}
+      </div>
+    </section>
+
+    <section class="cols" aria-label={A.title}>
+      {
+        A.columns.map((c) => (
+          <div>
+            <h2>{c.head}</h2>
+            {c.groups.map((g) => (
+              <>
+                <h3>{g.title}</h3>
+                <p>{g.items}</p>
+              </>
+            ))}
+          </div>
+        ))
+      }
+    </section>
+
+    <p class="section-h">$ ls projects/</p>
+    <h2 class="section-t">{A.projectsHead}</h2>
+    <section class="proj-grid">
+      {
+        A.projects.map((p, i) => {
+          const Tag = p.href ? "a" : "div";
+          return (
+            <Tag class="proj card" href={p.href && url(lang, p.href)}>
+              {i === 3 && <span class="tape" />}
+              <span class="idx">proj_{String(i + 1).padStart(2, "0")}</span>
+              <h3>{p.title}</h3>
+              <span class="role">{p.role}</span>
+              <p>{p.summary}</p>
+              <div class="tags">{p.tags.map((t) => <span class="tag">{t}</span>)}</div>
+            </Tag>
+          );
+        })
+      }
+      <div class="proj card certs" aria-label="Certifications">
+        {A.certs.map((c) => <abbr class="stamp-round" title={c.name}>{c.code}</abbr>)}
+      </div>
+    </section>
+
+    <section class="quote-card">
+      <span class="c">$ cat principles.md</span>
+      <p>{A.principle}</p>
+    </section>
+
+    <p class="section-h">$ ls posts/ --pinned</p>
+    <h2 class="section-t">{A.writingHead}</h2>
+    <ol class="writing">
+      {
+        A.writing.map((w) => (
+          <li class="card">
+            <a href={url(lang, w.href)}>{w.title}</a>
+            <p>{w.note}</p>
+          </li>
+        ))
+      }
+    </ol>
+
+    <h2 class="section-t contact-t">{A.contactHead}</h2>
+    <div class="contact">
+      <a class="chip-btn" href={social.github}>GitHub · YouToco</a>
+      <a class="chip-btn" href={social.x}>X · @busygod9527</a>
+      <a class="chip-btn" href={social.telegram}>Telegram</a>
+      <a class="chip-btn" href={social.wechat}>{A.wechat}</a>
+      <a class="chip-btn" href={url(lang, "/index.xml")}>RSS</a>
+    </div>
+    <p class="contact-note">{A.contactNote}</p>
+  </main>
+</Base>

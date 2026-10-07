@@ -1,0 +1,44 @@
+---
+import { type Lang, LANGS, url } from "../../../i18n";
+import Base from "../../../layouts/Base.astro";
+import { type Term } from "../../../lib/content";
+import { type Tax, TAXES, taxLabel, termsOf } from "../../../lib/taxonomy";
+
+export async function getStaticPaths() {
+  const out = [];
+  for (const lang of LANGS) {
+    for (const tax of TAXES) {
+      out.push({ params: { lang: lang === "zh" ? undefined : "en", tax }, props: { lang, tax, list: await termsOf(lang, tax) } });
+    }
+  }
+  return out;
+}
+interface Props {
+  lang: Lang;
+  tax: Tax;
+  list: Term[];
+}
+const { lang, tax, list } = Astro.props;
+const label = taxLabel(lang, tax);
+---
+
+<Base lang={lang} title={label} path={`/${tax}/`} section="posts" bodyClass="dotgrid">
+  <main class="shelf" id="main">
+    <header class="shelf-head">
+      <div class="crumb">~/{tax}/ <b>ls</b></div>
+      <h1>✦ {label}</h1>
+    </header>
+    <ul class="term-cloud" role="list">
+      {
+        list.map((term) => (
+          <li>
+            <a class="card" href={url(lang, `/${tax}/${term.slug}/`)}>
+              {tax === "tags" ? `#${term.name}` : term.name}
+              <small>{term.posts.length}</small>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </main>
+</Base>

@@ -1,0 +1,36 @@
+---
+import PostList from "../../../components/PostList.astro";
+import { type Lang, langParams, t, url } from "../../../i18n";
+import Base from "../../../layouts/Base.astro";
+import { getPosts, terms } from "../../../lib/content";
+
+export const getStaticPaths = langParams;
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const L = t[lang];
+const posts = await getPosts(lang);
+const series = terms(posts, "series");
+const cats = terms(posts, "categories");
+const intro =
+  lang === "zh"
+    ? "Agent 工程、记忆系统、推理服务与生产交付。每篇都有英文版，也都有一份给 Agent 读的 Markdown。"
+    : "Agent engineering, memory systems, model serving and shipping to production. Every post also exists in Chinese and as plain Markdown for agents.";
+---
+
+<Base lang={lang} title={L.allPosts} path="/posts/" section="posts" bodyClass="dotgrid">
+  <main class="shelf" id="main">
+    <header class="shelf-head">
+      <div class="crumb">~/posts/ <b>ls -lt</b></div>
+      <h1>✦ {L.allPosts}</h1>
+      <p>{intro}</p>
+      <nav class="filters" aria-label={`${L.series} / ${L.categories}`}>
+        {series.map((s) => <a class="tag red" href={url(lang, `/series/${s.slug}/`)}>{s.name}<small>{s.posts.length}</small></a>)}
+        {cats.map((c) => <a class="tag" href={url(lang, `/categories/${c.slug}/`)}>{c.name}<small>{c.posts.length}</small></a>)}
+        <a class="tag" href={url(lang, "/tags/")}>#{L.tags} →</a>
+      </nav>
+    </header>
+    <PostList lang={lang} posts={posts} byYear />
+  </main>
+</Base>

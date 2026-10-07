@@ -1,0 +1,27 @@
+---
+import { analytics } from "../site";
+---
+
+<script is:inline define:vars={{ a: analytics }}>
+  // Only the published site reports traffic; local builds and previews stay out of the stats.
+  if (/(^|\.)zhuoqidev\.com$/.test(location.hostname)) {
+    var add = function (src, attrs) {
+      var s = document.createElement("script");
+      s.async = true;
+      s.src = src;
+      for (var k in attrs || {}) s.setAttribute(k, attrs[k]);
+      document.head.appendChild(s);
+    };
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function () {
+      dataLayer.push(arguments);
+    };
+    gtag("js", new Date());
+    gtag("config", a.google);
+    add("https://www.googletagmanager.com/gtag/js?id=" + a.google);
+    add("https://hm.baidu.com/hm.js?" + a.baidu);
+    add("https://static.cloudflareinsights.com/beacon.min.js", {
+      "data-cf-beacon": JSON.stringify({ token: a.cloudflare }),
+    });
+  }
+</script>

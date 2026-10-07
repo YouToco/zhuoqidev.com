@@ -1,0 +1,28 @@
+---
+import { type Lang, t, url } from "../i18n";
+import { site } from "../site";
+
+interface Props {
+  lang: Lang;
+  path: string;
+  altPath: string | null;
+}
+const { lang, path, altPath } = Astro.props;
+const zhPath = lang === "zh" ? path : (altPath ?? "/");
+const enPath = lang === "en" ? path : (altPath ?? "/");
+---
+
+<header class="topbar">
+  <a class="brand" href={url(lang, "/")}>
+    <span class="seal" aria-hidden="true">卓琪</span>
+    <span><b>{site[lang].title}</b><small>zhuoqidev.com</small></span>
+  </a>
+  <span class="spacer"></span>
+  <slot />
+  <a class="chip-btn hide-sm" href={url(lang, "/index.xml")}>RSS</a>
+  <a class="chip-btn hide-sm" href={url(lang, "/llms.txt")}>llms.txt</a>
+  <nav class="lang" aria-label={t[lang].langNav}>
+    <a href={url("zh", zhPath)} hreflang="zh-CN" lang="zh-CN" aria-current={lang === "zh" ? "page" : undefined}>中</a>
+    <a href={url("en", enPath)} hreflang="en" lang="en" aria-current={lang === "en" ? "page" : undefined}>EN</a>
+  </nav>
+</header>

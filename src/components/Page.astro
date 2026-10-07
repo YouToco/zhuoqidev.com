@@ -1,0 +1,33 @@
+---
+// A single Markdown page on paper: project write-ups and the privacy policy.
+import type { Lang } from "../i18n";
+import { splitTitle, ymd } from "../lib/content";
+
+interface Props {
+  lang: Lang;
+  title: string;
+  crumb: string;
+  date?: Date | undefined;
+}
+const { title, crumb, date } = Astro.props;
+const { main, sub } = splitTitle(title);
+---
+
+<div class="page-wrap">
+  <article class="paper card" id="main">
+    <div class="crumb">{crumb}</div>
+    {date && <div class="meta-row"><span class="m"><time datetime={ymd(date)}>{ymd(date)}</time></span></div>}
+    <h1 class="post-title">
+      {main}
+      {
+        sub && (
+          <>
+            <span class="sr-only"> — </span>
+            <span class="post-sub">{sub}</span>
+          </>
+        )
+      }
+    </h1>
+    <div class="prose"><slot /></div>
+  </article>
+</div>

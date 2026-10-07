@@ -1,0 +1,58 @@
+---
+import PostList from "../../../../components/PostList.astro";
+import Redirect from "../../../../components/Redirect.astro";
+import { type Lang, LANGS, other, url } from "../../../../i18n";
+import Base from "../../../../layouts/Base.astro";
+import { type Term } from "../../../../lib/content";
+import { legacyRootTerms, type Tax, TAXES, taxLabel, termsOf, termTitle } from "../../../../lib/taxonomy";
+
+export async function getStaticPaths() {
+  const out = [];
+  for (const tax of TAXES) {
+    const byLang = { zh: await termsOf("zh", tax), en: await termsOf("en", tax) };
+    for (const lang of LANGS) {
+      for (const term of byLang[lang]) {
+        const hasAlt = byLang[other(lang)].some((x) => x.slug === term.slug);
+        out.push({ params: { lang: lang === "zh" ? undefined : "en", tax, term: term.slug }, props: { lang, tax, term, hasAlt } });
+      }
+    }
+    // English terms used to live under the root as well; keep those URLs answering.
+    for (const legacy of await legacyRootTerms(tax)) {
+      if (!legacy.zhExists) out.push({ params: { lang: undefined, tax, term: legacy.slug }, props: { redirect: legacy.target } });
+    }
+  }
+  return out;
+}
+type Props =
+  | { lang: Lang; tax: Tax; term: Term; hasAlt: boolean; redirect?: undefined }
+  | { redirect: string };
+const props = Astro.props as Props;
+---
+
+{
+  props.redirect !== undefined ? (
+    <Redirect to={props.redirect} />
+  ) : (
+    <Base
+      lang={props.lang}
+      title={termTitle(props.lang, props.tax, props.term.name)}
+      path={`/${props.tax}/${props.term.slug}/`}
+      altPath={props.hasAlt ? `/${props.tax}/${props.term.slug}/` : null}
+      section="posts"
+      bodyClass="dotgrid"
+    >
+      <main class="shelf" id="main">
+        <header class="shelf-head">
+          <div class="crumb">
+            <a href={url(props.lang, `/${props.tax}/`)}>~/{props.tax}/</a> <b>{props.term.slug}</b>
+          </div>
+          <h1>{props.tax === "tags" ? `#${props.term.name}` : props.term.name}</h1>
+          <p>
+            {taxLabel(props.lang, props.tax)} · {props.term.posts.length}
+          </p>
+        </header>
+        <PostList lang={props.lang} posts={props.term.posts} />
+      </main>
+    </Base>
+  )
+}
