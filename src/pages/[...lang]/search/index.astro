@@ -1,0 +1,33 @@
+---
+import { type Lang, langParams, t, url } from "../../../i18n";
+import Base from "../../../layouts/Base.astro";
+
+export const getStaticPaths = langParams;
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const L = t[lang];
+---
+
+<Base lang={lang} title={L.searchTitle} path="/search/" section="posts" bodyClass="dotgrid" noindex>
+  <main class="shelf" id="main">
+    <header class="shelf-head">
+      <div class="crumb">~/posts/ <b>grep -ri</b></div>
+      <h1>✦ {L.searchTitle}</h1>
+    </header>
+    <form class="search-box card" role="search" action={url(lang, "/search/")} data-empty={L.searchEmpty("%q")} data-failed={L.searchFailed}>
+      <label class="sr-only" for="q">{L.searchLabel}</label>
+      <span class="search-prompt" aria-hidden="true">$ grep</span>
+      <input id="q" name="q" type="search" autocomplete="off" spellcheck="false" placeholder={L.searchPlaceholder} />
+    </form>
+    <p class="search-hint">{L.searchHint}</p>
+    <noscript><p class="search-hint">{L.searchNoJs} <a href={url(lang, "/posts/")}>{L.allPosts} →</a></p></noscript>
+    <p class="search-status" role="status" aria-live="polite"></p>
+    <ol class="search-results"></ol>
+  </main>
+</Base>
+
+<script>
+  import "../../../scripts/search";
+</script>

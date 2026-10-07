@@ -1,0 +1,50 @@
+---
+import { type Lang, url } from "../i18n";
+import { type Post, postUrl, shortTitle, slugOf, termSlug, ymd } from "../lib/content";
+
+interface Props {
+  lang: Lang;
+  posts: Post[];
+  /** Group under year headings (archive view). */
+  byYear?: boolean;
+  /** Heading level for item titles. */
+  level?: 2 | 3;
+}
+const { lang, posts, byYear = false, level = 2 } = Astro.props;
+const H = level === 2 ? "h2" : "h3";
+const groups = byYear
+  ? [...new Set(posts.map((p) => p.data.date.getUTCFullYear()))].map((y) => ({
+      year: y,
+      posts: posts.filter((p) => p.data.date.getUTCFullYear() === y),
+    }))
+  : [{ year: null, posts }];
+---
+
+{
+  groups.map((g) => (
+    <>
+      {g.year && <div class="year-h">{g.year}</div>}
+      <ol class="post-list">
+        {g.posts.map((p) => (
+          <li>
+            <article class="post-item card">
+              <time class="d" datetime={ymd(p.data.date)}>{ymd(p.data.date)}</time>
+              <div>
+                <H>
+                  <a href={postUrl(lang, slugOf(p))} class="stretch">{shortTitle(p)}</a>
+                </H>
+                <p>{p.data.description}</p>
+                <div class="tags">
+                  {p.data.series && <a class="tag red" href={url(lang, `/series/${termSlug(p.data.series)}/`)}>{p.data.series}</a>}
+                  {p.data.tags.slice(0, 4).map((t) => (
+                    <a class="tag" href={url(lang, `/tags/${termSlug(t)}/`)}>#{t}</a>
+                  ))}
+                </div>
+              </div>
+            </article>
+          </li>
+        ))}
+      </ol>
+    </>
+  ))
+}

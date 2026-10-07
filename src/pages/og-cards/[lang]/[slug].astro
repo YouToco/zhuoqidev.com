@@ -1,0 +1,31 @@
+---
+import OgCard from "../../../components/OgCard.astro";
+import { type Lang, LANGS, t } from "../../../i18n";
+import { getPosts, type Post, readingStats, slugOf, splitTitle, ymd } from "../../../lib/content";
+
+export async function getStaticPaths() {
+  const out = [];
+  for (const lang of LANGS) {
+    for (const post of await getPosts(lang)) out.push({ params: { lang, slug: slugOf(post) }, props: { lang, post } });
+  }
+  return out;
+}
+interface Props {
+  lang: Lang;
+  post: Post;
+}
+const { lang, post } = Astro.props;
+const { main, sub } = splitTitle(post.data.title);
+const L = t[lang];
+const stats = readingStats(post.body ?? "", lang);
+const tags = [post.data.series, ...post.data.categories].filter((x): x is string => Boolean(x)).slice(0, 2);
+---
+
+<OgCard
+  lang={lang}
+  title={main}
+  sub={sub}
+  tags={tags}
+  tagline="notes from shipping agents to production"
+  foot={`${ymd(post.data.date)} · ${L.minutes(stats.minutes)}`}
+/>

@@ -1,5 +1,5 @@
 {
   // Cloudflare Pages project config
   "name": "zhuoqidev",
-  "pages_build_output_dir": "public"
+  "pages_build_output_dir": "dist"
 }

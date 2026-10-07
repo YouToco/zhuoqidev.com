@@ -1,0 +1,26 @@
+---
+import { type Lang, t, url } from "../i18n";
+
+interface Props {
+  lang: Lang;
+  section?: string | undefined;
+}
+const { lang, section } = Astro.props;
+const items = [
+  { key: "home", href: url(lang, "/"), label: t[lang].home },
+  { key: "posts", href: url(lang, "/posts/"), label: t[lang].posts },
+  { key: "projects", href: url(lang, "/projects/"), label: t[lang].projects },
+  { key: "about", href: url(lang, "/about/"), label: t[lang].about },
+];
+---
+
+<nav class="dock" aria-label={t[lang].mainNav}>
+  {
+    items.map((it, i) => (
+      <a href={it.href} aria-current={section === it.key ? "page" : undefined}>
+        <span class="k">{String(i + 1).padStart(2, "0")}</span>
+        {it.label}
+      </a>
+    ))
+  }
+</nav>

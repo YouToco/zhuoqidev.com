@@ -1,0 +1,20 @@
+---
+// Hugo's paginated taxonomy URLs (/tags/x/page/1/). Lists are no longer paginated.
+import Redirect from "../../../../../../components/Redirect.astro";
+import { legacyRootTerms, TAXES } from "../../../../../../lib/taxonomy";
+
+export async function getStaticPaths() {
+  const out = [];
+  for (const tax of TAXES) {
+    for (const legacy of await legacyRootTerms(tax)) {
+      for (let n = 1; n <= Math.max(1, legacy.pages); n++) {
+        out.push({ params: { lang: undefined, tax, term: legacy.slug, n: String(n) }, props: { to: legacy.target } });
+      }
+    }
+  }
+  return out;
+}
+const { to } = Astro.props as { to: string };
+---
+
+<Redirect to={to} />

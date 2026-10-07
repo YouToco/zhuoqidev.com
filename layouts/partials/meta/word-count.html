@@ -1,4 +1,0 @@
-<span>
-  {{- if in .RelPermalink "/en/" }}{{ printf "%d words" .WordCount }}{{ else }}{{ i18n "article.word_count" .WordCount | markdownify }}{{ end -}}
-</span>
-{{- /* Trim EOF */ -}}

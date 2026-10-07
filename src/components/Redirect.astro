@@ -1,0 +1,22 @@
+---
+// A static stand-in for a moved URL: meta refresh + canonical, kept out of search indexes.
+interface Props {
+  to: string;
+}
+const { to } = Astro.props;
+const href = new URL(to, Astro.site).href;
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>{href}</title>
+    <meta name="robots" content="noindex" />
+    <link rel="canonical" href={href} />
+    <meta http-equiv="refresh" content={`0; url=${to}`} />
+  </head>
+  <body>
+    <a href={to}>{href}</a>
+  </body>
+</html>

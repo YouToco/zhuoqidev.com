@@ -1,0 +1,32 @@
+---
+import { getCollection, render } from "astro:content";
+import Page from "../../../../components/Page.astro";
+import { type Lang, LANGS } from "../../../../i18n";
+import Base from "../../../../layouts/Base.astro";
+import { getProjects, type Project, slugOf } from "../../../../lib/content";
+
+export async function getStaticPaths() {
+  const out = [];
+  for (const lang of LANGS) {
+    for (const project of await getProjects(lang)) {
+      out.push({ params: { lang: lang === "zh" ? undefined : "en", slug: slugOf(project) }, props: { lang, project } });
+    }
+  }
+  return out;
+}
+interface Props {
+  lang: Lang;
+  project: Project;
+}
+const { lang, project } = Astro.props;
+const slug = slugOf(project);
+const { Content } = await render(project);
+const all = await getCollection("projects");
+const hasAlt = all.some((p) => slugOf(p) === slug && p.id !== project.id);
+---
+
+<Base lang={lang} title={project.data.title} description={project.data.description} path={`/projects/${slug}/`} altPath={hasAlt ? `/projects/${slug}/` : null} section="projects" ogType="article" bodyClass="dotgrid">
+  <Page lang={lang} title={project.data.title} crumb={`~/projects/${slug}.md`} date={project.data.date} searchable>
+    <Content />
+  </Page>
+</Base>

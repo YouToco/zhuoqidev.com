@@ -1,0 +1,182 @@
+---
+import { getProjects, getPosts, postUrl, shortTitle, slugOf, splitTitle, terms, ymd } from "../../lib/content";
+import { board, layout } from "../../data/board";
+import { type Lang, langParams, t, url } from "../../i18n";
+import Base from "../../layouts/Base.astro";
+import { SITE_URL, site, social } from "../../site";
+
+export const getStaticPaths = langParams;
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const L = t[lang];
+const B = board[lang];
+const posts = await getPosts(lang);
+const projects = await getProjects(lang);
+const bySlug = new Map(posts.map((p) => [slugOf(p), p]));
+const latest = posts[0]!;
+const series = terms(posts, "series").slice(0, 2);
+const notes = B.notes.map((n) => ({ ...n, post: bySlug.get(n.slug)! }));
+const stickyPost = bySlug.get(B.sticky.slug)!;
+const years = [...new Set(posts.map((p) => p.data.date.getUTCFullYear()))];
+const md = (d: Date) => ymd(d).slice(5);
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: site[lang].title,
+  url: new URL(url(lang, "/"), SITE_URL).href,
+  inLanguage: lang === "zh" ? "zh-CN" : "en",
+  description: site[lang].description,
+  author: { "@type": "Person", name: site[lang].author, jobTitle: site[lang].headline, sameAs: [social.github, social.x] },
+};
+---
+
+<Base lang={lang} path="/" section="home" jsonLd={jsonLd}>
+  <div class="home">
+    <aside class="index" aria-labelledby="idx-h">
+      <h2 id="idx-h">✦ {L.allPosts} <small>{L.postsCount(posts.length)}</small></h2>
+      {
+        years.map((y) => (
+          <>
+            <div class="year">{y}</div>
+            <ol>
+              {posts
+                .filter((p) => p.data.date.getUTCFullYear() === y)
+                .map((p) => (
+                  <li>
+                    <a class:list={{ on: p === latest }} href={postUrl(lang, slugOf(p))}>
+                      <span class="dot" />
+                      <span class="d">{md(p.data.date)}</span>
+                      <span>{shortTitle(p)}</span>
+                    </a>
+                  </li>
+                ))}
+            </ol>
+          </>
+        ))
+      }
+      <div class="agent-links">
+        {L.forAgentsIndex}<br /><a href={url(lang, "/llms.txt")}>/llms.txt</a> ·
+        <a href={url(lang, "/llms-full.txt")}>/llms-full.txt</a> ·
+        <a href={`${postUrl(lang, slugOf(latest))}index.md`}>{L.eachPostMd}</a>
+      </div>
+    </aside>
+
+    <main class="board-wrap dotgrid" id="main">
+      <div class="board-tools">
+        <span class="hint">{L.boardHint}</span>
+        <button class="chip-btn" id="reset-board" type="button">{L.boardReset}</button>
+      </div>
+      <div class="board" id="board">
+        <section class="pin hero" id="hero" style={layout.hero}>
+          <h1>{B.hero.before}<span class="mark">{B.hero.mark}</span></h1>
+          <p>{B.hero.tagline}</p>
+          <div class="sub">{B.hero.sub}</div>
+        </section>
+
+        <svg class="pin doodle" style={layout.doodle} width="150" height="86" viewBox="0 0 150 86" aria-hidden="true">
+          <text x="2" y="20">{B.doodle}</text>
+          <path d="M20 32 C 50 44, 92 46, 128 74" fill="none" stroke="#d9452b" stroke-width="2.2" stroke-linecap="round"></path>
+          <path d="M114 76 L129 75 L124 61" fill="none" stroke="#d9452b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+
+        <figure class="pin sticky" id="sticky" data-drag style={layout.sticky}>
+          <blockquote><q>{B.sticky.quote}</q></blockquote>
+          <figcaption>{B.sticky.from} <a href={postUrl(lang, B.sticky.slug)}>{shortTitle(stickyPost)}</a></figcaption>
+        </figure>
+
+        <div class="pin terminal" id="term" data-drag style={layout.term}>
+          <div class="bar"><i></i><i></i><i></i><span>{B.terminal.title}</span></div>
+          <pre><span class="p">$</span> whoami
+<span class="o">{B.terminal.whoami}</span>
+
+<span class="p">$</span> ls posts/ | wc -l
+<span class="o">{posts.length}  # {B.terminal.countNote}</span>
+
+<span class="p">$</span> cat focus.md
+<span class="o">{B.terminal.focus.join("\n")}</span>
+
+<span class="p">$</span> open <a class="y" href={postUrl(lang, slugOf(latest))}>latest.md</a> <span class="cursor"></span></pre>
+        </div>
+
+        <article class="pin card feature" id="feature" data-drag style={layout.feature}>
+          <span class="tape"></span>
+          <div class="row">
+            <span class="tag red">{L.latest}</span>
+            {latest.data.series && <span class="tag">{latest.data.series} #{String(latest.data.seriesOrder ?? 1).padStart(2, "0")}</span>}
+          </div>
+          <h2><a href={postUrl(lang, slugOf(latest))}>{splitTitle(latest.data.title).main}</a></h2>
+          <p>{latest.data.description}</p>
+          <div class="foot">
+            <time datetime={ymd(latest.data.date)}>{ymd(latest.data.date)}</time>
+            <a class="go" href={postUrl(lang, slugOf(latest))}>{L.readMore}</a>
+          </div>
+        </article>
+
+        {
+          series.map((s, i) => (
+            <section class="pin card folder" id={`series-${i}`} data-drag style={layout[`series-${i}`]}>
+              <span class="tab">series/</span>
+              <div class="in">
+                <h3>
+                  <a href={url(lang, `/series/${s.slug}/`)}>{s.name}</a> <small>{L.postsCount(s.posts.length)}</small>
+                </h3>
+                <ol>
+                  {s.posts.map((p, n) => (
+                    <li>
+                      <a href={postUrl(lang, slugOf(p))}>
+                        <span class="n">{String(n + 1).padStart(2, "0")}</span>
+                        {shortTitle(p)}
+                      </a>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </section>
+          ))
+        }
+
+        <div class="pin sticker" id="robot" data-drag style={layout.robot} aria-hidden="true">🤖</div>
+
+        {
+          notes.map((n, i) => (
+            <article class="pin card memo" id={`note-${i}`} data-drag style={layout[`note-${i}`]}>
+              {i === 1 && <span class="tape blue" />}
+              <span class="kicker">
+                {n.label} · {md(n.post.data.date)}
+              </span>
+              <h3>
+                <a href={postUrl(lang, n.slug)}>{shortTitle(n.post)}</a>
+              </h3>
+              <p>{n.blurb}</p>
+            </article>
+          ))
+        }
+
+        <section class="pin card projects" id="projects" data-drag style={layout.projects}>
+          <h3 class="kicker"><a href={url(lang, "/projects/")}>{B.projectsLabel}</a></h3>
+          {
+            projects.map((p) => (
+              <a href={url(lang, `/projects/${slugOf(p)}/`)}>
+                <b>{splitTitle(p.data.title).main}</b>
+                <span>{p.data.description}</span>
+              </a>
+            ))
+          }
+        </section>
+
+        <section class="pin card stamps" id="stamps" data-drag style={layout.stamps} aria-label={B.stampsLabel}>
+          <span class="stamp-round">CKA</span><span class="stamp-round">CKS</span><span class="stamp-round">RHCE</span>
+        </section>
+
+        <div class="pin sticker" id="coffee" data-drag style={layout.coffee} aria-hidden="true">☕</div>
+      </div>
+    </main>
+  </div>
+</Base>
+
+<script>
+  import "../../scripts/board";
+</script>

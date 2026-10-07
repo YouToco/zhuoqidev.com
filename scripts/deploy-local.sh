@@ -4,14 +4,7 @@ set -euo pipefail
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$repo_root"
 
-hugo_version=0.161.1
-hugo_pkg=hugo_extended_${hugo_version}_darwin-universal.pkg
-hugo_url="https://github.com/gohugoio/hugo/releases/download/v${hugo_version}/${hugo_pkg}"
-hugo_sha256=ffa5333f0733b21a5c2501cf6fa8b6a99ef3f1953d047f5dc9b47f7cc35da768
-blowfish_version=2.105.0
-blowfish_sha=4afcd32b9950f16afbd686175b0f49a906d87626
 tool_root="$repo_root/.local-tools"
-hugo_bin="$tool_root/hugo-${hugo_version}/hugo"
 aliyun_profile=default
 oss_bucket=${OSS_BUCKET:-zhuoqidev}
 oss_endpoint=${OSS_ENDPOINT:-oss-cn-shenzhen.aliyuncs.com}
@@ -56,8 +49,19 @@ if [[ -z $mode ]]; then
   exit 2
 fi
 
-if [[ $(uname -s) != Darwin ]]; then
-  echo "local release currently supports macOS only" >&2
+# Build-time diagrams and social cards render in Google Chrome (see astro.config.ts).
+if [[ -z ${MERMAID_CHROME:-} && $(uname -s) == Darwin ]]; then
+  export MERMAID_CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+fi
+chrome=${MERMAID_CHROME:-/usr/bin/google-chrome}
+if [[ ! -x $chrome ]]; then
+  echo "Google Chrome is required at $chrome (set MERMAID_CHROME to override)" >&2
+  exit 1
+fi
+
+wanted_node=$(<.nvmrc)
+if [[ $(node --version 2>/dev/null) != "v$wanted_node" ]]; then
+  echo "Node.js v$wanted_node is required (see .nvmrc); found $(node --version 2>/dev/null || echo none)" >&2
   exit 1
 fi
 
@@ -79,42 +83,21 @@ if [[ $mode == deploy ]]; then
   fi
 fi
 
-mkdir -p "$tool_root/hugo-${hugo_version}" "$tool_root/downloads"
-
-if [[ ! -x $hugo_bin ]] || [[ $($hugo_bin version 2>/dev/null || true) != *"v${hugo_version}"* ]]; then
-  pkg_path="$tool_root/downloads/$hugo_pkg"
-  expanded_path="$tool_root/downloads/hugo-${hugo_version}-expanded"
-  curl --fail --location --silent --show-error -o "$pkg_path.tmp" "$hugo_url"
-  printf '%s  %s\n' "$hugo_sha256" "$pkg_path.tmp" | shasum -a 256 --check --status
-  mv "$pkg_path.tmp" "$pkg_path"
-  if [[ ! -f $expanded_path/Payload/hugo ]]; then
-    pkgutil --expand-full "$pkg_path" "$expanded_path"
-  fi
-  install -m 0755 "$expanded_path/Payload/hugo" "$hugo_bin"
-fi
-
-git submodule update --init --recursive --depth 1
-if [[ $(git -C themes/blowfish rev-parse HEAD) != "$blowfish_sha" ]]; then
-  echo "Blowfish must be pinned to v${blowfish_version} ($blowfish_sha)" >&2
-  exit 1
-fi
+mkdir -p "$tool_root"
+npm ci
 bash -n \
   scripts/install-aliyun.sh \
   scripts/renew-cert.sh \
   scripts/deploy-local.sh
 python3 -m unittest discover -s tests -p "test_*.py" -v
-
-"$hugo_bin" --minify --cleanDestinationDir
-test -s public/index.html
-test -s public/llms.txt
-test -s public/en/llms.txt
-grep -q "https://zhuoqidev.com/posts/" public/llms.txt
-grep -q "https://zhuoqidev.com/en/posts/" public/en/llms.txt
+npm run check
+npm run build
+npm run verify
 
 commit_sha=$(git rev-parse HEAD)
 built_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 printf '{"commit":"%s","built_at":"%s"}\n' "$commit_sha" "$built_at" \
-  > public/deploy-manifest.json
+  > dist/deploy-manifest.json
 
 if [[ $mode == build ]]; then
   echo "local build passed for $commit_sha"
@@ -122,11 +105,11 @@ if [[ $mode == build ]]; then
 fi
 
 command -v aliyun >/dev/null || {
-  echo "aliyun CLI is required; install it with: brew install aliyun-cli" >&2
+  echo "aliyun CLI 3.4.x is required (see scripts/install-aliyun.sh)" >&2
   exit 1
 }
 command -v wrangler >/dev/null || {
-  echo "Wrangler is required; install it with: brew install cloudflare-wrangler" >&2
+  echo "Wrangler is required: npm install --global wrangler" >&2
   exit 1
 }
 
@@ -141,9 +124,10 @@ aliyun oss ls "oss://${oss_bucket}/" \
 wrangler pages deployment list \
   --project-name "$cloudflare_project" >/dev/null
 
-aliyun oss sync public/ "oss://${oss_bucket}/" \
+aliyun oss sync dist/ "oss://${oss_bucket}/" \
   --endpoint "$oss_endpoint" \
   --region "$aliyun_region" \
+  --exclude "_headers" \
   --delete \
   --update \
   --force \
@@ -151,8 +135,23 @@ aliyun oss sync public/ "oss://${oss_bucket}/" \
   --output-dir "$tool_root/ossutil-output" \
   --checkpoint-dir "$tool_root/ossutil-checkpoint"
 
+# OSS omits the charset (and has no type for .md), so upload those files again with an explicit
+# type. cp needs only PutObject, the permission sync already uses; Cloudflare reads public/_headers.
+for rule in "*.md|text/markdown; charset=utf-8" "*.txt|text/plain; charset=utf-8" \
+  "*.webmanifest|application/manifest+json"; do
+  aliyun oss cp dist/ "oss://${oss_bucket}/" \
+    --include "${rule%%|*}" \
+    --meta "Content-Type:${rule#*|}" \
+    --endpoint "$oss_endpoint" \
+    --region "$aliyun_region" \
+    --recursive \
+    --force \
+    --disable-ignore-error \
+    --output-dir "$tool_root/ossutil-output"
+done
+
 commit_message=$(git log -1 --pretty=%s)
-wrangler pages deploy public/ \
+wrangler pages deploy dist/ \
   --project-name "$cloudflare_project" \
   --branch main \
   --commit-hash "$commit_sha" \
