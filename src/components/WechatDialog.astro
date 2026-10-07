@@ -1,0 +1,23 @@
+---
+// The WeChat card. Links marked data-wechat open it in place; without JS they still go to the image.
+import { type Lang, t } from "../i18n";
+import { social } from "../site";
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const T = t[lang];
+---
+
+<dialog class="wechat" id="wechat" aria-labelledby="wechat-title">
+  <form method="dialog" class="wechat-x">
+    <button type="submit" aria-label={T.close}>×</button>
+  </form>
+  <h2 id="wechat-title"><span aria-hidden="true">📮</span> {T.wechatTitle}</h2>
+  <div class="wechat-qr">
+    <img src={social.wechat} alt={T.wechatAlt} width="928" height="1380" loading="lazy" decoding="async" />
+  </div>
+  <p class="wechat-tip">{T.wechatTip}</p>
+  <p class="wechat-note"><span aria-hidden="true">⚠️</span> {T.wechatNote}</p>
+</dialog>

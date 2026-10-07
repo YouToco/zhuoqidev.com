@@ -128,8 +128,9 @@ a { color: inherit; }
   position: fixed; left: 50%; bottom: 18px; z-index: 50;
   transform: translateX(-50%);
   display: flex; gap: 4px; padding: 6px;
-  background: var(--card); border: 1px solid var(--line);
-  border-radius: 999px; box-shadow: var(--shadow);
+  background: color-mix(in srgb, var(--card) 82%, transparent); border: 1px solid var(--line);
+  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+  border-radius: 999px; box-shadow: 0 8px 32px rgba(28, 34, 48, .12);
 }
 .dock a {
   display: flex; align-items: baseline; gap: 6px;
@@ -148,12 +149,13 @@ a { color: inherit; }
   border-radius: 14px; box-shadow: var(--shadow);
 }
 .tape {
-  position: absolute; top: -11px; left: 50%;
-  width: 92px; height: 22px; transform: translateX(-50%) rotate(-3deg);
-  background: rgba(255, 224, 102, .72);
-  border-left: 2px dashed rgba(255, 255, 255, .6); border-right: 2px dashed rgba(255, 255, 255, .6);
+  --t: 255, 214, 61;
+  position: absolute; top: -9px; left: 50%;
+  width: 78px; height: 18px; transform: translateX(-50%) rotate(-3deg);
+  background: repeating-linear-gradient(90deg, rgba(var(--t), .9) 0 5px, rgba(var(--t), .45) 5px 10px);
+  border-radius: 1px;
 }
-.tape.blue { background: rgba(47, 91, 211, .22); }
+.tape.blue { --t: 47, 91, 211; opacity: .55; }
 .kicker {
   font: 500 11px/1 var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3);
 }
@@ -274,7 +276,11 @@ a { color: inherit; }
 .stamp-round:nth-child(2) { transform: rotate(6deg); }
 .stamp-round:nth-child(3) { transform: rotate(-3deg); }
 
-.sticker { font-size: 52px; line-height: 1; filter: drop-shadow(0 6px 8px rgba(28, 34, 48, .18)); }
+.sticker {
+  font-size: 52px; line-height: 1; filter: drop-shadow(0 6px 8px rgba(28, 34, 48, .18));
+  transition: scale .2s var(--ease), rotate .2s var(--ease), box-shadow .2s var(--ease);
+}
+.sticker:hover { scale: 1.12; rotate: -4deg; }
 .doodle { pointer-events: none; }
 .doodle text { font-family: var(--f-hand); font-size: 22px; fill: var(--seal); }
 
@@ -607,7 +613,69 @@ dialog.zoom {
   width: min(96vw, 1600px); max-width: none; max-height: 94vh; padding: 12px; overflow: auto;
   border: 1px solid var(--line); border-radius: 14px; background: var(--sheet); box-shadow: var(--shadow);
 }
-dialog.zoom::backdrop { background: rgba(10, 12, 16, .72); }
+dialog.zoom::backdrop { background: rgba(10, 12, 16, .66); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
 dialog.zoom form { position: sticky; top: 0; display: flex; justify-content: flex-end; margin-bottom: 8px; }
 dialog.zoom form .chip-btn { background: var(--sheet); color: #1c2230; border-color: #8b90a0; }
 dialog.zoom img { display: block; width: 100%; height: auto; }
+
+/* ---------- 手作细节：微信卡片 / 桌面星星 / 卡片入场 / 滚动条 / 回到顶部 ---------- */
+html { scrollbar-width: thin; scrollbar-color: var(--blue-line) transparent; }
+.index, .toc { scrollbar-width: thin; scrollbar-color: var(--blue-line) transparent; }
+
+dialog.wechat {
+  width: min(92vw, 352px); padding: 26px 24px 20px; overflow: visible;
+  border: 2px dashed var(--blue-line); border-radius: 18px;
+  background: var(--paper); color: var(--ink); text-align: center;
+  box-shadow: 0 16px 48px rgba(28, 34, 48, .18);
+}
+dialog.wechat[open] { animation: pop .22s var(--ease); }
+dialog.wechat::backdrop { background: rgba(28, 34, 48, .35); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+dialog.wechat h2 { margin: 0 0 16px; font: 400 30px/1.15 var(--f-hand-zh); color: var(--blue); }
+.wechat-qr { width: 216px; margin: 0 auto; padding: 8px; border: 2px dashed var(--blue-line); border-radius: 14px; background: #fff; transform: rotate(-1deg); }
+.wechat-qr img { display: block; width: 100%; height: auto; border-radius: 8px; }
+.wechat-tip { margin: 14px 0 10px; font-size: 13px; color: var(--ink-2); }
+.wechat-note {
+  margin: 0; padding: 9px 12px; border: 1.5px dashed var(--seal); border-radius: 10px;
+  background: var(--seal-soft); color: var(--seal); font-size: 13.5px; font-weight: 600; line-height: 1.6; text-wrap: balance;
+}
+.wechat-x { position: absolute; top: 8px; right: 10px; }
+.wechat-x button {
+  width: 30px; height: 30px; border: 1.5px dashed transparent; border-radius: 8px; background: none;
+  color: var(--ink-3); font: 400 20px/1 var(--f-sans); cursor: pointer;
+}
+.wechat-x button:hover { border-color: var(--ink-3); color: var(--ink); }
+@keyframes pop { from { opacity: 0; scale: .94; } }
+
+.click-star {
+  position: fixed; z-index: 70; pointer-events: none; translate: -50% -50%;
+  color: var(--yellow); -webkit-text-stroke: 1px #c99a00; line-height: 1;
+  animation: star-pop .7s ease-out forwards;
+}
+@keyframes star-pop {
+  0% { opacity: .95; transform: scale(0) rotate(0); }
+  30% { opacity: .9; transform: scale(1.2) rotate(10deg); }
+  60% { opacity: .75; transform: scale(1) rotate(-3deg); }
+  100% { opacity: 0; transform: scale(.8) rotate(0); }
+}
+
+/* Cards land on the desk one after another (the headline stays put: it is the largest paint).
+   `translate` composes with each card's own rotate. */
+@media (min-width: 1001px) {
+  .board > .pin:not(#hero) { animation: pin-in .5s var(--ease) both; }
+  .board > .pin:nth-child(2) { animation-delay: .04s; } .board > .pin:nth-child(3) { animation-delay: .08s; }
+  .board > .pin:nth-child(4) { animation-delay: .12s; } .board > .pin:nth-child(5) { animation-delay: .16s; }
+  .board > .pin:nth-child(6) { animation-delay: .2s; } .board > .pin:nth-child(7) { animation-delay: .24s; }
+  .board > .pin:nth-child(8) { animation-delay: .28s; } .board > .pin:nth-child(9) { animation-delay: .32s; }
+  .board > .pin:nth-child(10) { animation-delay: .36s; } .board > .pin:nth-child(11) { animation-delay: .4s; }
+  .board > .pin:nth-child(12) { animation-delay: .44s; } .board > .pin:nth-child(n + 13) { animation-delay: .48s; }
+}
+@keyframes pin-in { from { opacity: 0; translate: 0 16px; } }
+
+.back-top {
+  display: inline-flex; flex-direction: column; align-items: center; gap: 4px; margin-bottom: 18px;
+  color: var(--ink-3); letter-spacing: .14em; text-decoration: none;
+}
+.site-footer a.back-top { color: var(--ink-3); }
+.site-footer a.back-top:hover { color: var(--ink); }
+.back-top span { font-size: 18px; animation: float-up 2s ease-in-out infinite; }
+@keyframes float-up { 0%, 100% { opacity: .5; translate: 0 0; } 50% { opacity: 1; translate: 0 -6px; } }

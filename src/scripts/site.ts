@@ -39,3 +39,21 @@ addEventListener("keydown", (e) => {
     location.href = searchLink.href;
   }
 });
+
+// WeChat card: open in place instead of leaving for the bare image; a click on the backdrop closes it.
+const wechat = document.querySelector<HTMLDialogElement>("#wechat");
+if (wechat) {
+  for (const link of document.querySelectorAll<HTMLAnchorElement>("a[data-wechat]")) {
+    link.addEventListener("click", (e) => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+      e.preventDefault();
+      wechat.showModal();
+    });
+  }
+  wechat.addEventListener("click", (e) => {
+    // The dialog's own padding is also e.target === wechat, so close only outside its box.
+    const r = wechat.getBoundingClientRect();
+    const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+    if (e.target === wechat && !inside) wechat.close();
+  });
+}

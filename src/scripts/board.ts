@@ -57,6 +57,21 @@ if (board) {
     });
   }
 
+  // A click on the bare desk leaves a little star behind.
+  const still = window.matchMedia("(prefers-reduced-motion: reduce)");
+  board.parentElement?.addEventListener("click", (e) => {
+    if (still.matches || (e.target as Element).closest(".pin, a, button")) return;
+    const star = document.createElement("span");
+    star.className = "click-star";
+    star.textContent = "✦";
+    star.setAttribute("aria-hidden", "true");
+    star.style.left = `${e.clientX}px`;
+    star.style.top = `${e.clientY}px`;
+    star.style.fontSize = `${14 + Math.random() * 12}px`;
+    document.body.append(star);
+    star.addEventListener("animationend", () => star.remove(), { once: true });
+  });
+
   document.getElementById("reset-board")?.addEventListener("click", () => {
     store.del(KEY);
     location.reload();
