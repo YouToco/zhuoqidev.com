@@ -1,5 +1,7 @@
-// Site-wide enhancements: day/night toggle and the "/" search shortcut. Both are optional.
+// Site-wide enhancements: day/night toggle, the "/" search shortcut, the WeChat card and the
+// goodbye terminal. All optional: without JavaScript every page still reads and links work.
 import { store } from "./store";
+import { cue } from "./typing";
 
 const root = document.documentElement;
 const systemDark = matchMedia("(prefers-color-scheme: dark)");
@@ -56,4 +58,29 @@ if (wechat) {
     const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
     if (e.target === wechat && !inside) wechat.close();
   });
+}
+
+// The goodbye terminal at the bottom of every page plays its session the first time it scrolls
+// into view. Pages short enough to show it on arrival keep it still, as does reduced motion.
+const bye = document.querySelector<HTMLElement>("[data-bye]");
+if (
+  bye &&
+  "IntersectionObserver" in window &&
+  !matchMedia("(prefers-reduced-motion: reduce)").matches &&
+  bye.getBoundingClientRect().top > innerHeight
+) {
+  cue(bye);
+  bye.classList.add("armed");
+  const play = () => {
+    bye.classList.add("play");
+    io.disconnect();
+  };
+  const io = new IntersectionObserver(
+    (entries) => {
+      if (entries.some((e) => e.isIntersecting)) play();
+    },
+    { threshold: 0.3 },
+  );
+  io.observe(bye);
+  bye.addEventListener("focusin", play, { once: true });
 }
