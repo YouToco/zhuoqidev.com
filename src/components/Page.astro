@@ -19,7 +19,7 @@ const { main, sub } = splitTitle(title);
   <article class="paper card" id="main" data-pagefind-body={searchable ? "" : undefined}>
     <div class="crumb" data-pagefind-ignore>{crumb}</div>
     {date && <div class="meta-row"><span class="m"><time datetime={ymd(date)}>{ymd(date)}</time></span></div>}
-    <h1 class="post-title">
+    <h1 class="post-title" data-vt>
       {main}
       {
         sub && (

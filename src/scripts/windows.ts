@@ -118,11 +118,20 @@ function open(icon: HTMLAnchorElement) {
   w.addEventListener("pointerdown", () => front(w));
   w.addEventListener("keydown", keys);
   w.querySelector(".l-close")!.addEventListener("click", close);
-  w.querySelector(".l-shade")!.addEventListener("click", () => w.classList.toggle("shaded"));
-  w.querySelector(".l-zoom")!.addEventListener("click", () => {
-    w.classList.remove("shaded");
-    w.classList.toggle("max");
-  });
+  // Rolling up and zooming spring between sizes (.win.morph); dragging stays direct.
+  const morph = (change: () => void) => {
+    w.classList.add("morph");
+    change();
+    clearTimeout(Number(w.dataset.morph));
+    w.dataset.morph = String(setTimeout(() => w.classList.remove("morph"), 600));
+  };
+  w.querySelector(".l-shade")!.addEventListener("click", () => morph(() => w.classList.toggle("shaded")));
+  w.querySelector(".l-zoom")!.addEventListener("click", () =>
+    morph(() => {
+      w.classList.remove("shaded");
+      w.classList.toggle("max");
+    }),
+  );
 
   const bar = w.querySelector<HTMLElement>(".win-bar")!;
   bar.addEventListener("pointerdown", (e) => {
@@ -136,7 +145,7 @@ function open(icon: HTMLAnchorElement) {
     });
   });
   bar.addEventListener("dblclick", (e) => {
-    if (!(e.target as Element).closest("button, a")) w.classList.toggle("max");
+    if (!(e.target as Element).closest("button, a")) morph(() => w.classList.toggle("max"));
   });
 
   w.querySelector<HTMLElement>(".win-grip")!.addEventListener("pointerdown", (e) => {

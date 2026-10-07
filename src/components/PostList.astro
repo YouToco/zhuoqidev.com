@@ -31,7 +31,7 @@ const groups = byYear
               <time class="d" datetime={ymd(p.data.date)}>{ymd(p.data.date)}</time>
               <div>
                 <H>
-                  <a href={postUrl(lang, slugOf(p))} class="stretch">{shortTitle(p)}</a>
+                  <a href={postUrl(lang, slugOf(p))} class="stretch" data-vt>{shortTitle(p)}</a>
                 </H>
                 <p>{p.data.description}</p>
                 <div class="tags">

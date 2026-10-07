@@ -31,7 +31,7 @@ const intro =
                 {p.data.date ? <time class="d" datetime={ymd(p.data.date)}>{ymd(p.data.date)}</time> : <span />}
                 <div>
                   <h2>
-                    <a href={url(lang, `/projects/${slugOf(p)}/`)} class="stretch">{main}</a>
+                    <a href={url(lang, `/projects/${slugOf(p)}/`)} class="stretch" data-vt>{main}</a>
                   </h2>
                   {sub && <p class="sub">{sub}</p>}
                   <p>{p.data.description}</p>

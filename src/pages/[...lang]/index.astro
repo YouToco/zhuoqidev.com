@@ -84,7 +84,7 @@ const jsonLd = {
                 .filter((p) => p.data.date.getUTCFullYear() === y)
                 .map((p) => (
                   <li>
-                    <a class:list={{ on: p === latest }} href={postUrl(lang, slugOf(p))}>
+                    <a class:list={{ on: p === latest }} href={postUrl(lang, slugOf(p))} data-vt>
                       <span class="dot" />
                       <span class="d">{md(p.data.date)}</span>
                       <span>{shortTitle(p)}</span>
@@ -148,7 +148,7 @@ const jsonLd = {
             <span class="tag red">{L.latest}</span>
             {latest.data.series && <span class="tag">{latest.data.series} #{String(latest.data.seriesOrder ?? 1).padStart(2, "0")}</span>}
           </div>
-          <h2><a href={postUrl(lang, slugOf(latest))}>{splitTitle(latest.data.title).main}</a></h2>
+          <h2><a href={postUrl(lang, slugOf(latest))} data-vt>{splitTitle(latest.data.title).main}</a></h2>
           <p>{latest.data.description}</p>
           <div class="foot">
             <time datetime={ymd(latest.data.date)}>{ymd(latest.data.date)}</time>
@@ -167,7 +167,7 @@ const jsonLd = {
                 <ol>
                   {s.posts.map((p, n) => (
                     <li>
-                      <a href={postUrl(lang, slugOf(p))}>
+                      <a href={postUrl(lang, slugOf(p))} data-vt>
                         <span class="n">{String(n + 1).padStart(2, "0")}</span>
                         {shortTitle(p)}
                       </a>
@@ -190,7 +190,7 @@ const jsonLd = {
                 {n.label} · {md(n.post.data.date)}
               </span>
               <h3>
-                <a href={postUrl(lang, n.slug)}>{shortTitle(n.post)}</a>
+                <a href={postUrl(lang, n.slug)} data-vt>{shortTitle(n.post)}</a>
               </h3>
               <p>{n.blurb}</p>
             </article>
@@ -202,7 +202,7 @@ const jsonLd = {
           {
             projects.map((p) => (
               <a href={url(lang, `/projects/${slugOf(p)}/`)}>
-                <b>{splitTitle(p.data.title).main}</b>
+                <b data-vt>{splitTitle(p.data.title).main}</b>
                 <span>{p.data.description}</span>
               </a>
             ))
