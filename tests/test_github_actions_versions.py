@@ -33,12 +33,14 @@ class GitHubActionsVersionTests(unittest.TestCase):
         self.assertTrue(refs)
         self.assertEqual({(SETUP_NODE_SHA, SETUP_NODE_TAG)}, set(refs))
 
-    def test_site_build_runners_are_pinned(self) -> None:
-        # The build lays out CJK text in the runner's Chrome; a floating image could change it.
-        for name in ("ci.yml", "deploy.yml"):
-            text = (WORKFLOWS / name).read_text(encoding="utf-8")
-            with self.subTest(workflow=name):
+    def test_runners_are_pinned(self) -> None:
+        # A floating image changes tools under us; the build also lays out CJK text in the
+        # runner's Chrome.
+        for path in sorted(WORKFLOWS.glob("*.y*ml")):
+            text = path.read_text(encoding="utf-8")
+            with self.subTest(workflow=path.name):
                 self.assertRegex(text, r"runs-on: ubuntu-\d+\.\d+\n")
+                self.assertNotIn("ubuntu-latest", text)
 
     def test_site_workflows_build_with_cjk_fonts_and_verify(self) -> None:
         for name in ("ci.yml", "deploy.yml"):

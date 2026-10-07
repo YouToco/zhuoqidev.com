@@ -7,7 +7,7 @@ The repository renews the domestic Alibaba Cloud CDN certificate for
 ## Behavior
 
 - Runs every Monday at 03:17 UTC and can also be started manually.
-- Runs on the GitHub-hosted `ubuntu-latest` runner.
+- Runs on the GitHub-hosted `ubuntu-26.04` runner, pinned like the build workflows.
 - Reads the certificate currently bound to both CDN domains.
 - Exits without mutation when both certificates have more than 30 days left.
 - Otherwise issues one Let's Encrypt ECC certificate containing both DNS names
