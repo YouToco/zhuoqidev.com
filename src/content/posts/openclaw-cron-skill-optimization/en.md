@@ -102,15 +102,18 @@ Worse, these search operations produced massive `tool_result` payloads — every
 
 This is a textbook **context bloat feedback loop**:
 
-```
-SKILL.md missing path
-    → Agent searches for tool location (15 exec calls)
-    → Search results fill context (+900KB)
-    → Triggers compaction (takes time + may lose info)
-    → Compaction discards the path Agent just found
-    → Agent searches again (another 15 exec calls)
-    → Context bloats again
-    → Timeout
+```mermaid
+flowchart TD
+    A["SKILL.md missing path"] --> B["Agent searches for tool location<br>15 exec calls"]
+    B --> C["Search results fill context<br>+900KB"]
+    C --> D["Triggers compaction<br>takes time + may lose info"]
+    D --> E["Compaction discards the path Agent just found"]
+    E -->|"searches again (another 15 exec calls)"| B
+    E -->|"context bloats again"| F["Timeout"]
+    classDef cause fill:#fff3bf,stroke:#f08c00
+    classDef bad fill:#ffe3e3,stroke:#e03131
+    class A cause
+    class F bad
 ```
 
 That's right — **compaction discarded exactly the tool path the Agent had painstakingly discovered**, so the next round started the search from scratch. This is where 165 messages came from: the Agent went through 2-3 complete cycles of "search → find → get compacted → search again."

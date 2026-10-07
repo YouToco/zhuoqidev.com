@@ -282,27 +282,31 @@ L3 分布式 / 分离层    —— 一个机房跑一个大模型，架构比引
 
 把上面所有东西压缩成一棵树：
 
+```mermaid
+flowchart LR
+    %% layout: tree
+    Q(["你要在哪一层？"])
+    Q --> L1["本地 / 单机 / 隐私 / 原型"]
+    Q --> L2["高性能线上服务<br>一个服务撑多用户"]
+    Q --> L3["机房级<br>一个大模型吃满整个集群"]
+    L1 --> C1["就想一键跑起来、日常用"] --> E1["Ollama"]
+    L1 --> C2["要抠 CPU / 端侧 / 极致量化"] --> E2["llama.cpp"]
+    L1 --> C3["几行代码验证个模型"] --> E3["HF transformers.pipeline"]
+    L1 --> C4["显存不够但要跑满血 671B MoE"] --> E4["KTransformers"]
+    L2 --> C5["拿不准 / 要模型覆盖最广"] --> E5["vLLM（默认选它）"]
+    L2 --> C6["大规模 MoE / DeepSeek / 多轮前缀重"] --> E6["SGLang"]
+    L2 --> C7["纯 NVIDIA 卡 + 要极致性能 + 企业级"] --> E7["TensorRT-LLM"]
+    L2 --> C8["国产模型 + 强 KV 量化 / 低延迟"] --> E8["LMDeploy"]
+    L3 --> C9["别只盯引擎，先上编排层"] --> E9["NVIDIA Dynamo<br>PD 分离 + Mooncake KV 池 + EP<br>后端仍是 vLLM / SGLang / TRT-LLM"]
+    classDef q fill:#fff3bf,stroke:#f08c00
+    classDef tier fill:#d0ebff,stroke:#1971c2
+    classDef engine fill:#d3f9d8,stroke:#2f9e44
+    class Q q
+    class L1,L2,L3 tier
+    class E1,E2,E3,E4,E5,E6,E7,E8,E9 engine
 ```
-你要在哪一层？
-│
-├── 本地 / 单机 / 隐私 / 原型
-│   ├── 就想一键跑起来、日常用 ─────────► Ollama
-│   ├── 要抠 CPU / 端侧 / 极致量化 ──────► llama.cpp
-│   ├── 几行代码验证个模型 ────────────► HF transformers.pipeline
-│   └── 显存不够但要跑满血 671B MoE ───► KTransformers
-│
-├── 高性能线上服务（一个服务撑多用户）
-│   ├── 拿不准 / 要模型覆盖最广 ───────► vLLM（默认选它）
-│   ├── 大规模 MoE / DeepSeek / 多轮前缀重 ► SGLang
-│   ├── 纯 NVIDIA 卡 + 要极致性能 + 企业级 ► TensorRT-LLM
-│   └── 国产模型 + 强 KV 量化 / 低延迟 ──► LMDeploy
-│
-└── 机房级 / 一个大模型吃满整个集群
-    └── 别只盯引擎，先上编排层 ─────────► NVIDIA Dynamo
-        （PD 分离 + Mooncake KV 池 + EP，后端仍是 vLLM/SGLang/TRT-LLM）
 
 ⚠️ 还在考虑上 TGI 生产？—— 别了，官方已维护模式，改道 vLLM/SGLang。
-```
 
 ---
 

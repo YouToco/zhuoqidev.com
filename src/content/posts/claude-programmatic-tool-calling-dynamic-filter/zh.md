@@ -47,12 +47,16 @@ Michael Ridland 在 [Team 400 博客](https://team400.ai/blog/2026-03-claude-pro
 
 而 Programmatic Tool Calling 的范式转移在于：**Claude 不再一个一个地请求工具并等待结果回到上下文，而是写一段 Python 代码来编排所有工具调用，只把最终 `stdout` 注入到上下文窗口。**
 
-```
-传统方式: Prompt → Claude → Tool 1 → Result 1 → Claude → Tool 2 → Result 2 → Claude → Answer
-           (3 个工具 = 3 次推理、3 份中间结果全量入上下文)
-
-PTC 方式:  Prompt → Claude → 写 Python → 代码调用 Tool 1, 2, 3 → stdout → Claude → Answer
-           (3 个工具 = 1 次推理、仅最终输出入上下文)
+```mermaid
+flowchart TB
+    T["传统方式<br>3 个工具 = 3 次推理<br>3 份中间结果全量入上下文"] --> t0["Prompt"] --> t1["Claude"] --> t2["Tool 1"] --> t3["Result 1"] --> t4["Claude"] --> t5["Tool 2"] --> t6["Result 2"] --> t7["Claude"] --> t8["Answer"]
+    P["PTC 方式<br>3 个工具 = 1 次推理<br>仅最终输出入上下文"] --> p0["Prompt"] --> p1["Claude"] --> p2["写 Python"] --> p3["代码调用 Tool 1, 2, 3"] --> p4["stdout"] --> p5["Claude"] --> p6["Answer"]
+    classDef head fill:#fff3bf,stroke:#f08c00
+    classDef ctx fill:#ffe3e3,stroke:#e03131
+    classDef out fill:#d3f9d8,stroke:#2f9e44
+    class T,P head
+    class t3,t6 ctx
+    class p4 out
 ```
 
 这个概念看似简单，但它的含义深远——**它把编排逻辑从模型的"推理链"转移到了"代码执行环境"中。** 循环、条件判断、数据处理、错误处理都变成了显式的代码而非隐式的模型推理。Claude Lab 的 Masaki Hirokawa 在[生产实践指南](https://claudelab.net/en/articles/api-sdk/claude-api-programmatic-tool-calling-production-guide)中总结道：
@@ -227,10 +231,15 @@ Anthropic 在[官方博客](https://claude.com/blog/improved-web-search-with-dyn
 
 Dynamic Filtering 本质上是 PTC 理念在 Web Search 场景的原生实现——让 Claude 写 Python 代码预处理搜索结果：
 
-```
-传统: Query → Search API → 10 个原始 HTML → 全部进入上下文 → Claude 推理
-
-Dynamic Filtering: Query → Search API → 10 个原始 HTML → Claude 写代码提取关键信息 → 过滤后摘要进入上下文 → Claude 推理
+```mermaid
+flowchart TB
+    Q["Query"] --> S["Search API"] --> H["10 个原始 HTML"]
+    H -->|"传统"| A1["全部进入上下文"] --> A2["Claude 推理"]
+    H -->|"Dynamic Filtering"| B1["Claude 写代码提取关键信息"] --> B2["过滤后摘要进入上下文"] --> B3["Claude 推理"]
+    classDef ctx fill:#ffe3e3,stroke:#e03131
+    classDef out fill:#d3f9d8,stroke:#2f9e44
+    class A1 ctx
+    class B2 out
 ```
 
 ### 基准测试数据

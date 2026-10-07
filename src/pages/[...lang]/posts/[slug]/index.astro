@@ -245,8 +245,14 @@ const jsonLd = {
     <>
       <script type="application/json" id="zoom-map" set:html={JSON.stringify(zoom)} />
       <dialog class="zoom" aria-label={L.zoomOpen}>
-        <form method="dialog"><button class="chip-btn" type="submit">{L.zoomClose} ✕</button></form>
-        <img alt="" decoding="async" />
+        <div class="zoom-bar">
+          <span class="zoom-hint">{L.zoomHint}</span>
+          <button class="chip-btn" type="button" data-zoom="out" aria-label={L.zoomOut}>−</button>
+          <button class="chip-btn zoom-level" type="button" data-zoom="fit" data-fit={L.zoomFit}>{L.zoomFit}</button>
+          <button class="chip-btn" type="button" data-zoom="in" aria-label={L.zoomIn}>+</button>
+          <form method="dialog"><button class="chip-btn" type="submit" autofocus>{L.zoomClose} ✕</button></form>
+        </div>
+        <div class="zoom-stage"><img alt="" decoding="async" draggable="false" /></div>
       </dialog>
     </>
   )

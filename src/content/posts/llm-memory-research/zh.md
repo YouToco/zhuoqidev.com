@@ -582,19 +582,14 @@ MemoryOS 适合当可读、可改的实验基线；不要把论文参考实现�
 
 ### 1. 原始事件与派生记忆分开
 
-```text
-event_log（不可变、可审计）
-  ├─ conversation
-  ├─ tool_result
-  ├─ user_correction
-  └─ environment_observation
-
-derived_memory（可更新、可失效）
-  ├─ profile_fact
-  ├─ episodic_summary
-  ├─ entity_relation
-  ├─ procedure
-  └─ policy
+```mermaid
+flowchart LR
+    EL["event_log<br>不可变、可审计"] --> e1["conversation"] & e2["tool_result"] & e3["user_correction"] & e4["environment_observation"]
+    DM["derived_memory<br>可更新、可失效"] --> d1["profile_fact"] & d2["episodic_summary"] & d3["entity_relation"] & d4["procedure"] & d5["policy"]
+    classDef raw fill:#d0ebff,stroke:#1971c2
+    classDef derived fill:#e5dbff,stroke:#6741d9
+    class EL raw
+    class DM derived
 ```
 
 任何派生记忆都保存 `source_event_ids`。删除源数据时，系统才知道哪些摘要、embedding 和图边需要重建或撤销。
@@ -650,14 +645,11 @@ access_scope:
 
 一个稳健读取链路通常是：
 
-```text
-query
-  → scope / ACL filter
-  → exact + BM25 + vector + graph candidates
-  → recency / importance / validity rerank
-  → contradiction check
-  → token budget packing
-  → provenance-preserving context
+```mermaid
+flowchart TD
+    A["query"] --> B["scope / ACL filter"] --> C["exact + BM25 + vector + graph candidates"] --> D["recency / importance / validity rerank"] --> E["contradiction check"] --> F["token budget packing"] --> G["provenance-preserving context"]
+    classDef out fill:#d3f9d8,stroke:#2f9e44
+    class G out
 ```
 
 「相似」只是其中一个信号。

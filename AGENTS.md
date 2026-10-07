@@ -79,7 +79,10 @@
   SVG); `-- --force` redraws everything from Mermaid and discards such edits. The
   generator lives in `tools/diagrams/` with its own dependencies (installed on
   first run, never in CI); mermaid-to-excalidraw cannot draw mindmaps, so
-  `tools/diagrams/mindmap.js` lays those out itself.
+  `tools/diagrams/mindmap.js` lays those out itself, and a flowchart with a
+  `%% layout: tree` line is drawn as an indented outline by
+  `tools/diagrams/tree.js` (for decision trees, which Mermaid's columns make
+  too wide). Draw diagrams as Mermaid, not as ASCII art in a code block.
 - After changing a remark/rehype plugin or Markdown config, delete
   `node_modules/.astro/data-store.json`; the content layer otherwise reuses the
   previously rendered HTML.

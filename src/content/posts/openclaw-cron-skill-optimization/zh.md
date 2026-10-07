@@ -102,15 +102,18 @@ ls /home/openclaw/workspace/.venv*/
 
 这是一个经典的**上下文膨胀恶性循环**：
 
-```
-SKILL.md 缺路径
-    → Agent 搜索工具位置（15 次 exec）
-    → 搜索结果塞满上下文（+900KB）
-    → 触发 compaction（压缩耗时 + 可能丢信息）
-    → 压缩后 Agent 忘记之前搜到的路径
-    → 再搜一遍（又 15 次 exec）
-    → 上下文再次膨胀
-    → 超时
+```mermaid
+flowchart TD
+    A["SKILL.md 缺路径"] --> B["Agent 搜索工具位置<br>15 次 exec"]
+    B --> C["搜索结果塞满上下文<br>+900KB"]
+    C --> D["触发 compaction<br>压缩耗时 + 可能丢信息"]
+    D --> E["压缩后 Agent 忘记之前搜到的路径"]
+    E -->|"再搜一遍（又 15 次 exec）"| B
+    E -->|"上下文再次膨胀"| F["超时"]
+    classDef cause fill:#fff3bf,stroke:#f08c00
+    classDef bad fill:#ffe3e3,stroke:#e03131
+    class A cause
+    class F bad
 ```
 
 没错——**compaction 压缩掉的恰恰是 Agent 好不容易搜到的工具路径**，于是下一轮它又从头搜。这就是 165 条消息的来源：Agent 至少做了 2-3 轮完整的"搜索 → 找到 → 被压缩 → 再搜"循环。

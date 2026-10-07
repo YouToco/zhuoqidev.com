@@ -124,20 +124,17 @@ Cursor 1.2 给 Memories 加 user approval、Devin Knowledge 默认走 suggestion
 
 ## 实战决策树
 
-```
-你的知识数据有多大？
-├── <10 个 Markdown 文件，总计 <200 行
-│   └── 纯文本上下文（CLAUDE.md / Cursor Rules）
-│       优势：零延迟、可 git、零噪音
-│
-├── 10–100 篇文档，有清晰结构
-│   └── LLM Wiki（Claude Projects / GPTs Knowledge）
-│       优势：结构化导航、按需加载、人工可审核
-│
-└── >100 篇文档，或需要语义搜索
-    └── RAG（Mem0 / Zep / 自建向量库）
-        前提：你已经验证过"全量塞 prompt"真的塞不下
-        提醒：RAG 的维护成本是另外两种方案的 10 倍
+```mermaid
+flowchart LR
+    %% layout: tree
+    Q(["你的知识数据有多大？"])
+    Q --> A["<10 个 Markdown 文件<br>总计 <200 行"] --> A1["纯文本上下文<br>CLAUDE.md / Cursor Rules<br>优势：零延迟、可 git、零噪音"]
+    Q --> B["10–100 篇文档<br>有清晰结构"] --> B1["LLM Wiki<br>Claude Projects / GPTs Knowledge<br>优势：结构化导航、按需加载、人工可审核"]
+    Q --> C[">100 篇文档<br>或需要语义搜索"] --> C1["RAG<br>Mem0 / Zep / 自建向量库<br>前提：你已经验证过“全量塞 prompt”真的塞不下<br>提醒：RAG 的维护成本是另外两种方案的 10 倍"]
+    classDef q fill:#fff3bf,stroke:#f08c00
+    classDef pick fill:#d3f9d8,stroke:#2f9e44
+    class Q q
+    class A1,B1,C1 pick
 ```
 
 ---

@@ -86,6 +86,10 @@ export const t = {
     themeLight: "开灯",
     zoomOpen: "点开看大图",
     zoomClose: "关闭",
+    zoomIn: "放大",
+    zoomOut: "缩小",
+    zoomFit: "适应窗口",
+    zoomHint: "滚轮或双指缩放 · 拖动平移 · 双击切换",
     guestbook: "留言板",
     gb: {
       description: "给卓琪贴张便签：读后感、想看的题目、发现的错别字，或者就打个招呼。",
@@ -190,6 +194,10 @@ export const t = {
     themeLight: "Lights on",
     zoomOpen: "Open full-size image",
     zoomClose: "Close",
+    zoomIn: "Zoom in",
+    zoomOut: "Zoom out",
+    zoomFit: "Fit",
+    zoomHint: "Scroll or pinch to zoom · drag to pan · double-click to toggle",
     guestbook: "Guestbook",
     gb: {
       description: "Leave Liu ZhuoQi a sticky note: thoughts on a post, a topic you'd like to read, a typo you spotted, or just hi.",
