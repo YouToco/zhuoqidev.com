@@ -9,12 +9,14 @@ const { lang } = Astro.props;
 ---
 
 <footer class="site-footer">
+  <a class="back-top" href="#"><span aria-hidden="true">↑</span>{t[lang].backToTop}</a>
   <div class="links">
     <span>© 2026 {site[lang].author}</span>
     <a href={url(lang, "/index.xml")}>RSS</a>
     <a href={url(lang, "/llms.txt")}>llms.txt</a>
     <a href="/sitemap.xml">Sitemap</a>
     <a href={social.github}>GitHub</a>
+    <a href={social.wechat} data-wechat>{t[lang].wechat}</a>
     <a href={url(lang, "/privacy/")}>{t[lang].privacy}</a>
     <span>{t[lang].builtWith}</span>
   </div>
