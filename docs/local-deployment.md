@@ -15,8 +15,8 @@ from a workstation when GitHub Actions is unavailable.
    screenshots build-time card pages in Chrome), Pagefind search index.
 3. `npm run verify`: legacy URLs, links, anchors, hreflang, JSON-LD, images,
    Markdown twins, search index.
-4. `aliyun oss sync dist/ oss://zhuoqidev/ --delete`, then `aliyun oss set-meta`
-   adds the UTF-8 charset to `*.md` and `*.txt` (OSS omits it, which turns
+4. `aliyun oss sync dist/ oss://zhuoqidev/ --delete`, then `aliyun oss cp --meta`
+   re-uploads `*.md` and `*.txt` with a UTF-8 charset (OSS omits it, which turns
    Chinese text into mojibake in browsers). Cloudflare gets the same types from
    `public/_headers`.
 5. `wrangler pages deploy dist/`, Alibaba Cloud CDN directory refresh, and
@@ -30,7 +30,7 @@ from a workstation when GitHub Actions is unavailable.
   (`MERMAID_CHROME` overrides the path; macOS is detected automatically) and CJK
   fonts (`fonts-noto-cjk` on Linux).
 - Alibaba Cloud CLI 3.4.x with an authenticated `default` profile for OSS sync,
-  `set-meta`, CDN refresh and STS identity checks. The OSS plugin bundled with
+  `cp`, CDN refresh and STS identity checks. The OSS plugin bundled with
   the 3.4 series does not accept the global `--profile` flag on OSS commands.
 - Wrangler authenticated through `CLOUDFLARE_API_TOKEN` and
   `CLOUDFLARE_ACCOUNT_ID`, with access to the `zhuoqidev` Pages project.

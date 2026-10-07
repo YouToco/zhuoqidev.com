@@ -95,13 +95,14 @@ jobs:
       # so Chinese llms.txt and per-post index.md would render as mojibake in browsers.
       - name: Set text content types on Aliyun OSS
         run: |
+          # OSS omits the charset (and has no type for .md), so upload those files again with an
+          # explicit type. cp needs only PutObject, the permission sync already uses.
           set_type() {
-            "$RUNNER_TEMP/aliyun-3.4.10/aliyun" oss set-meta oss://zhuoqidev/ \
-              "Content-Type:$2" \
+            "$RUNNER_TEMP/aliyun-3.4.10/aliyun" oss cp dist/ oss://zhuoqidev/ \
               --include "$1" \
+              --meta "Content-Type:$2" \
               --endpoint oss-cn-shenzhen.aliyuncs.com \
               --region cn-shenzhen \
-              --update \
               --recursive \
               --force \
               --disable-ignore-error

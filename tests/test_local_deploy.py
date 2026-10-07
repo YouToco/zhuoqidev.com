@@ -85,7 +85,8 @@ class LocalDeployTests(unittest.TestCase):
         script = self.script()
         headers = HEADERS.read_text(encoding="utf-8")
 
-        self.assertIn("aliyun oss set-meta", script)
+        self.assertIn('aliyun oss cp dist/ "oss://${oss_bucket}/"', script)
+        self.assertIn('--meta "Content-Type:${rule#*|}"', script)
         self.assertIn('"*.md|text/markdown; charset=utf-8"', script)
         self.assertIn('"*.txt|text/plain; charset=utf-8"', script)
         self.assertIn("/*.md\n  Content-Type: text/markdown; charset=utf-8", headers)

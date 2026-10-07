@@ -135,17 +135,19 @@ aliyun oss sync dist/ "oss://${oss_bucket}/" \
   --output-dir "$tool_root/ossutil-output" \
   --checkpoint-dir "$tool_root/ossutil-checkpoint"
 
-# OSS omits the charset (and has no type for .md); Cloudflare reads public/_headers instead.
+# OSS omits the charset (and has no type for .md), so upload those files again with an explicit
+# type. cp needs only PutObject, the permission sync already uses; Cloudflare reads public/_headers.
 for rule in "*.md|text/markdown; charset=utf-8" "*.txt|text/plain; charset=utf-8" \
   "*.webmanifest|application/manifest+json"; do
-  aliyun oss set-meta "oss://${oss_bucket}/" "Content-Type:${rule#*|}" \
+  aliyun oss cp dist/ "oss://${oss_bucket}/" \
     --include "${rule%%|*}" \
+    --meta "Content-Type:${rule#*|}" \
     --endpoint "$oss_endpoint" \
     --region "$aliyun_region" \
-    --update \
     --recursive \
     --force \
-    --disable-ignore-error
+    --disable-ignore-error \
+    --output-dir "$tool_root/ossutil-output"
 done
 
 commit_message=$(git log -1 --pretty=%s)
