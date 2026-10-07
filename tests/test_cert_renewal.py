@@ -30,7 +30,7 @@ class CertificateWorkflowTests(unittest.TestCase):
         self.assertRegex(workflow, r"permissions:\n  contents: read\n")
         self.assertIn("group: zhuoqidev-certificate-renewal", workflow)
         self.assertIn("cancel-in-progress: false", workflow)
-        self.assertIn("runs-on: ubuntu-latest", workflow)
+        self.assertIn("runs-on: ubuntu-26.04", workflow)
         self.assertIn("environment: production-certificate", workflow)
 
     def test_workflow_pins_checkout_and_uses_only_secrets(self) -> None:
