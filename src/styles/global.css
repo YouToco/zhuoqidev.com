@@ -638,14 +638,19 @@ html[lang="en"] { --f-hand-zh: var(--font-caveat), var(--f-hand-cjk); }
 
 .zoom-btn { display: block; width: 100%; padding: 0; border: none; background: none; cursor: zoom-in; }
 .zoom-btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 4px; border-radius: 10px; }
+/* The whole picture fits the window: the image takes the largest size that fits both the width and
+   the height (--r is its aspect ratio, set on open), so a tall figure no longer runs off the bottom.
+   26px = padding + border; 70px adds the close bar. */
 dialog.zoom {
-  width: min(96vw, 1600px); max-width: none; max-height: 94vh; padding: 12px; overflow: auto;
+  --zoom-w: min(96vw, 1600px); --zoom-h: 94vh;
+  width: fit-content; max-width: var(--zoom-w); max-height: var(--zoom-h); padding: 12px; overflow: auto;
   border: 1px solid var(--line); border-radius: 14px; background: var(--sheet); box-shadow: var(--shadow);
 }
+@supports (height: 1dvh) { dialog.zoom { --zoom-h: 94dvh; } }
 dialog.zoom::backdrop { background: rgba(10, 12, 16, .66); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
 dialog.zoom form { position: sticky; top: 0; display: flex; justify-content: flex-end; margin-bottom: 8px; }
 dialog.zoom form .chip-btn { background: var(--sheet); color: #1c2230; border-color: #8b90a0; }
-dialog.zoom img { display: block; width: 100%; height: auto; }
+dialog.zoom img { display: block; width: min(var(--zoom-w) - 26px, (var(--zoom-h) - 70px) * var(--r, 1.5)); height: auto; }
 
 /* ---------- 手作细节：微信卡片 / 桌面星星 / 卡片入场 / 滚动条 / 回到顶部 ---------- */
 html { scrollbar-width: thin; scrollbar-color: var(--blue-line) transparent; }

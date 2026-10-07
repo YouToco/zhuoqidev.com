@@ -70,7 +70,8 @@ if (bar && article) {
 }
 
 // Click an article image to see it large. Figures render at the column width; the viewer loads
-// a 1600w copy (the same file the Markdown export links to).
+// a 1600w copy (the same file the Markdown export links to) and fits all of it in the window,
+// which needs the picture's aspect ratio before the copy arrives.
 const zoomMap = document.getElementById("zoom-map");
 const dialog = document.querySelector<HTMLDialogElement>("dialog.zoom");
 if (zoomMap && dialog && typeof dialog.showModal === "function") {
@@ -88,6 +89,9 @@ if (zoomMap && dialog && typeof dialog.showModal === "function") {
     img.replaceWith(btn);
     btn.append(img);
     btn.addEventListener("click", () => {
+      const ratio = img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : img.width / img.height;
+      if (ratio > 0) view.style.setProperty("--r", String(ratio));
+      else view.style.removeProperty("--r");
       view.src = big[stem]!;
       view.alt = img.alt;
       dialog.showModal();
