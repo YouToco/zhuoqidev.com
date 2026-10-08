@@ -6,9 +6,12 @@ import { recordCrawler } from "../server/stats.ts";
 
 export const onRequest: PagesFunction<Env> = async (context) => {
   const { request, env } = context;
+  const { hostname, pathname, search } = new URL(request.url);
+  const backend = /^\/(api|admin)(\/|$)/.test(pathname);
+  // api.zhuoqidev.com is only there for the API and /admin/; send its pages back to the site.
+  if (hostname === "api.zhuoqidev.com" && !backend) return Response.redirect(`https://zhuoqidev.com${pathname}${search}`, 301);
   try {
-    const { pathname } = new URL(request.url);
-    if ((request.method === "GET" || request.method === "HEAD") && isPageLike(pathname) && !/^\/(api|admin)(\/|$)/.test(pathname)) {
+    if ((request.method === "GET" || request.method === "HEAD") && isPageLike(pathname) && !backend) {
       const crawler = classify(request.headers.get("User-Agent"));
       if (crawler) {
         context.waitUntil(recordCrawler(env.DB, beijingDay(), "cf", crawler).catch((e) => console.error("crawler count failed", e)));

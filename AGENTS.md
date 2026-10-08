@@ -109,6 +109,7 @@
 - The published pages call the API on `https://api.zhuoqidev.com` (`api` / `apiBase` in `src/site.ts`):
   a CNAME to `zhuoqidev.pages.dev` on every DNS line plus a custom domain on the Pages project, so
   readers on the mainland line reach it too. Local previews and `*.pages.dev` call their own origin.
+  Page requests on `api.zhuoqidev.com` get a 301 to the site (`functions/_middleware.ts`).
 - `public/_routes.json` keeps static assets out of Functions (assets are free and unmetered;
   Function calls count against the free 100,000 requests a day). The project is set to "fail open",
   so if the allowance runs out pages are still served and only the counts and guestbook stop.
