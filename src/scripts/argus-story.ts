@@ -143,7 +143,7 @@ function init(root: HTMLElement) {
     started = true;
     const camera = JSON.parse(root.dataset.camera!) as StoryCamera;
     import("./argus-story-scene")
-      .then((m) => m.mount({ fig, url: root.dataset.model!, camera, reduced, onFrame: place }))
+      .then((m) => m.mount({ fig, camera, reduced, onFrame: place }))
       .then((s) => {
         scene = s;
         scene.setStep(active);

@@ -98,9 +98,10 @@
   `src/components/ArgusStory.astro`) must not cost the first load anything: the
   poster render is the LCP image and the fallback, the step script starts after
   `load` and never reads layout while the page loads, and three.js plus the model
-  load only after the reader's first scroll, tap or key press. The model and
-  poster come from `tools/models/argus-story.py` (steps in `tools/models/README.md`);
-  the step text lives in `src/data/argus-story.ts` and follows the recorded run in
+  load only after the reader's first scroll, tap or key press. The model is code
+  (`src/scripts/argus-story-model.ts`); after changing it, render the poster, its
+  camera and label spots again with `npm run poster` (`tools/models/README.md`).
+  The step text lives in `src/data/argus-story.ts` and follows the recorded run in
   `tools/models/argus-story-run.json`. After changing any of it,
   compare mobile Lighthouse on that page with `main`.
 

@@ -1,8 +1,8 @@
 // The 3D version of the Argus scene, loaded by ./argus-story.ts after the reader's first input.
-// The model is tools/models/argus-story.py exported to glTF, meshopt-compressed and gzipped
-// (tools/models/README.md). Each step is a group (step0_video … step5_browser) whose pieces pop in
-// when the reader reaches that step; focus_step0 … focus_step5 mark where the camera looks; pin_*
-// are the points the HTML labels hang from. The scene opens exactly as the poster was rendered (every
+// The model is built here from code (./argus-story-model.ts); there is no model file to download.
+// Each step is a group (step0_video … step5_browser) whose pieces pop in when the reader reaches
+// that step; focus_step0 … focus_step4 mark where the camera looks (the last step looks where the
+// poster's camera does); pin_* are the points the HTML labels hang from. The scene opens exactly as the poster was rendered (every
 // step shown, same camera), so the swap from picture to canvas is invisible, then settles on the
 // current step. It only renders while something is moving.
 //
@@ -27,11 +27,9 @@ import {
   WebGLRenderer,
 } from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import paths from "../assets/models/argus-story-paths.json";
-import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { buildArgusStory } from "./argus-story-model";
 
-/** The camera the poster was rendered with, in glTF axes (y up); `dir` points from target to camera. */
+/** The camera the poster was rendered with (y up); `dir` points from target to camera. */
 export type StoryCamera = { dir: number[]; target: number[]; distance: number; fovY: number; aspect: number };
 /** Pin positions as fractions of the canvas (0..1 from the top left), or null when off screen. */
 export type PinCoords = Record<string, [number, number] | null>;
@@ -54,7 +52,6 @@ type Packet = { w: Group; at: number; dir: 1 | -1 };
 
 export async function mount(opts: {
   fig: HTMLElement;
-  url: string;
   camera: StoryCamera;
   reduced: boolean;
   onFrame: (pins: PinCoords) => void;
@@ -64,7 +61,6 @@ export async function mount(opts: {
   canvas.setAttribute("aria-hidden", "true");
   // Throws without WebGL; the caller keeps the poster.
   const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "low-power" });
-  const data = await fetchModel(opts.url);
 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.outputColorSpace = SRGBColorSpace;
@@ -89,8 +85,7 @@ export async function mount(opts: {
   key.shadow.normalBias = 0.03;
   scene.add(key, key.target);
 
-  const gltf = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(data, "");
-  const model = gltf.scene;
+  const model = buildArgusStory();
   model.traverse((o) => {
     if ((o as Mesh).isMesh) o.castShadow = o.receiveShadow = true;
   });
@@ -158,8 +153,7 @@ export async function mount(opts: {
   const goalDist = (k: number) => cam.distance * ZOOM[k]! * Math.max(1, cam.aspect / camera.aspect) ** (k === last ? 1 : 0.75);
 
   // Moving parts get a wrapper group at their own centre, so they can turn, squash and slide
-  // about that centre whatever transform the glTF node carries.
-  // (A glTF node with both a mesh and children loads as an Object3D holding the mesh, so match nodes.)
+  // about that centre whatever transform the piece itself carries.
   const byName = (re: RegExp) => {
     const out: Object3D[] = [];
     model.traverse((o) => {
@@ -202,7 +196,7 @@ export async function mount(opts: {
   let gazeMix = 0;
   let squint = 1;
 
-  const wire = paths.s1_cable.map((p) => new Vector3(...(p as [number, number, number])));
+  const wire = model.userData.wire as Vector3[];
   const seg = wire.slice(1).map((p, i) => p.distanceTo(wire[i]!));
   const wireLen = seg.reduce((a, b) => a + b, 0);
   const onWire = (u: number, out: Vector3) => {
@@ -457,15 +451,4 @@ export async function mount(opts: {
       if (ready && k !== step) apply(k);
     },
   };
-}
-
-async function fetchModel(url: string): Promise<ArrayBuffer> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`model: HTTP ${res.status}`);
-  const buf = await res.arrayBuffer();
-  // Shipped gzipped because neither host compresses .glb. If something on the way already
-  // decoded it, these are the plain glTF bytes and need nothing more.
-  const head = new Uint8Array(buf, 0, 2);
-  if (head[0] !== 0x1f || head[1] !== 0x8b) return buf;
-  return new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();
 }
