@@ -67,7 +67,9 @@
   dark code / terminal surfaces.
 - Mermaid diagrams and social cards render in Google Chrome
   (`/usr/bin/google-chrome`, override with `MERMAID_CHROME`) and need CJK fonts
-  (`fonts-noto-cjk` on Linux) so Chinese labels are measured correctly.
+  (`fonts-noto-cjk` on Linux) so Chinese labels are measured correctly. CI
+  installs the same font files and fontconfig rules with
+  `scripts/install-cjk-fonts.sh` (pinned upstream commit + sha256, no apt).
 - Diagrams are drawn ahead of time, not at build time: after adding or editing a
   ```` ```mermaid ```` fence, run `npm run diagrams` and commit what it writes.
   Each fence gets `diagrams/<id>.excalidraw` (the editable scene) and
