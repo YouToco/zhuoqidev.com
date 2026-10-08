@@ -55,6 +55,8 @@ type Packet = { w: Group; at: number; dir: 1 | -1 };
 export async function mount(opts: {
   fig: HTMLElement;
   url: string;
+  /** Builds the scene in code instead of loading the GLB at `url` (./argus-story-build.ts). */
+  build?: (() => Object3D) | undefined;
   camera: StoryCamera;
   reduced: boolean;
   onFrame: (pins: PinCoords) => void;
@@ -64,7 +66,7 @@ export async function mount(opts: {
   canvas.setAttribute("aria-hidden", "true");
   // Throws without WebGL; the caller keeps the poster.
   const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "low-power" });
-  const data = await fetchModel(opts.url);
+  const data = opts.build ? null : await fetchModel(opts.url);
 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.outputColorSpace = SRGBColorSpace;
@@ -89,8 +91,7 @@ export async function mount(opts: {
   key.shadow.normalBias = 0.03;
   scene.add(key, key.target);
 
-  const gltf = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(data, "");
-  const model = gltf.scene;
+  const model = data ? (await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(data, "")).scene : opts.build!();
   model.traverse((o) => {
     if ((o as Mesh).isMesh) o.castShadow = o.receiveShadow = true;
   });
