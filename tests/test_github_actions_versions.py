@@ -60,6 +60,10 @@ class GitHubActionsVersionTests(unittest.TestCase):
 
         self.assertIn("if: github.ref == 'refs/heads/main'", text)
         self.assertIn("oss sync dist/ oss://zhuoqidev/", text)
+        # More than ossutil's 3 uploads at a time; the type fix-up skips directory objects.
+        self.assertIn("--jobs 32", text)
+        self.assertIn("--disable-dir-object", text)
+        self.assertIn("--connect-timeout 10 --max-time 20", text)
         self.assertIn("pages deploy dist/", text)
         self.assertNotIn("public/", text)
         self.assertNotIn("cache: npm", text)

@@ -131,12 +131,14 @@ aliyun oss sync dist/ "oss://${oss_bucket}/" \
   --delete \
   --update \
   --force \
+  --jobs 32 \
   --disable-ignore-error \
   --output-dir "$tool_root/ossutil-output" \
   --checkpoint-dir "$tool_root/ossutil-checkpoint"
 
 # OSS omits the charset (and has no type for .md), so upload those files again with an explicit
 # type. cp needs only PutObject, the permission sync already uses; Cloudflare reads public/_headers.
+# The sync made the directory objects already, so cp skips them (else every pass rewrites ~470).
 for rule in "*.md|text/markdown; charset=utf-8" "*.txt|text/plain; charset=utf-8" \
   "*.webmanifest|application/manifest+json"; do
   aliyun oss cp dist/ "oss://${oss_bucket}/" \
@@ -146,6 +148,8 @@ for rule in "*.md|text/markdown; charset=utf-8" "*.txt|text/plain; charset=utf-8
     --region "$aliyun_region" \
     --recursive \
     --force \
+    --disable-dir-object \
+    --jobs 16 \
     --disable-ignore-error \
     --output-dir "$tool_root/ossutil-output"
 done
@@ -175,21 +179,21 @@ fi
 echo "CDN refresh accepted as task $refresh_task_id"
 
 for attempt in $(seq 1 36); do
-  primary_sha=$(curl --fail --silent --show-error \
+  primary_sha=$(curl --fail --silent --show-error --connect-timeout 10 --max-time 20 \
     --connect-to "$primary_domain:443:$primary_edge:443" \
     -H 'Cache-Control: no-cache' \
     "https://$primary_domain/deploy-manifest.json?verify=$commit_sha" \
     | python3 -c \
       'import json,sys; print(json.load(sys.stdin).get("commit", ""))' \
     2>/dev/null || true)
-  san_sha=$(curl --fail --silent --show-error \
+  san_sha=$(curl --fail --silent --show-error --connect-timeout 10 --max-time 20 \
     --connect-to "$san_domain:443:$san_edge:443" \
     -H 'Cache-Control: no-cache' \
     "https://$san_domain/deploy-manifest.json?verify=$commit_sha" \
     | python3 -c \
       'import json,sys; print(json.load(sys.stdin).get("commit", ""))' \
     2>/dev/null || true)
-  cloudflare_sha=$(curl --fail --silent --show-error \
+  cloudflare_sha=$(curl --fail --silent --show-error --connect-timeout 10 --max-time 20 \
     -H 'Cache-Control: no-cache' \
     "$cloudflare_url/deploy-manifest.json?verify=$commit_sha" \
     | python3 -c \

@@ -83,6 +83,9 @@ jobs:
             --access-key-secret "$ALIYUN_ACCESS_KEY_SECRET" \
             --region cn-shenzhen
 
+      # A fresh build is newer than everything in the bucket, so every file goes up on every
+      # deploy (about 1,200 files and 470 directory objects). Each one is a round trip from the
+      # runner to Shenzhen; ossutil's default of 3 at a time made this step take 4-5 minutes.
       - name: Sync site to Aliyun OSS
         run: |
           "$RUNNER_TEMP/aliyun-3.5.1/aliyun" oss sync dist/ oss://zhuoqidev/ \
@@ -92,6 +95,7 @@ jobs:
             --delete \
             --update \
             --force \
+            --jobs 32 \
             --disable-ignore-error
 
       # OSS guesses types from the extension but omits the charset (and has no type for .md),
@@ -99,7 +103,9 @@ jobs:
       - name: Set text content types on Aliyun OSS
         run: |
           # OSS omits the charset (and has no type for .md), so upload those files again with an
-          # explicit type. cp needs only PutObject, the permission sync already uses.
+          # explicit type. cp needs only PutObject, the permission sync already uses. The sync
+          # above already made the directory objects; without --disable-dir-object each pass
+          # wrote all 470 of them again for a handful of files (about 40 s a pass).
           set_type() {
             "$RUNNER_TEMP/aliyun-3.5.1/aliyun" oss cp dist/ oss://zhuoqidev/ \
               --include "$1" \
@@ -108,6 +114,8 @@ jobs:
               --region cn-shenzhen \
               --recursive \
               --force \
+              --disable-dir-object \
+              --jobs 16 \
               --disable-ignore-error
           }
           set_type "*.md" "text/markdown; charset=utf-8"
@@ -138,25 +146,28 @@ jobs:
           }
           echo "CDN refresh accepted as task $task_id"
 
+      # Now and then a CDN edge accepts no connection from the runner, and curl's own connect
+      # timeout (over two minutes) stretched this 180-second wait to ten minutes. An attempt that
+      # cannot connect in 10 s is dropped and the loop tries again.
       - name: Verify every provider serves the new commit
         run: |
           commit_sha="${{ github.sha }}"
           primary_edge="zhuoqidev.com.queniuaa.com"
           san_edge="www.zhuoqidev.com.w.kunlunaq.com"
           for attempt in $(seq 1 36); do
-            primary=$(curl --fail --silent --show-error \
+            primary=$(curl --fail --silent --show-error --connect-timeout 10 --max-time 20 \
               --connect-to "zhuoqidev.com:443:${primary_edge}:443" \
               -H 'Cache-Control: no-cache' \
               "https://zhuoqidev.com/deploy-manifest.json?verify=${commit_sha}" \
               | python3 -c 'import json,sys; print(json.load(sys.stdin).get("commit",""))' \
               2>/dev/null || true)
-            san=$(curl --fail --silent --show-error \
+            san=$(curl --fail --silent --show-error --connect-timeout 10 --max-time 20 \
               --connect-to "www.zhuoqidev.com:443:${san_edge}:443" \
               -H 'Cache-Control: no-cache' \
               "https://www.zhuoqidev.com/deploy-manifest.json?verify=${commit_sha}" \
               | python3 -c 'import json,sys; print(json.load(sys.stdin).get("commit",""))' \
               2>/dev/null || true)
-            cloudflare=$(curl --fail --silent --show-error \
+            cloudflare=$(curl --fail --silent --show-error --connect-timeout 10 --max-time 20 \
               -H 'Cache-Control: no-cache' \
               "https://zhuoqidev.pages.dev/deploy-manifest.json?verify=${commit_sha}" \
               | python3 -c 'import json,sys; print(json.load(sys.stdin).get("commit",""))' \
