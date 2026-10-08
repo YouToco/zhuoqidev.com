@@ -3,8 +3,9 @@ import camera from "../assets/models/argus-story-camera.json";
 import pins from "../assets/models/argus-story-pins.json";
 
 // The clay scene at the top of the Argus project page: one real search through the sample video,
-// told in six steps. The model, its poster render and these pin coordinates come from
-// tools/models/argus-story.py; the step groups (step0..step5) and pin_* names match that script.
+// told in six steps. The model is src/scripts/argus-story-model.ts; its poster, the poster's camera
+// and these pin coordinates come from tools/models/argus-poster.mjs. The step groups (step0..step5)
+// and pin_* names match the model.
 
 export type PinName = keyof typeof pins;
 
@@ -58,8 +59,8 @@ export const story: Record<
       "红色出现和消失的两头各有三层越来越密的小帧；一个淡紫色的子代理在看后半段；Argus 身边的托盘里放着最近三批帧和一张字条，旁边一张便签；" +
       "一张写着 10.0s – 25.0s 的回答卡用红线钉回胶片上的两帧；一根线从 Argus 连到窗口外代表你自己配置的模型的云，线上有小图和一张指令卡。",
     run: ["场景按 2026-10-08 用 DeepSeek 真跑的一次摆放（", "完整调用记录", "），每次跑，过程会有出入。"],
-    credit: "模型是 agent 经 Blender MCP 写脚本建的。",
-    script: "建模脚本",
+    credit: "模型是 agent 写 three.js 代码搭的，封面图也是在浏览器里光线追踪出来的。",
+    script: "建模代码",
     more: ["这几步背后的 Agent 循环和 8 个工具", "#架构亮点"],
     steps: [
       {
@@ -111,8 +112,8 @@ export const story: Record<
       "with a sticky note beside it; an answer card reading 10.0s – 25.0s is tied by red threads to two frames on the strip; " +
       "a wire runs from Argus to a cloud outside the window that stands for the model you configured, carrying small frames and an instruction card.",
     run: ["The scene follows one real run with DeepSeek on 2026-10-08 (", "full call record", "); every run goes a little differently."],
-    credit: "An agent modelled it by writing a Blender script over Blender MCP.",
-    script: "The script",
+    credit: "An agent built the model in three.js code; the poster is path traced in the browser too.",
+    script: "The code",
     more: ["The agent loop and the 8 tools behind these steps", "#architecture-highlights"],
     steps: [
       {

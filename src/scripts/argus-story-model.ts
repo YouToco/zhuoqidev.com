@@ -1,7 +1,12 @@
-// tools/models/argus-story.py ported to three.js: the same clay scene built in the browser from
-// primitives instead of loaded as a GLB. Same object names, step groups, focus_* and pin_* empties,
-// so ./argus-story-scene.ts animates it unchanged. Everything is laid out in Blender's axes (z up,
-// numbers copied from the script) and turned to three's y-up at the end.
+// The clay scene on the Argus project page, built from primitives in code (about 8 KB gzipped, no
+// model file to download). One real search through Argus's sample video in six step groups
+// (step0_video … step5_browser); focus_step* empties mark where the web camera looks in each step
+// and pin_* empties are where the HTML labels hang. ./argus-story-scene.ts animates it by those
+// names; tools/models/argus-poster.mjs path-traces the same scene for the poster.
+//
+// The scene was first modelled in Blender, so everything is laid out in Blender's axes (z up, x to
+// the right, y away from the viewer) and turned to three's y-up at the end; shading, bevels and
+// curves follow what Blender did, so the look stayed the same when the model moved here.
 import {
   BoxGeometry,
   type BufferGeometry,
@@ -42,6 +47,7 @@ const FRAME_PITCH = 0.72;
 const T0_X = -3.91;
 const tx = (t: number) => T0_X + (t / 15) * FRAME_PITCH;
 
+// The poster's view direction (from the scene towards the camera); cards and bubbles face it.
 const CAM_DIR = new Vector3(0.42, -1.3, 1.15).normalize();
 const YAW = Math.atan2(CAM_DIR.y, CAM_DIR.x) + PI / 2;
 const TILT = rad(-24);
@@ -66,7 +72,7 @@ const HEX: Record<string, string | undefined> = {
 };
 
 // ---------------------------------------------------------------------------
-// Building blocks (the script's Builder)
+// Building blocks
 // ---------------------------------------------------------------------------
 
 const materials = new Map<string, MeshStandardMaterial>();
@@ -89,7 +95,7 @@ const shared = (key: string, make: () => BufferGeometry) => {
   return g;
 };
 
-// The script shades every mesh smooth (only prisms and text flat). On a plain box or disc that bends
+// Every mesh is shaded smooth (only prisms and text flat). On a plain box or disc that bends
 // the light across its sharp edges, which gives the thin screens their glow and the red discs their
 // dome; welding the corners and averaging the normals does the same here.
 const smooth = (g: BufferGeometry) => {
@@ -173,7 +179,8 @@ function prism(name: string, pts: [number, number][], h: number, loc: V3 | Vecto
   return mesh(name, geo, loc, rot, mat, parent);
 }
 
-// The script's Bezier curve with Catmull-Rom handles, so the wire is the same path it recorded.
+// A Bezier curve through the points with Catmull-Rom handles; the cable's sampled path is kept for the
+// page, which runs the frames and the tool call along it.
 const PATHS: Record<string, Vector3[]> = {};
 function tube(name: string, points: Vector3[], r: number, mat: string, parent: Object3D, res = 16, record = false) {
   const n = points.length;
@@ -440,8 +447,16 @@ function step5Browser(g: Object3D) {
   empty("pin_s5_wire", along(PATHS.s1_cable!, 0.76).add(new Vector3(0, 0, 0.25)), g);
 }
 
-/** The whole scene; `fitTarget` is the poster camera's target in Blender's axes (focus_step5). */
-export function buildArgusStory(fitTarget: V3 = [0.15, 0.55, 0.95]): Object3D {
+/** Blender axes (z up) -> three's (y up). */
+const Y_UP = new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), -PI / 2);
+/** The poster's view direction in three's axes, from the scene towards the camera. */
+export const VIEW_DIR = CAM_DIR.clone().applyQuaternion(Y_UP);
+
+/**
+ * The whole scene, in three's axes. `userData.wire` is the cable's sampled path (s1_cable). The last
+ * step has no focus empty: the page looks at the poster camera's target there.
+ */
+export function buildArgusStory(): Object3D {
   materials.clear();
   geometries.clear();
   const root = new Group();
@@ -454,15 +469,15 @@ export function buildArgusStory(fitTarget: V3 = [0.15, 0.55, 0.95]): Object3D {
     fns[i]!(g);
     return g;
   });
-  const focus: V3[] = [[tx(45) - 0.6, STRIP_Y + 0.3, 0.75], [-0.6, 1.2, 1.7], [tx(17.5), FUNNEL_Y + 0.25, 0.8], [-0.65, -0.3, 0.6], [-1.5, 0.35, 1.45], fitTarget];
+  const focus: V3[] = [[tx(45) - 0.6, STRIP_Y + 0.3, 0.75], [-0.6, 1.2, 1.7], [tx(17.5), FUNNEL_Y + 0.25, 0.8], [-0.65, -0.3, 0.6], [-1.5, 0.35, 1.45]];
   const empties = focus.map((loc, i) => empty(`focus_step${i}`, loc, root));
   // z up -> y up, one level down from the step groups, so the groups themselves keep three's axes
   // (the page squashes eyes along their group's y to blink).
-  const q = new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), -PI / 2);
   for (const o of [...groups.flatMap((g) => g.children), ...empties]) {
-    o.position.applyQuaternion(q);
-    o.quaternion.premultiply(q);
+    o.position.applyQuaternion(Y_UP);
+    o.quaternion.premultiply(Y_UP);
   }
+  root.userData.wire = PATHS.s1_cable!.map((p) => p.clone().applyQuaternion(Y_UP));
   root.updateMatrixWorld(true);
   return root;
 }

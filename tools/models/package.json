@@ -1,0 +1,15 @@
+{
+  "name": "zhuoqidev-models",
+  "private": true,
+  "type": "module",
+  "description": "Renders the Argus scene's poster (path traced in Chrome) and writes its camera and label spots; also the 3D text's glyphs. Run from the repo root: npm run poster",
+  "dependencies": {
+    "esbuild": "0.28.2",
+    "fontkit": "2.0.4",
+    "three-gpu-pathtracer": "0.0.26",
+    "three-mesh-bvh": "0.9.16"
+  },
+  "allowScripts": {
+    "esbuild": false
+  }
+}

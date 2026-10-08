@@ -4,7 +4,6 @@
 // light up as you scroll, and after your first scroll, tap or key press the 3D scene replaces the
 // picture (src/scripts/argus-story.ts); it never loads during the initial page load.
 import { Picture } from "astro:assets";
-import model from "../assets/models/argus-story.glb.gz?url";
 import poster from "../assets/models/argus-story-poster.webp";
 import { camera, pins, posterMarks, runUrl, story, ticks } from "../data/argus-story";
 import type { Lang } from "../i18n";
@@ -15,14 +14,13 @@ interface Props {
 const { lang } = Astro.props;
 const S = story[lang];
 const at = ([x, y]: number[]) => `left:${(x! * 100).toFixed(2)}%;top:${(y! * 100).toFixed(2)}%`;
-const scriptUrl = "https://github.com/YouToco/zhuoqidev.com/blob/main/tools/models/argus-story.py";
+const scriptUrl = "https://github.com/YouToco/zhuoqidev.com/blob/main/src/scripts/argus-story-model.ts";
 ---
 
 <section
   class="story"
   aria-labelledby="story-h"
   data-story
-  data-model={model}
   data-camera={JSON.stringify(camera)}
   data-pins={JSON.stringify(pins)}
 >

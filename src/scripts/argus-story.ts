@@ -142,10 +142,8 @@ function init(root: HTMLElement) {
     if (started || !near || !wanted) return;
     started = true;
     const camera = JSON.parse(root.dataset.camera!) as StoryCamera;
-    // Prototype switch: ?three builds the scene in code (./argus-story-build.ts) instead of the GLB.
-    const code = new URLSearchParams(location.search).has("three");
-    Promise.all([import("./argus-story-scene"), code ? import("./argus-story-build") : null])
-      .then(([m, b]) => m.mount({ fig, url: root.dataset.model!, build: b?.buildArgusStory, camera, reduced, onFrame: place }))
+    import("./argus-story-scene")
+      .then((m) => m.mount({ fig, camera, reduced, onFrame: place }))
       .then((s) => {
         scene = s;
         scene.setStep(active);

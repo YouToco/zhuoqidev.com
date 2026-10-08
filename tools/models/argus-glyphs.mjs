@@ -1,14 +1,25 @@
 // The few characters the Argus scene spells in 3D ("?", "10.0s", "25.0s", "-") as a three.js
 // typeface subset, so the page can extrude them without shipping a whole font.
-//   node tools/models/argus-glyphs.mjs [font]  ->  src/assets/models/argus-story-glyphs.json
-// Inter by default: Blender's built-in text font ("Bfont"), which it ships as datafiles/fonts/Inter.woff2.
-import { readFileSync, writeFileSync } from "node:fs";
+//   node tools/models/argus-glyphs.mjs  ->  src/assets/models/argus-story-glyphs.json
+// Inter 4.1 from its release commit, checked against a pinned SHA-256, with tabular figures (tnum):
+// the scene's numbers were first set in Blender, whose built-in Inter has tabular figures by default.
+import { createHash } from "node:crypto";
+import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { create } from "fontkitten";
+import { create } from "fontkit";
 
+const FONT = {
+  url: "https://raw.githubusercontent.com/rsms/inter/e3a3d4c57d5ecc01453a575621882a384c1995a3/docs/font-files/InterVariable.woff2", // tag v4.1
+  sha256: "693b77d4f32ee9b8bfc995589b5fad5e99adf2832738661f5402f9978429a8e3",
+};
 const CHARS = "?0125.s-";
-const src = process.argv[2] ?? `${process.env.HOME}/.local/opt/blender/current/5.2/datafiles/fonts/Inter.woff2`;
-const font = create(readFileSync(src));
+
+const res = await fetch(FONT.url);
+if (!res.ok) throw new Error(`${FONT.url}: HTTP ${res.status}`);
+const bytes = Buffer.from(await res.arrayBuffer());
+const got = createHash("sha256").update(bytes).digest("hex");
+if (got !== FONT.sha256) throw new Error(`InterVariable.woff2: sha256 ${got}, expected ${FONT.sha256}`);
+const font = create(bytes);
 const r = (n) => Math.round(n);
 
 // three's typeface outline: "m x y", "l x y", "q x y cpx cpy" (end point first), "b x y c1x c1y c2x c2y".
@@ -26,9 +37,10 @@ const outline = (commands) =>
 
 const glyphs = {};
 for (const ch of CHARS) {
-  const g = font.glyphForCodePoint(ch.codePointAt(0));
+  const run = font.layout(ch, ["tnum"]);
+  const [g] = run.glyphs;
   const box = g.path.bbox;
-  glyphs[ch] = { ha: r(g.advanceWidth), x_min: r(box.minX), x_max: r(box.maxX), o: outline(g.path.commands) };
+  glyphs[ch] = { ha: r(run.positions[0].xAdvance), x_min: r(box.minX), x_max: r(box.maxX), o: outline(g.path.commands) };
 }
 const out = {
   familyName: font.familyName,
