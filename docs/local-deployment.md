@@ -18,7 +18,9 @@ from a workstation when GitHub Actions is unavailable.
 4. `aliyun oss sync dist/ oss://zhuoqidev/ --delete`, then `aliyun oss cp --meta`
    re-uploads `*.md` and `*.txt` with a UTF-8 charset (OSS omits it, which turns
    Chinese text into mojibake in browsers). Cloudflare gets the same types from
-   `public/_headers`.
+   `public/_headers`. `*.js` goes up again as `application/javascript`: OSS only
+   gzips a fixed list of types, and the `text/javascript` it picks for `.js` is not
+   on it.
 5. `wrangler pages deploy dist/`, Alibaba Cloud CDN directory refresh, and
    polling until both Alibaba CDN hostnames and `zhuoqidev.pages.dev` serve the
    new `deploy-manifest.json`; the GitHub workflow also checks the text content

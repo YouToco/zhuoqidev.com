@@ -139,8 +139,9 @@ aliyun oss sync dist/ "oss://${oss_bucket}/" \
 # OSS omits the charset (and has no type for .md), so upload those files again with an explicit
 # type. cp needs only PutObject, the permission sync already uses; Cloudflare reads public/_headers.
 # The sync made the directory objects already, so cp skips them (else every pass rewrites ~470).
+# OSS gzips application/javascript but not the text/javascript it picks for .js.
 for rule in "*.md|text/markdown; charset=utf-8" "*.txt|text/plain; charset=utf-8" \
-  "*.webmanifest|application/manifest+json"; do
+  "*.webmanifest|application/manifest+json" "*.js|application/javascript; charset=utf-8"; do
   aliyun oss cp dist/ "oss://${oss_bucket}/" \
     --include "${rule%%|*}" \
     --meta "Content-Type:${rule#*|}" \

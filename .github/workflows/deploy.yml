@@ -120,6 +120,11 @@ jobs:
           set_type "*.md" "text/markdown; charset=utf-8"
           set_type "*.txt" "text/plain; charset=utf-8"
           set_type "*.webmanifest" "application/manifest+json"
+          # OSS labels .js as text/javascript, which is missing from the fixed list of types it
+          # gzips (application/javascript is on it), so every script reached the CDN uncompressed,
+          # three.js at 568 KB. The CDN passes a gzipped response through as it is; its own brotli
+          # came out about 27% larger than gzip for three.js.
+          set_type "*.js" "application/javascript; charset=utf-8"
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
@@ -201,4 +206,13 @@ jobs:
           for base in "$oss" "$cf"; do
             check_type "$base/llms.txt" "text/plain; charset=utf-8"
             check_type "$base/posts/managed-agents-outcomes-dreaming/index.md" "text/markdown; charset=utf-8"
+            check_type "$base/pagefind/pagefind.js" "application/javascript"
           done
+          encoding=$(curl --fail --silent --show-error --head -H 'Accept-Encoding: gzip' \
+            "$oss/pagefind/pagefind.js" \
+            | tr -d '\r' | awk 'tolower($1)=="content-encoding:" {print $2}')
+          if [[ $encoding != gzip ]]; then
+            echo "$oss/pagefind/pagefind.js answered Content-Encoding '$encoding', expected gzip" >&2
+            exit 1
+          fi
+          echo "$oss/pagefind/pagefind.js → Content-Encoding: gzip"
