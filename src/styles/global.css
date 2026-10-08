@@ -516,6 +516,100 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 .page-wrap { max-width: 860px; margin: 0 auto; padding: 40px 24px 100px; }
 .page-wrap .paper { padding: 52px 60px 44px; }
 
+/* ---------- 作品页顶部的 3D 场景（ArgusStory.astro） ----------
+   The picture stays pinned while the six steps scroll past it. The layout is the same with or
+   without JavaScript (so nothing jumps when the script arrives); `.live` only lights the current
+   step and its labels, and `.gl` crossfades the poster into the 3D canvas. */
+.story { --w: min(1240px, calc(100vw - 48px)); width: var(--w); margin: 0 0 36px calc((100% - var(--w)) / 2); }
+.story-head { max-width: 760px; margin: 0 auto 24px; text-align: center; }
+.story-head h2 { margin: 12px 0 8px; font: 900 34px/1.3 var(--f-serif); }
+.story-sub { margin: 0; font-size: 15px; color: var(--ink-2); }
+.story-skip { display: inline-block; margin-top: 8px; font: 400 12px/1.8 var(--f-mono); color: var(--ink-3); }
+.story-skip:hover { color: var(--blue); }
+.story-body { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 36px; }
+.story-stage { position: sticky; top: 76px; align-self: start; }
+.story-fig {
+  position: relative; margin: 0 auto; overflow: hidden;
+  width: min(100%, calc((100svh - 100px) * 1800 / 1150)); aspect-ratio: 1800 / 1150;
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow);
+}
+.story-fig picture, .story-fig img { display: block; width: 100%; height: 100%; }
+.story-fig picture { transition: opacity .6s var(--ease); }
+.story-fig canvas {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  opacity: 0; transition: opacity .6s var(--ease); touch-action: pan-y; cursor: grab;
+}
+.story-fig canvas:active { cursor: grabbing; }
+.story-fig.gl canvas { opacity: 1; }
+.story-fig.gl picture { opacity: 0; }
+.story-marks, .story-pins { position: absolute; inset: 0; pointer-events: none; }
+.story-num {
+  position: absolute; translate: -50% -50%; display: grid; place-items: center;
+  width: 26px; height: 26px; border-radius: 50%; background: var(--stamp); color: #fff8ef;
+  font: 700 13px/1 var(--f-mono); box-shadow: 0 0 0 3px var(--card);
+}
+.story.live .story-marks { display: none; }
+.story-tick {
+  position: absolute; translate: -50% 6px; padding: 1px 6px; border-radius: 6px;
+  background: var(--card); border: 1px solid var(--line); font: 400 11px/1.5 var(--f-mono); color: var(--ink-2);
+}
+.story-label { position: absolute; width: 0; height: 0; visibility: hidden; opacity: 0; transition: opacity .25s, visibility .25s; }
+.story.live .story-label.on { visibility: visible; opacity: 1; }
+.story-tick.out, .story.live .story-label.out { visibility: hidden; opacity: 0; }
+.story-label::before { content: ""; position: absolute; left: -1px; bottom: 0; width: 2px; height: 20px; background: var(--ink); }
+.story-label::after {
+  content: ""; position: absolute; left: -5px; top: -5px; width: 10px; height: 10px;
+  border-radius: 50%; background: var(--seal); box-shadow: 0 0 0 2px var(--card);
+}
+.story-label > span {
+  position: absolute; bottom: 20px; left: 0; translate: calc(-50% + var(--dx, 0px)) 0;
+  padding: 4px 10px; white-space: nowrap; border: 1.5px solid var(--ink); border-radius: 10px;
+  background: var(--card); color: var(--ink); font: 500 13px/1.45 var(--f-sans);
+  box-shadow: 2px 3px 0 rgba(28, 34, 48, .18);
+}
+.story-label:is(.side, .side-l)::before { display: none; }
+.story-label:is(.side, .side-l) > span { bottom: auto; top: 0; translate: 12px -50%; }
+.story-label.side-l > span { left: auto; right: 0; translate: -12px -50%; }
+.story-label.below::before { bottom: auto; top: 0; }
+.story-label.below > span { bottom: auto; top: 20px; }
+.story-steps { list-style: none; margin: 0; padding: 0; }
+.story-step { min-height: 62vh; }
+.story-card {
+  position: relative; padding: 18px 20px 18px 56px;
+  background: var(--card); border: 2px dashed var(--blue-line); border-radius: 14px; box-shadow: var(--shadow);
+  transition: border-color .3s, translate .5s var(--spring);
+}
+.story-card h3 { margin: 0 0 6px; font: 700 18px/1.45 var(--f-serif); }
+.story-card p { margin: 0; font-size: 14.5px; line-height: 1.8; color: var(--ink-2); }
+.story-n {
+  position: absolute; left: 16px; top: 18px; display: grid; place-items: center;
+  width: 27px; height: 27px; border-radius: 50%; border: 1.5px solid var(--ink-3);
+  font: 600 13px/1 var(--f-mono); color: var(--ink-2); transition: background-color .3s, color .3s, border-color .3s;
+}
+.story.live .story-step.on .story-card { border-style: solid; border-color: var(--seal); translate: -6px 0; }
+.story.live .story-step.on .story-n { background: var(--stamp); border-color: var(--stamp); color: #fff8ef; }
+.story-call { margin: 10px 0 0; padding-top: 8px; border-top: 1px dashed var(--line); font: 400 12px/1.7 var(--f-mono); color: var(--ink-2); overflow-wrap: anywhere; }
+.story-more { display: inline-block; margin-top: 10px; font-size: 13.5px; color: var(--blue); }
+.story-credit { margin: 4px 0 0; text-align: center; font: 400 12px/1.7 var(--f-mono); color: var(--ink-3); }
+.story-credit a { color: var(--ink-2); }
+.embedded .story-stage { top: 16px; }
+@media (max-width: 1000px) {
+  .story { width: auto; margin: 0 0 28px; }
+  .story-head h2 { font-size: 27px; }
+  .story-body { display: block; }
+  /* On a phone the picture rides along under the top bar and the steps scroll beneath it. */
+  .story-stage { top: 60px; z-index: 3; margin: 0 -16px; padding: 8px 16px 10px; background: var(--paper); }
+  .embedded .story-stage { top: 0; }
+  .story-fig { width: 100%; }
+  .story-step { min-height: 52svh; }
+  .story-step:first-child { padding-top: 14px; }
+  .story-label > span { font-size: 12.5px; padding: 3px 8px; }
+  .story.live .story-step.on .story-card { translate: none; }
+}
+@media (max-width: 640px) {
+  .story { padding: 22px 16px 0; }
+}
+
 /* ---------- 404 ---------- */
 .lost { max-width: 640px; margin: 0 auto; padding: 120px 24px; text-align: center; }
 .lost h1 { margin: 0; font: 400 46px/1.2 var(--f-hand-zh); }

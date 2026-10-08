@@ -71,26 +71,30 @@ if (wechat) {
 }
 
 // The goodbye terminal at the bottom of every page plays its session the first time it scrolls
-// into view. Pages short enough to show it on arrival keep it still, as does reduced motion.
+// into view. Pages short enough to show it on arrival keep it still, as does reduced motion. The
+// observer's first report tells whether it is on screen on arrival; asking the element itself here
+// would force a layout of the whole page while it is still loading.
 const bye = document.querySelector<HTMLElement>("[data-bye]");
-if (
-  bye &&
-  "IntersectionObserver" in window &&
-  !matchMedia("(prefers-reduced-motion: reduce)").matches &&
-  bye.getBoundingClientRect().top > innerHeight
-) {
-  cue(bye);
-  bye.classList.add("armed");
+if (bye && "IntersectionObserver" in window && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  let first = true;
   const play = () => {
     bye.classList.add("play");
     io.disconnect();
   };
   const io = new IntersectionObserver(
     (entries) => {
-      if (entries.some((e) => e.isIntersecting)) play();
+      const seen = entries.some((e) => e.isIntersecting);
+      if (!first) {
+        if (seen) play();
+        return;
+      }
+      first = false;
+      if (seen) return io.disconnect();
+      cue(bye);
+      bye.classList.add("armed");
+      bye.addEventListener("focusin", play, { once: true });
     },
     { threshold: 0.3 },
   );
   io.observe(bye);
-  bye.addEventListener("focusin", play, { once: true });
 }

@@ -1,5 +1,6 @@
 ---
-// A single Markdown page on paper: project write-ups and the privacy policy.
+// A single Markdown page on paper: project write-ups and the privacy policy. The optional `hero`
+// slot sits above the paper (the Argus page puts its 3D scene there).
 import type { Lang } from "../i18n";
 import { splitTitle, ymd } from "../lib/content";
 
@@ -16,6 +17,7 @@ const { main, sub } = splitTitle(title);
 ---
 
 <main class="page-wrap">
+  <slot name="hero" />
   <article class="paper card" id="main" data-pagefind-body={searchable ? "" : undefined}>
     <div class="crumb" data-pagefind-ignore>{crumb}</div>
     {date && <div class="meta-row"><span class="m"><time datetime={ymd(date)}>{ymd(date)}</time></span></div>}
