@@ -47,13 +47,28 @@ class GitHubActionsVersionTests(unittest.TestCase):
             text = (WORKFLOWS / name).read_text(encoding="utf-8")
             with self.subTest(workflow=name):
                 self.assertIn("node-version-file: .nvmrc", text)
-                self.assertIn("fonts-noto-cjk", text)
+                self.assertIn("bash scripts/install-cjk-fonts.sh", text)
+                self.assertIn("bash -n scripts/install-aliyun.sh scripts/install-cjk-fonts.sh", text)
+                self.assertNotIn("apt-get", text)
                 self.assertIn("npm ci", text)
                 self.assertIn("npm run check", text)
                 self.assertIn("npm test", text)
                 self.assertIn("npm run build", text)
                 self.assertIn("npm run verify", text)
                 self.assertNotIn("hugo", text.lower())
+
+    def test_cjk_fonts_come_from_a_pinned_commit_with_checksums(self) -> None:
+        # apt on the runner sometimes waited minutes on the Ubuntu mirror; the script fetches
+        # the same four files from one upstream commit and checks each one.
+        text = (ROOT / "scripts" / "install-cjk-fonts.sh").read_text(encoding="utf-8")
+
+        self.assertRegex(text, r"commit=[0-9a-f]{40} ")
+        self.assertIn("https://raw.githubusercontent.com/notofonts/noto-cjk/$commit", text)
+        fonts = re.findall(r'"((?:Sans|Serif)/OTC/Noto\w+CJK-\w+\.ttc) ([0-9a-f]{64})"', text)
+        self.assertEqual(4, len(fonts))
+        self.assertIn("sha256sum --check --strict", text)
+        self.assertIn("fc-match", text)
+        self.assertNotIn("apt-get", text)
 
     def test_deploy_publishes_dist_from_main_only(self) -> None:
         text = (WORKFLOWS / "deploy.yml").read_text(encoding="utf-8")

@@ -36,15 +36,14 @@ jobs:
       # the runner image ships Chrome but no CJK fonts, which would shift every Chinese label.
       - name: Install CJK fonts
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends fonts-noto-cjk
+          bash scripts/install-cjk-fonts.sh
           google-chrome --version
 
       - name: Install dependencies
         run: npm ci
 
       - name: Validate shell syntax
-        run: bash -n scripts/install-aliyun.sh scripts/renew-cert.sh scripts/deploy-local.sh
+        run: bash -n scripts/install-aliyun.sh scripts/install-cjk-fonts.sh scripts/renew-cert.sh scripts/deploy-local.sh
 
       - name: Run repository tests
         run: python3 -m unittest discover -s tests -p "test_*.py" -v
