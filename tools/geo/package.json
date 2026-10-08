@@ -1,0 +1,9 @@
+{
+  "name": "zhuoqidev-geo",
+  "private": true,
+  "type": "module",
+  "description": "Builds the map data of the visitor map (src/data/geo/) from Natural Earth and DataV.GeoAtlas. Run from the repo root: npm run geo",
+  "dependencies": {
+    "mapshaper": "0.7.80"
+  }
+}

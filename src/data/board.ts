@@ -9,7 +9,7 @@ export const layout: Record<string, string> = {
   term: "left:2.5%;top:222px;width:340px;z-index:5",
   feature: "left:38.5%;top:216px;width:330px;z-index:7",
   "series-0": "left:73%;top:520px;width:250px;z-index:4",
-  robot: "left:58%;top:1190px;z-index:8",
+  robot: "left:44%;top:1222px;z-index:8",
   "note-0": "left:3%;top:586px;width:310px;transform:rotate(-2deg);z-index:4",
   "note-1": "left:38.5%;top:660px;width:290px;transform:rotate(1.5deg);z-index:4",
   "series-1": "left:73%;top:900px;width:250px;transform:rotate(-1deg);z-index:4",

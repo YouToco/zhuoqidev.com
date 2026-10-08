@@ -17,6 +17,7 @@ async function entries(lang: Lang): Promise<Entry[]> {
     { path: "/about/", alt: true },
     { path: "/projects/", alt: true },
     { path: "/guestbook/", alt: true },
+    { path: "/visitors/", alt: true },
     { path: "/privacy/", alt: true },
     ...posts.map((p) => ({ path: `/posts/${slugOf(p)}/`, lastmod: ymd(p.data.updated ?? p.data.date), alt: true })),
     ...(await getProjects(lang)).map((p) => ({ path: `/projects/${slugOf(p)}/`, alt: true })),
