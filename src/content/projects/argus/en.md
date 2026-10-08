@@ -2,6 +2,7 @@
 title: Argus — A Browser-Local Long-Video Understanding Agent Harness
 description: 'An open-source, frontend-only agent harness for long-video understanding: video never leaves the browser, multi-provider LLMs via Vercel AI SDK, with frame-extraction / memory / sub-agent tools and dual-CDN publishing. Vite + React + TypeScript.'
 date: 2026-08-30
+scene: argus
 ---
 
 **Argus** (named after Argus Panoptes, the hundred-eyed giant of Greek myth) is an open-source, long-video understanding agent harness I designed and built solo — **frontend-only, no backend**. Videos are decoded entirely in the browser, and users bring their own API keys and models. A multimodal LLM agent calls tools to "watch" the video itself: extracting frames, zooming into regions, taking notes, and spawning sub-agents. Typical scenarios: counting people in surveillance footage, or finding a specific object.

@@ -22,6 +22,7 @@
     "playwright": "1.63.0",
     "rehype-mermaid": "3.0.0",
     "sharp": "0.35.5",
+    "three": "0.186.1",
     "unist-util-visit": "5.1.0"
   },
   "devDependencies": {
@@ -30,6 +31,7 @@
     "@types/hast": "3.0.5",
     "@types/mdast": "4.0.4",
     "@types/node": "24.19.1",
+    "@types/three": "0.186.0",
     "pagefind": "1.5.2",
     "subset-font": "2.9.0",
     "typescript": "6.0.3"

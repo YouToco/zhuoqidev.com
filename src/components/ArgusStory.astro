@@ -1,0 +1,84 @@
+---
+// One real Argus search as a clay scene, told in six steps (src/data/argus-story.ts).
+// Without JavaScript this is a picture with numbered marks next to a numbered list. With it the steps
+// light up as you scroll, and after your first scroll, tap or key press the 3D scene replaces the
+// picture (src/scripts/argus-story.ts); it never loads during the initial page load.
+import { Picture } from "astro:assets";
+import model from "../assets/models/argus-story.glb.gz?url";
+import poster from "../assets/models/argus-story-poster.webp";
+import { camera, pins, posterMarks, story, ticks } from "../data/argus-story";
+import type { Lang } from "../i18n";
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const S = story[lang];
+const at = ([x, y]: number[]) => `left:${(x! * 100).toFixed(2)}%;top:${(y! * 100).toFixed(2)}%`;
+const scriptUrl = "https://github.com/YouToco/zhuoqidev.com/blob/main/tools/models/argus-story.py";
+---
+
+<section
+  class="story"
+  aria-labelledby="story-h"
+  data-story
+  data-model={model}
+  data-camera={JSON.stringify(camera)}
+  data-pins={JSON.stringify(pins)}
+>
+  <header class="story-head">
+    <p class="kicker">{S.kicker}</p>
+    <h2 id="story-h">{S.heading}</h2>
+    <p class="story-sub">{S.sub}</p>
+    <a class="story-skip" href="#main">{S.skip}</a>
+  </header>
+  <div class="story-body">
+    <div class="story-stage">
+      <figure class="story-fig" data-story-fig>
+        <Picture
+          src={poster}
+          alt={S.alt}
+          formats={["avif", "webp"]}
+          fallbackFormat="webp"
+          widths={[640, 960, 1280, 1800]}
+          sizes="(max-width: 1000px) 100vw, 900px"
+          loading="eager"
+          fetchpriority="high"
+        />
+        <div class="story-marks" aria-hidden="true">
+          {posterMarks.map((p, i) => <span class="story-num" data-step={i} style={at(pins[p])}>{i + 1}</span>)}
+        </div>
+        <div class="story-pins" aria-hidden="true">
+          {ticks.map(([p, text]) => <span class="story-tick" data-pin={p} style={at(pins[p])}>{text}</span>)}
+          {
+            S.steps.flatMap((s, i) =>
+              Object.entries(s.labels).map(([p, text]) => (
+                <span class="story-label" data-pin={p} data-step={i}>
+                  <span>{text}</span>
+                </span>
+              )),
+            )
+          }
+        </div>
+      </figure>
+    </div>
+    <ol class="story-steps">
+      {
+        S.steps.map((s, i) => (
+          <li class="story-step" data-step={i}>
+            <div class="story-card">
+              <span class="story-n" aria-hidden="true">{i + 1}</span>
+              <h3>{s.title}</h3>
+              <p>{s.body}</p>
+            </div>
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+  <p class="story-credit">{S.credit} <a href={scriptUrl}>{S.script}</a></p>
+</section>
+
+<script>
+  import "../scripts/argus-story";
+</script>

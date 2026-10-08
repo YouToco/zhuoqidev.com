@@ -1,5 +1,6 @@
 ---
 import { getCollection, render } from "astro:content";
+import ArgusStory from "../../../../components/ArgusStory.astro";
 import Page from "../../../../components/Page.astro";
 import { type Lang, LANGS } from "../../../../i18n";
 import Base from "../../../../layouts/Base.astro";
@@ -27,6 +28,7 @@ const hasAlt = all.some((p) => slugOf(p) === slug && p.id !== project.id);
 
 <Base lang={lang} title={project.data.title} description={project.data.description} path={`/projects/${slug}/`} altPath={hasAlt ? `/projects/${slug}/` : null} section="projects" ogType="article" bodyClass="dotgrid">
   <Page lang={lang} title={project.data.title} crumb={`~/projects/${slug}.md`} date={project.data.date} searchable>
+    {project.data.scene === "argus" && <ArgusStory slot="hero" lang={lang} />}
     <Content />
   </Page>
 </Base>

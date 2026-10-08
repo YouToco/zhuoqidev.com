@@ -2,6 +2,7 @@
 title: Argus — 纯前端长视频理解 Agent Harness
 description: 开源的浏览器本地长视频理解 agent harness：视频不出本地，多 provider LLM（Vercel AI SDK）+ 切帧/记忆/子代理工具，自带双线 CDN 发布。Vite + React + TypeScript。
 date: 2026-08-30
+scene: argus
 ---
 
 **Argus**（取名自希腊百眼巨人 Argus Panoptes）是我独立设计开发并开源的长视频理解 agent harness——**只有前端、没有后端**，视频完全在浏览器本地解码处理，API Key 与模型全部用户自填。让多模态 LLM agent 自己调用工具去"看"视频：抽帧、局部放大、记笔记、派子代理，典型场景如监控视频数人数、找特定物品。

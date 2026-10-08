@@ -32,6 +32,8 @@ const projects = defineCollection({
     title: z.string(),
     description: z.string(),
     date: z.coerce.date().optional(),
+    /** An interactive scene shown above the write-up (src/components/ArgusStory.astro). */
+    scene: z.enum(["argus"]).optional(),
   }),
 });
 

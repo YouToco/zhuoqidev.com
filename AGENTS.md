@@ -92,6 +92,14 @@
 - URLs are a contract. Chinese pages live at the root and English pages under
   `/en/`; old Hugo paths are kept as redirects (`src/lib/redirects.ts`, post
   `aliases`, taxonomy pages) and listed in `tests/fixtures/hugo-urls.txt`.
+- The 3D scene on the Argus project page (`scene: argus` in its front matter,
+  `src/components/ArgusStory.astro`) must not cost the first load anything: the
+  poster render is the LCP image and the fallback, the step script starts after
+  `load` and never reads layout while the page loads, and three.js plus the model
+  load only after the reader's first scroll, tap or key press. The model and
+  poster come from `tools/models/argus-story.py` (steps in `tools/models/README.md`);
+  the step text lives in `src/data/argus-story.ts`. After changing any of it,
+  compare mobile Lighthouse on that page with `main`.
 
 ## Guestbook and visit counts (Pages Functions + D1)
 
