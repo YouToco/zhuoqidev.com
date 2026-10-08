@@ -570,6 +570,8 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 .story-label:is(.side, .side-l)::before { display: none; }
 .story-label:is(.side, .side-l) > span { bottom: auto; top: 0; translate: 12px -50%; }
 .story-label.side-l > span { left: auto; right: 0; translate: -12px -50%; }
+.story-label.below::before { bottom: auto; top: 0; }
+.story-label.below > span { bottom: auto; top: 20px; }
 .story-steps { list-style: none; margin: 0; padding: 0; }
 .story-step { min-height: 62vh; }
 .story-card {
@@ -586,6 +588,8 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 }
 .story.live .story-step.on .story-card { border-style: solid; border-color: var(--seal); translate: -6px 0; }
 .story.live .story-step.on .story-n { background: var(--stamp); border-color: var(--stamp); color: #fff8ef; }
+.story-call { margin: 10px 0 0; padding-top: 8px; border-top: 1px dashed var(--line); font: 400 12px/1.7 var(--f-mono); color: var(--ink-2); overflow-wrap: anywhere; }
+.story-more { display: inline-block; margin-top: 10px; font-size: 13.5px; color: var(--blue); }
 .story-credit { margin: 4px 0 0; text-align: center; font: 400 12px/1.7 var(--f-mono); color: var(--ink-3); }
 .story-credit a { color: var(--ink-2); }
 .embedded .story-stage { top: 16px; }

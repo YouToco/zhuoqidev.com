@@ -5,6 +5,11 @@
 // are the points the HTML labels hang from. The scene opens exactly as the poster was rendered (every
 // step shown, same camera), so the swap from picture to canvas is invisible, then settles on the
 // current step. It only renders while something is moving.
+//
+// Three things move on their own: Argus's eyes follow what the current step is about and blink now
+// and then; the frames and the tool call on the wire (s1_pkt*) ride it to the model and back when
+// the step changes; and when the tray arrives, its oldest batch (s3_tray_old*) gives way to a slip
+// of text (s3_tray_slip) as the newest batch (s3_tray_b2_*) lands, as in the run the scene follows.
 import {
   Box3,
   DirectionalLight,
@@ -22,6 +27,7 @@ import {
   WebGLRenderer,
 } from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import paths from "../assets/models/argus-story-paths.json";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
@@ -34,10 +40,17 @@ export interface StoryScene {
 }
 
 /** Camera distance for each step as a share of the poster's; the last step is the poster framing. */
-const ZOOM = [0.55, 0.62, 0.42, 0.62, 0.62, 1];
+const ZOOM = [0.55, 0.8, 0.38, 0.6, 0.62, 1];
 const UP = new Vector3(0, 1, 0);
+/** What the main Argus looks at in each step (pin names; the last step looks at the reader). */
+const GAZE = ["s0_question", "s1_scan", "s2_in", "s3_sub", "s4_answer", null];
+const LAP = 1.7; // seconds for a packet to ride the whole wire
+const BLINK = 0.16;
 
 type Piece = { g: Group; step: number; delay: number; s: number; v: number; to: number; wait: number };
+type Eye = { e: Group; p: Group; n: Vector3; len: number };
+type Argus = { eyes: Eye[]; gaze: Vector3; target: () => Vector3 };
+type Packet = { w: Group; at: number; dir: 1 | -1 };
 
 export async function mount(opts: {
   fig: HTMLElement;
@@ -121,10 +134,17 @@ export async function mount(opts: {
       group.add(g);
       g.updateMatrixWorld(true);
       for (const m of members) g.attach(m);
-      return { g, d: pivot.distanceTo(focus[step]!) };
+      // The rows over the edges of the red span come in pass by pass (every 1 s, 0.5 s, 0.1 s), then
+      // the dots down to the strip; everything else comes nearest to the step's focus first.
+      const name = members[0]!.name;
+      const row = /^s2_row(\d)/.exec(name);
+      const rank = row ? +row[1]! + 1 : name.startsWith("s2_thread") ? 4 : 0;
+      return { g, rank, d: rank * 100 + pivot.distanceTo(focus[step]!) };
     });
     made.sort((a, b) => a.d - b.d);
-    made.forEach(({ g }, i) => pieces.push({ g, step, delay: Math.min(i * 0.05, 0.6), s: 1, v: 0, to: 1, wait: 0 }));
+    made.forEach(({ g, rank }, i) =>
+      pieces.push({ g, step, delay: Math.min(i * 0.05, 0.6) + rank * 0.28, s: 1, v: 0, to: 1, wait: 0 }),
+    );
   });
 
   const camera = new PerspectiveCamera(cam.fovY, cam.aspect, 0.5, 200);
@@ -136,6 +156,89 @@ export async function mount(opts: {
   let wanted = last;
 
   const goalDist = (k: number) => cam.distance * ZOOM[k]! * Math.max(1, cam.aspect / camera.aspect) ** (k === last ? 1 : 0.75);
+
+  // Moving parts get a wrapper group at their own centre, so they can turn, squash and slide
+  // about that centre whatever transform the glTF node carries.
+  // (A glTF node with both a mesh and children loads as an Object3D holding the mesh, so match nodes.)
+  const byName = (re: RegExp) => {
+    const out: Object3D[] = [];
+    model.traverse((o) => {
+      if (re.test(o.name)) out.push(o);
+    });
+    return out;
+  };
+  const centre = (objs: Object3D[]) => {
+    const box = new Box3();
+    for (const o of objs) box.expandByObject(o);
+    return box.getCenter(new Vector3());
+  };
+  const wrap = (objs: Object3D[]) => {
+    const parent = objs[0]!.parent!;
+    const w = new Group();
+    w.position.copy(parent.worldToLocal(centre(objs)));
+    parent.add(w);
+    w.updateMatrixWorld(true);
+    for (const o of objs) w.attach(o);
+    return w;
+  };
+  const pinAt = (name: string) => pins.get(name)!.getWorldPosition(new Vector3());
+
+  const rig = (prefix: string, target: () => Vector3): Argus => {
+    const eyes: Eye[] = byName(new RegExp(`^${prefix}_eye\\d+$`)).map((eye) => {
+      const pupil = byName(new RegExp(`^${prefix}_pupil${eye.name.slice(prefix.length + 4)}$`))[0]!;
+      const e = wrap([eye, pupil]);
+      const p = wrap([pupil]);
+      return { e, p, n: p.position.clone().normalize(), len: p.position.length() };
+    });
+    return { eyes, gaze: target().clone(), target };
+  };
+  const eyeCam = new Vector3();
+  const subLook = centre(byName(/^s3_card1$/)); // the sub-agent watches the frames it pulled
+  const argi = [
+    rig("s1_argus", () => (GAZE[step] ? pinAt(GAZE[step]!) : eyeCam.copy(camera.position))),
+    rig("s3_sub", () => subLook),
+  ];
+  // The poster has every eye looking straight out; the gaze blends in once the scene is live.
+  let gazeMix = 0;
+  let squint = 1;
+
+  const wire = paths.s1_cable.map((p) => new Vector3(...(p as [number, number, number])));
+  const seg = wire.slice(1).map((p, i) => p.distanceTo(wire[i]!));
+  const wireLen = seg.reduce((a, b) => a + b, 0);
+  const onWire = (u: number, out: Vector3) => {
+    let left = u * wireLen;
+    for (let i = 0; i < seg.length; i++) {
+      if (left <= seg[i]! || i === seg.length - 1) return out.lerpVectors(wire[i]!, wire[i + 1]!, Math.min(1, left / seg[i]!));
+      left -= seg[i]!;
+    }
+    return out;
+  };
+  const v0 = new Vector3();
+  const nearest = (p: Vector3) => {
+    let best = 0;
+    let bestD = Infinity;
+    for (let k = 0; k <= 200; k++) {
+      const d = onWire(k / 200, v0).distanceToSquared(p);
+      if (d < bestD) [best, bestD] = [k / 200, d];
+    }
+    return best;
+  };
+  const packets: Packet[] = ["A", "B", "C"].map((k) => {
+    const w = wrap(byName(new RegExp(`^s1_pkt${k}$`)));
+    return { w, at: nearest(w.getWorldPosition(new Vector3())), dir: k === "C" ? -1 : 1 };
+  });
+  // laps the packets have ridden; they rest wherever a whole number of laps leaves them
+  let lap = 0;
+  let lapTo = 0;
+  let lapV = 0;
+
+  const old = wrap(byName(/^s3_tray_old\d+$/));
+  const slip = wrap(byName(/^s3_tray_slip$/));
+  const newest = wrap(byName(/^s3_tray_b2_\d+$/));
+  let swap = 1; // 0: the skim batch still in the tray, 1: swapped for the slip (the poster's state)
+  let swapAt = -1;
+  let clock = 0;
+  let blinkAt = -1;
 
   let yaw = 0;
   let drag: { x: number; yaw: number } | null = null;
@@ -189,13 +292,67 @@ export async function mount(opts: {
       p.g.visible = p.s > 0.002;
       p.g.scale.setScalar(Math.max(p.s, 0.002));
     }
+    if (ready) {
+      const k = reduced ? 1 : 1 - Math.exp(-dt * 6);
+      gazeMix += (0.55 - gazeMix) * k;
+      if (0.55 - gazeMix > 1e-3) busy = true;
+      for (const a of argi) {
+        const to = a.target();
+        a.gaze.lerp(to, k);
+        if (a.gaze.distanceToSquared(to) > 1e-4) busy = true;
+      }
+    }
+    if (blinkAt >= 0 && clock >= blinkAt) {
+      const t = (clock - blinkAt) / BLINK;
+      squint = t >= 1 ? 1 : 1 - 0.92 * Math.sin(Math.PI * t);
+      if (t >= 1) blinkAt = -1;
+      else busy = true;
+    }
+    if (lap < lapTo) {
+      // Ride at full speed, easing into the last lap so every packet stops where it rests.
+      const goal = Math.min(1 / LAP, Math.max(0.06, (lapTo - lap) * 1.6));
+      lapV += (goal - lapV) * Math.min(1, dt * 5);
+      lap = Math.min(lapTo, lap + lapV * dt);
+      if (lap === lapTo) lapV = 0;
+      else busy = true;
+    }
+    if (swapAt >= 0) {
+      busy = true;
+      if (clock >= swapAt) swap = Math.min(1, swap + dt / 0.5);
+      if (swap === 1) swapAt = -1;
+    }
     return busy;
   };
 
   const v = new Vector3();
+  const smooth = (x: number) => x * x * (3 - 2 * x);
+  const pose = () => {
+    for (const a of argi) {
+      for (const { e, p, n, len } of a.eyes) {
+        // the pupil slides over the eye towards the target, as far as gazeMix lets it
+        e.parent!.worldToLocal(v.copy(a.gaze)).sub(e.position).normalize();
+        p.position.copy(n).lerp(v, gazeMix).normalize().multiplyScalar(len);
+        e.scale.y = squint;
+      }
+    }
+    for (const k of packets) {
+      const u = (((k.at + k.dir * lap) % 1) + 1) % 1;
+      const s = Math.min(1, u / 0.08, (1 - u) / 0.08); // out of Argus's head, into the cloud
+      k.w.position.copy(k.w.parent!.worldToLocal(onWire(u, v)));
+      k.w.scale.setScalar(Math.max(s, 0.001));
+    }
+    const sw = smooth(swap);
+    old.scale.setScalar(Math.max(1 - sw, 0.001));
+    old.visible = sw < 1;
+    for (const w of [slip, newest]) {
+      w.scale.setScalar(Math.max(sw, 0.001));
+      w.visible = sw > 0;
+    }
+  };
   const draw = () => {
     camera.position.copy(look).addScaledVector(v.copy(dir).applyAxisAngle(UP, yaw), dist);
     camera.lookAt(look);
+    pose();
     renderer.render(scene, camera);
     const out: PinCoords = {};
     for (const [name, o] of pins) {
@@ -212,6 +369,7 @@ export async function mount(opts: {
     // Small fixed steps, so the springs keep real time on a slow GPU too.
     let dt = Math.min((now - then) / 1000, 0.25);
     then = now;
+    clock += dt;
     let busy = false;
     while (dt > 0) {
       const h = Math.min(dt, 1 / 120);
@@ -237,8 +395,32 @@ export async function mount(opts: {
       // Jumping several steps at once still builds them in order.
       p.wait = to ? p.delay + Math.max(0, p.step - from - 1) * 0.3 : 0;
     }
+    if (!reduced && k >= 1 && k !== from) {
+      // the next round trip: frames up the wire, the next tool call down
+      lapTo = Math.ceil(lap) + (from < 1 ? 2 : 1);
+    }
+    if (!reduced && k >= 3 && from < 3) {
+      // the tray lands with the skim batch still in it; then the fourth batch comes in and the skim
+      // batch becomes a slip of text
+      swap = 0;
+      swapAt = clock + 1.2 + Math.max(0, 3 - from - 1) * 0.3;
+    }
     kick();
   };
+
+  let seen = false;
+  new IntersectionObserver(([e]) => (seen = e!.isIntersecting)).observe(fig);
+  const blinkLater = () =>
+    setTimeout(
+      () => {
+        if (seen && !document.hidden) {
+          blinkAt = clock;
+          kick();
+        }
+        blinkLater();
+      },
+      2600 + Math.random() * 3400,
+    );
 
   const resize = () => {
     const w = fig.clientWidth;
@@ -264,6 +446,7 @@ export async function mount(opts: {
     () => {
       ready = true;
       apply(wanted);
+      if (!reduced) blinkLater();
     },
     reduced ? 0 : 650,
   );

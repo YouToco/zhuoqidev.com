@@ -1,6 +1,6 @@
 ---
 title: Argus — A Browser-Local Long-Video Understanding Agent Harness
-description: 'An open-source, frontend-only agent harness for long-video understanding: video never leaves the browser, multi-provider LLMs via Vercel AI SDK, with frame-extraction / memory / sub-agent tools and dual-CDN publishing. Vite + React + TypeScript.'
+description: 'An open-source, frontend-only agent harness for long-video understanding: the video file never leaves the browser, multi-provider LLMs via Vercel AI SDK, with frame-extraction / memory / sub-agent tools and dual-CDN publishing. Vite + React + TypeScript.'
 date: 2026-08-30
 scene: argus
 ---
@@ -12,11 +12,11 @@ scene: argus
 
 ## The Problem
 
-The hard part of long-video understanding isn't the model — it's **how you feed it the video**. Uploading everything is prohibitively expensive; blind frame sampling misses the signal. Argus hands that decision to the agent: it inspects video metadata first, then decides which frames to extract, at what rate, and where to zoom in — and when the context is about to explode, it spawns sub-agents to handle segments. Meanwhile the video never leaves the browser: no server, no uploads.
+The hard part of long-video understanding isn't the model — it's **how you feed it the video**. Uploading everything is prohibitively expensive; blind frame sampling misses the signal. Argus hands that decision to the agent: it inspects video metadata first, then decides which frames to extract, at what rate, and where to zoom in — and when the context is about to explode, it spawns sub-agents to handle segments. Meanwhile the video file never leaves your browser and there is no backend: all the model receives is the downscaled frames the agent picked, plus text.
 
 ## Architecture Highlights
 
-- **Agent Loop** — Vercel AI SDK `streamText` runs the multi-step tool loop (capped with `stopWhen`); the two parts that make the product are ours: `prepareStep` injects freshly extracted frames as a user message so any vision model can see them (images inside tool results don't carry across OpenAI-compatible gateways), and old images are pruned so long runs keep their context bounded.
+- **Agent Loop** — Vercel AI SDK `streamText` runs the multi-step tool loop (capped with `stopWhen`); the two parts that make the product are ours: `prepareStep` injects freshly extracted frames as a user message so any vision model can see them (images inside tool results don't carry across OpenAI-compatible gateways), and old images are pruned (only the last 3 batches stay; earlier ones become a line of text saying how to pull them back) so long runs keep their context bounded.
 - **8 Video-Understanding Tools** — `get_video_info` / `extract_frames` (range + rate sampling with timestamps) / `extract_frame_at` / `list_frames` / `inspect_region` (zoom into a region) / `remember` / `recall` (state memory against long-context drift) / `spawn_subagent` (segment very long videos, preventing context blow-up).
 - **Browser-Native Hardware-Decoded Frame Extraction** — the main path is mediabunny (WebCodecs demux + decode, no `<video>` seeking); when it can't decode a file, Argus falls back to `<video>` + `<canvas>` (with black-frame retries); containers like AVI / WMV / FLV are transcoded locally with ffmpeg.wasm, fetched from a CDN only the first time one shows up; mediainfo.js only fills in fps / codec / bitrate on the fallback path.
 - **211 Providers via a Runtime Catalog** — integrates the models.dev catalog, normalized into provider presets with a searchable dropdown; vision models are auto-flagged and selected by default; OpenAI-compatible / Anthropic / Gemini transports are detected automatically, with CORS hints and a connection test.

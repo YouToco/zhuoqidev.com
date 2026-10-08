@@ -1,6 +1,6 @@
 ---
 title: Argus — 纯前端长视频理解 Agent Harness
-description: 开源的浏览器本地长视频理解 agent harness：视频不出本地，多 provider LLM（Vercel AI SDK）+ 切帧/记忆/子代理工具，自带双线 CDN 发布。Vite + React + TypeScript。
+description: 开源的浏览器本地长视频理解 agent harness：视频文件不出本地，多 provider LLM（Vercel AI SDK）+ 切帧/记忆/子代理工具，自带双线 CDN 发布。Vite + React + TypeScript。
 date: 2026-08-30
 scene: argus
 ---
@@ -12,11 +12,11 @@ scene: argus
 
 ## 它解决什么
 
-让 LLM 理解长视频的痛点不在模型，而在**怎么把视频喂给它**：整段上传太贵，盲抽帧又漏信息。Argus 把这个问题交给 agent 自己决策——它先看视频元信息，再自主决定抽哪些帧、用什么频率、哪里需要放大细看，上下文要爆了就派子代理分段处理。同时视频不离开浏览器，没有服务器，没有数据上传。
+让 LLM 理解长视频的痛点不在模型，而在**怎么把视频喂给它**：整段上传太贵，盲抽帧又漏信息。Argus 把这个问题交给 agent 自己决策——它先看视频元信息，再自主决定抽哪些帧、用什么频率、哪里需要放大细看，上下文要爆了就派子代理分段处理。同时视频文件不离开你的浏览器，也没有后端：发给模型的只有 agent 挑出来的缩小帧和文字。
 
 ## 架构亮点
 
-- **Agent 循环** — 由 Vercel AI SDK `streamText` 驱动多步工具调用（`stopWhen` 限制步数），产品的核心两处自己写：`prepareStep` 把新抽的帧作为一条用户消息注入下一步，任何视觉模型都看得到（工具结果里带图，在各家 OpenAI 兼容网关之间不通用）；旧图自动裁掉，长任务的上下文不会失控。
+- **Agent 循环** — 由 Vercel AI SDK `streamText` 驱动多步工具调用（`stopWhen` 限制步数），产品的核心两处自己写：`prepareStep` 把新抽的帧作为一条用户消息注入下一步，任何视觉模型都看得到（工具结果里带图，在各家 OpenAI 兼容网关之间不通用）；旧图自动裁掉（只留最近 3 批，更早的换成一行字，要用时再抽回来），长任务的上下文不会失控。
 - **8 个视频理解工具** — `get_video_info` / `extract_frames`（范围+频率抽帧带时间戳）/ `extract_frame_at` / `list_frames` / `inspect_region`（局部放大细看）/ `remember` / `recall`（状态记忆，防长上下文遗忘）/ `spawn_subagent`（超长视频分段，防上下文爆炸）。
 - **浏览器本地硬解码抽帧** — 主路径用 mediabunny（基于 WebCodecs 解封装 + 解码，不用拖 `<video>` 的进度条）；解不了时退回 `<video>` + `<canvas>`（含黑帧重试）；AVI / WMV / FLV 这类容器第一次遇到时才从 CDN 懒加载 ffmpeg.wasm 在本地转码；mediainfo.js 只在退回路径上补 fps / 编码 / 码率。
 - **211 个 Provider 运行时目录** — 接入 models.dev 目录并归一化为 provider 预设，下拉可搜；自动标记视觉模型并优先默认选中（适配视频理解）；OpenAI 兼容 / Anthropic / Gemini 三类传输自动判定，附带 CORS 提示与连接测试。

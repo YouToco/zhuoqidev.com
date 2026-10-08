@@ -98,7 +98,8 @@
   `load` and never reads layout while the page loads, and three.js plus the model
   load only after the reader's first scroll, tap or key press. The model and
   poster come from `tools/models/argus-story.py` (steps in `tools/models/README.md`);
-  the step text lives in `src/data/argus-story.ts`. After changing any of it,
+  the step text lives in `src/data/argus-story.ts` and follows the recorded run in
+  `tools/models/argus-story-run.json`. After changing any of it,
   compare mobile Lighthouse on that page with `main`.
 
 ## Guestbook and visit counts (Pages Functions + D1)

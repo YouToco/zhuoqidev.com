@@ -1,10 +1,14 @@
 """A clay diorama of one real Argus run, for the Argus page on zhuoqidev.com.
 
-The story is a real analysis of the 3-minute sample video that ships with Argus: the reader asks
-"When does something red show up?"; the agent skims, samples densely around the hit, zooms in to
-confirm, takes notes and sends sub-agents to the second half, and answers 9.9s - 24.9s with the
-evidence frames. The sample video's real timeline: a red circle at 9.9-24.9s, the word HELLO at
-60-69.9s, a blue square at 99.9-119.9s, a green triangle from 2m30s.
+The story follows one real run (DeepSeek, 2026-10-08; the trace is argus-story-run.json next to
+this file) on the 3-minute sample video that ships with Argus. The reader asks "When does something
+red show up?". The agent skims one frame every 10 seconds; the small frames go up the wire to the
+reader's own model, which replies with the next tool call. Red shows at 10s and 20s, so it samples
+both edges of the red span every 1 s, then 0.5 s, then 0.1 s; a sub-agent checks 30-180 s on its own
+and reports one sentence; the main agent's context keeps the last three batches of frames (the
+skim becomes a line of text). It writes a note and answers 10.0s - 25.0s with the evidence frames.
+The sample video's timeline: a red circle at 10-25s, the word HELLO around 60s, a blue square at
+100-120s, a green triangle from 2m30s.
 
 Running it:
 - Over Blender MCP (watch it in the UI): in execute_blender_code,
@@ -13,6 +17,8 @@ Running it:
   poster and writes the label coordinates.
 
 The page brings in the groups step0..step5 one by one; the pin_* empties anchor its HTML labels.
+Some pieces exist only for the page to animate: the frames and the tool call riding the wire
+(s1_pkt*), and the skim batch that the tray swaps for a slip of text (s3_tray_old*, not rendered).
 """
 
 import json
@@ -22,9 +28,11 @@ import sys
 import bmesh
 import bpy
 from mathutils import Matrix, Vector
+from mathutils.geometry import interpolate_bezier
 
 SCENE = "ArgusStory"
-STEPS = ["step0_video", "step1_scan", "step2_zoom", "step3_notes", "step4_answer", "step5_browser"]
+STEPS = ["step0_video", "step1_scan", "step2_refine", "step3_helpers", "step4_answer", "step5_browser"]
+PATHS = {}  # sampled curves the page moves things along (world space), filled by Builder.tube(record=True)
 
 SW, SD, STH = 10.6, 6.6, 0.3  # the browser window (the stage): width, depth, thickness; top face at z = 0
 STRIP_Y = -1.3
@@ -207,7 +215,7 @@ class Builder:
             self.bevel(ob, bevel, 2, angle=True)
         return ob
 
-    def tube(self, name, points, r, mat, parent, res=16):
+    def tube(self, name, points, r, mat, parent, res=16, record=False):
         cu = bpy.data.curves.new(name + "_curve", "CURVE")
         cu.dimensions = "3D"
         cu.bevel_depth = r
@@ -216,9 +224,19 @@ class Builder:
         cu.use_fill_caps = True
         sp = cu.splines.new("BEZIER")
         sp.bezier_points.add(len(points) - 1)
-        for bp, p in zip(sp.bezier_points, points):
+        # Catmull-Rom handles, set explicitly so the path the page samples is the one drawn
+        pts = [Vector(p) for p in points]
+        tan = [(pts[min(i + 1, len(pts) - 1)] - pts[max(i - 1, 0)]) / 6 for i in range(len(pts))]
+        for bp, p, t in zip(sp.bezier_points, pts, tan):
+            bp.handle_left_type = bp.handle_right_type = "FREE"
             bp.co = p
-            bp.handle_left_type = bp.handle_right_type = "AUTO"
+            bp.handle_left = p - t
+            bp.handle_right = p + t
+        if record:
+            samples = [pts[0]]
+            for i in range(len(pts) - 1):
+                samples += interpolate_bezier(pts[i], pts[i] + tan[i], pts[i + 1] - tan[i + 1], pts[i + 1], res + 1)[1:]
+            PATHS[name] = samples
         ob = self._from_curve(name, cu, parent, mat)
         start = Vector(points[0])  # origin at the start, so the page can grow it from there
         ob.data.transform(Matrix.Translation(-start))
@@ -324,7 +342,7 @@ FRAME_KINDS = {1: "red", 4: "hello", 7: "blue", 10: "green", 11: "green"}
 
 def step0_video(b, g):
     """A 3-minute video (a film reel) and the reader's question."""
-    # the browser window's floor; its title bar, address bar and the model cloud arrive in the last step
+    # the browser window's floor; its title bar and address bar arrive in the last step
     b.box("s0_stage", (SW, SD, STH), (0, 0, -STH / 2), "stage", g, bevel=0.12, seg=5)
     # the reel
     rx, ry = -4.62, STRIP_Y + 0.1
@@ -368,92 +386,165 @@ def step0_video(b, g):
 
 
 ARGUS_POS = (-3.05, 0.75, 0.0)
+CLOUD = Vector((2.6, SD / 2 + 1.6, 3.3))
+
+
+def along(points, u):
+    """The point a share u (0-1) of the way along a sampled path."""
+    seg = [(a - b).length for a, b in zip(points[1:], points[:-1])]
+    left = u * sum(seg)
+    for a, b, d in zip(points[:-1], points[1:], seg):
+        if left <= d:
+            return a.lerp(b, left / d if d else 0)
+        left -= d
+    return points[-1].copy()
+
+
+def packet_frame(b, name, loc, parent):
+    """A downscaled frame on its way up the wire to the model."""
+    card = b.box(name, (0.4, 0.04, 0.3), loc, "white", parent, bevel=0.02, rot=face_cam())
+    b.box(f"{name}_scr", (0.33, 0.01, 0.23), (0, -0.024, 0), "screen", card, bevel=0)
+    b.cyl(f"{name}_red", 0.05, 0.012, (0.03, -0.031, 0), "seal", card, seg=18, rot=(math.pi / 2, 0, 0))
+    return card
+
+
+def packet_call(b, name, loc, parent):
+    """The model's reply on its way down: the next tool call."""
+    tag = b.box(name, (0.48, 0.05, 0.24), loc, "yellow", parent, bevel=0.05, rot=face_cam())
+    for j, w in enumerate((0.28, 0.17)):
+        b.box(f"{name}_l{j}", (w, 0.01, 0.034), (-0.13 + w / 2, -0.028, 0.04 - j * 0.08), "ink", tag, bevel=0)
+    return tag
 
 
 def step1_scan(b, g):
-    """Argus arrives and skims: one frame every so often; red shows up in the 15-second frame."""
+    """Argus skims one frame every 10 seconds. The frames go up the wire to the reader's own model
+    (the cloud), which replies with the next tool call; red shows in the frames at 10s and 20s."""
     argus(b, "s1_argus", ARGUS_POS, g)
     for i in (1, 4, 7, 10):
         x = T0_X + FRAME_PITCH * (i + 0.5)
         top = Vector((x, STRIP_Y + 0.25, 1.62))
         frame_card(b, f"s1_card{i}", 0.62, 0.5, FRAME_KINDS.get(i, "empty"), top, g)
         b.dots(f"s1_thread{i}_", (x, STRIP_Y, 0.12), top - Vector((0, 0, 0.3)), 6, "ink", g, r=0.022)
+    for k, (dx, dy, dz, r) in enumerate([(0, 0, 0, 0.62), (-0.6, 0.05, -0.15, 0.46), (0.6, 0.02, -0.12, 0.5),
+                                         (-0.2, 0.1, 0.42, 0.46), (0.3, -0.05, 0.36, 0.42),
+                                         (0.0, -0.25, -0.22, 0.44)]):
+        b.sphere(f"s1_cloud{k}", r, CLOUD + Vector((dx, dy, dz)), "cloud", g, u=24, v=14)
+    head = Vector((ARGUS_POS[0], ARGUS_POS[1], 1.62))
+    b.tube("s1_cable", [head, head + Vector((0.3, 0.6, 0.9)), Vector((0.0, SD / 2 + 0.2, 2.6)),
+                        CLOUD - Vector((0.7, 0.2, 0.25))], 0.04, "ink", g, record=True)
+    wire = PATHS["s1_cable"]
+    packet_frame(b, "s1_pktA", along(wire, 0.2), g)
+    packet_frame(b, "s1_pktB", along(wire, 0.66), g)
+    packet_call(b, "s1_pktC", along(wire, 0.84), g)
     b.empty("pin_s1_argus", (ARGUS_POS[0], ARGUS_POS[1], 1.75), g)
     b.empty("pin_s1_scan", (T0_X + FRAME_PITCH * 7.5, STRIP_Y + 0.25, 1.95), g)
+    b.empty("pin_s1_model", CLOUD + Vector((0, 0, 1.0)), g)
 
 
-def step2_zoom(b, g):
-    """Dense frames over 0-30 s find the edges at 9.9s and 24.9s; a magnifier confirms."""
-    xs = [(8, "empty"), (10, "red"), (24, "red"), (26, "empty")]
-    for k, (t, kind) in enumerate(xs):
-        x = tx(t) + (k - 1.5) * 0.12
-        pos = Vector((x - 0.15 + k * 0.05, STRIP_Y - 0.25, 0.86 + (k % 2) * 0.08))
-        frame_card(b, f"s2_card{k}", 0.4, 0.33, kind, pos, g, thick=0.03)
-    # the magnifier, held up to the 15-second card, with the red circle enlarged in the glass
-    card = Vector((tx(15) + 0.36 - 0.36, STRIP_Y + 0.25, 1.62))
-    toward = Vector((CAM_DIR.x, CAM_DIR.y, CAM_DIR.z))
-    lens = card + toward * 0.75 + Vector((0.25, 0, 0.1))
-    rot = face_cam(math.pi / 2)
-    b.torus("s2_lens_ring", 0.34, 0.055, lens, "yellow", g, maj=48, mnr=12, rot=rot)
-    b.cyl("s2_lens_glass", 0.31, 0.02, lens, "glass", g, seg=40, rot=rot)
-    b.cyl("s2_lens_red", 0.17, 0.02, lens + toward * 0.02, "seal", g, seg=32, rot=rot)
-    handle_end = lens + Vector((-0.35, 0.45, -0.45))
-    b.tube("s2_lens_handle", [lens + (handle_end - lens).normalized() * 0.36, handle_end], 0.06, "ink", g)
-    # Argus's arm reaching the handle
-    shoulder = Vector((ARGUS_POS[0] + 0.35, ARGUS_POS[1] - 0.3, 1.0))
-    b.tube("s2_arm", [shoulder, shoulder.lerp(handle_end, 0.5) + Vector((0, 0, 0.12)), handle_end], 0.07, "blue", g)
-    b.sphere("s2_hand", 0.1, handle_end, "blue", g, u=16, v=10)
-    b.empty("pin_s2_dense", (tx(17), STRIP_Y - 0.25, 1.2), g)
-    b.empty("pin_s2_lens", lens + Vector((0, 0, 0.45)), g)
+# the two edges of the red span (first and last frame with red) and the three passes over each:
+# card width, spacing, height for every 1 s, every 0.5 s, every 0.1 s. The rows hang in front of
+# the strip, nudged apart so the two sets do not touch.
+EDGES = ((10.0, "in", -0.07), (24.9, "out", 0.07))
+ROWS = ((0.25, 0.27, 1.12), (0.19, 0.205, 0.86), (0.145, 0.16, 0.63))
+FUNNEL_Y = STRIP_Y - 0.66
 
 
-def step3_notes(b, g):
-    """Notes (sticky notes on watched spans) and two sub-agents watching the second half."""
-    for k, (t0, t1, ang) in enumerate(((30, 60, 4), (75, 105, -5))):
-        x = (tx(t0) + tx(t1)) / 2
-        note = b.box(f"s3_note{k}", (0.78, 0.74, 0.02), (x, STRIP_Y + 0.02, 0.1), "note", g, bevel=0.01,
-                     rot=(0, 0, math.radians(ang)))
-        for j, wdt in enumerate((0.5, 0.36, 0.44)):
-            b.box(f"s3_note{k}_l{j}", (wdt, 0.04, 0.008), (-0.1 + wdt / 2 - 0.15, 0.18 - j * 0.15, 0.014), "ink",
-                  note, bevel=0)
-    subs = [(1.55, -2.45), (3.55, -2.45)]
-    for k, (sx, sy) in enumerate(subs):
-        argus(b, f"s3_sub{k}", (sx, sy, 0.0), g, scale=0.62, eyes=3, color="lavender")
-        for j in range(2):
-            t = 112 + k * 37 + j * 14
-            x = tx(t)
-            frame_card(b, f"s3_sub{k}_card{j}", 0.36, 0.3, FRAME_KINDS.get(int(t // 15), "empty"),
-                       (x, STRIP_Y + 0.1, 1.0 + j * 0.06), g, thick=0.03)
-            b.dots(f"s3_sub{k}_thread{j}_", (x, STRIP_Y, 0.12), (x, STRIP_Y + 0.1, 0.8), 4, "lavender", g, r=0.02)
-    b.empty("pin_s3_notes", ((tx(30) + tx(105)) / 2, STRIP_Y, 0.35), g)
-    b.empty("pin_s3_subs", ((subs[0][0] + subs[1][0]) / 2, subs[0][1], 0.95), g)
+def step2_refine(b, g):
+    """Around each edge of the red span it samples every 1 s, then every 0.5 s, then every 0.1 s."""
+    for t, side, nudge in EDGES:
+        x = tx(t) + nudge
+        for r, (w, dx, z) in enumerate(ROWS):
+            for k in (-1, 0, 1):
+                red = k >= 0 if side == "in" else k <= 0
+                frame_card(b, f"s2_row{r}{side}_c{k + 1}", w, w * 0.78, "red" if red else "empty",
+                           (x + k * dx, FUNNEL_Y, z), g, thick=0.025)
+        b.dots(f"s2_thread{side}_", (tx(t), STRIP_Y - 0.3, 0.1), (x, FUNNEL_Y, ROWS[-1][2] - 0.1), 5, "ink", g,
+               r=0.018)
+    b.empty("pin_s2_in", (tx(EDGES[0][0]) + EDGES[0][2], FUNNEL_Y, 1.38), g)
+    b.empty("pin_s2_out", (tx(EDGES[1][0]) + EDGES[1][2], FUNNEL_Y, 1.38), g)
+
+
+TRAY = Vector((-1.4, 1.6, 0.0))  # back far enough that the skim cards do not hide it
+
+
+def tray_stack(b, name, loc, n, parent, hide=False):
+    """A pile of n small frames lying in the tray."""
+    for k in range(n):
+        ang = math.radians((-6, 5, -2, 7, -4)[k % 5])
+        tile = b.box(f"{name}{k}", (0.32, 0.24, 0.018), loc + Vector((0.012 * (k % 2), 0, 0.022 * k)), "white",
+                     parent, bevel=0.006, rot=(0, 0, ang))
+        scr = b.box(f"{name}{k}_scr", (0.27, 0.19, 0.004), (0, 0, 0.01), "screen", tile, bevel=0)
+        tile.hide_render = scr.hide_render = hide
+
+
+def step3_helpers(b, g):
+    """A sub-agent checks 30-180 s on its own and hands back one sentence; the main agent's context
+    (the tray) keeps the last three batches of frames, the first batch (the skim) now a slip of text."""
+    sx, sy = 0.35, -2.5
+    argus(b, "s3_sub", (sx, sy, 0.0), g, scale=0.62, eyes=3, color="lavender")
+    for j, t in enumerate((63, 109, 156)):
+        x = tx(t)
+        frame_card(b, f"s3_card{j}", 0.36, 0.3, FRAME_KINDS.get(int(t // 15), "empty"),
+                   (x, STRIP_Y + 0.1, 1.0 + (j % 2) * 0.08), g, thick=0.03)
+        b.dots(f"s3_thread{j}_", (x, STRIP_Y, 0.12), (x, STRIP_Y + 0.1, 0.8), 4, "lavender", g, r=0.02)
+    # what it hands back: one slip of text
+    slip = b.box("s3_report", (0.46, 0.03, 0.3), (sx - 0.95, sy + 0.2, 0.85), "white", g, bevel=0.025,
+                 rot=face_cam())
+    for j, w in enumerate((0.32, 0.22)):
+        b.box(f"s3_report_l{j}", (w, 0.01, 0.035), (-0.12 + w / 2, -0.018, 0.055 - j * 0.09), "grey", slip,
+              bevel=0)
+    # the main agent's context: a tray with four slots
+    base = b.box("s3_tray", (1.7, 0.8, 0.06), (TRAY.x, TRAY.y, 0.03), "cream", g, bevel=0.03)
+    for k, (w, d, x, y) in enumerate(((1.7, 0.06, 0, 0.37), (1.7, 0.06, 0, -0.37), (0.06, 0.8, 0.82, 0),
+                                      (0.06, 0.8, -0.82, 0))):
+        b.box(f"s3_tray_rim{k}", (w, d, 0.1), (x, y, 0.06), "cream", base, bevel=0.02)
+    slots = [TRAY + Vector((x, 0, 0.075)) for x in (-0.58, -0.2, 0.2, 0.58)]
+    # slot 0: the skim's 18 frames, swapped for a line of text once the fourth batch came in
+    note = b.box("s3_tray_slip", (0.3, 0.36, 0.012), slots[0], "white", g, bevel=0.004,
+                 rot=(0, 0, math.radians(-8)))
+    for j, w in enumerate((0.2, 0.15, 0.18)):
+        b.box(f"s3_tray_slip_l{j}", (w, 0.03, 0.004), (-0.02, 0.1 - j * 0.085, 0.008), "grey", note, bevel=0)
+    tray_stack(b, "s3_tray_old", slots[0], 3, g, hide=True)
+    # the 28, 8 and 11 frames of the three passes
+    for k, n in enumerate((5, 2, 3)):
+        tray_stack(b, f"s3_tray_b{k}_", slots[k + 1], n, g)
+    b.empty("pin_s3_sub", (sx, sy, 1.3), g)
+    b.empty("pin_s3_tray", (TRAY.x, TRAY.y, 0.45), g)
 
 
 ANSWER = Vector((-0.2, 1.75, 2.85))
 
 
 def step4_answer(b, g):
-    """The answer, 9.9s - 24.9s, with two pins tying it back to those moments on the strip."""
+    """It writes a note, then answers 10.0s - 25.0s with threads back to the evidence frames."""
     card = b.box("s4_answer", (2.5, 0.08, 1.15), ANSWER, "white", g, bevel=0.08, seg=5, rot=face_cam())
-    b.cyl("s4_answer_red", 0.17, 0.03, (-0.88, -0.05, 0.12), "seal", card, seg=28, rot=(math.pi / 2, 0, 0))
-    b.box("s4_chip_a", (0.62, 0.03, 0.3), (-0.22, -0.05, 0.12), "yellow", card, bevel=0.06)
-    b.box("s4_chip_b", (0.8, 0.03, 0.3), (0.72, -0.05, 0.12), "yellow", card, bevel=0.06)
-    b.text("s4_t_a", "9.9s", 0.2, (-0.22, -0.075, 0.12), "ink", card, rot=(math.pi / 2, 0, 0), depth=0.015)
-    b.text("s4_dash", "-", 0.2, (0.22, -0.075, 0.12), "ink", card, rot=(math.pi / 2, 0, 0), depth=0.015)
-    b.text("s4_t_b", "24.9s", 0.2, (0.72, -0.075, 0.12), "ink", card, rot=(math.pi / 2, 0, 0), depth=0.015)
+    b.cyl("s4_answer_red", 0.17, 0.03, (-0.9, -0.05, 0.12), "seal", card, seg=28, rot=(math.pi / 2, 0, 0))
+    chips = ((-0.22, "10.0s"), (0.78, "25.0s"))
+    for k, (x, body) in enumerate(chips):
+        b.box(f"s4_chip{k}", (0.8, 0.03, 0.3), (x, -0.05, 0.12), "yellow", card, bevel=0.06)
+        b.text(f"s4_t{k}", body, 0.2, (x, -0.075, 0.12), "ink", card, rot=(math.pi / 2, 0, 0), depth=0.015)
+    b.text("s4_dash", "-", 0.2, (0.28, -0.075, 0.12), "ink", card, rot=(math.pi / 2, 0, 0), depth=0.015)
     for j, wdt in enumerate((1.9, 1.4)):
         b.box(f"s4_line{j}", (wdt, 0.02, 0.07), (-1.0 + wdt / 2, -0.05, -0.2 - j * 0.17), "grey", card, bevel=0.02)
     bpy.context.view_layer.update()
     mw = card.matrix_world
-    for k, (t, chip_x) in enumerate(((9.9, -0.22), (24.9, 0.72))):
+    # threads to the first frame with red (10.0s) and the last (24.9s)
+    for k, (t, chip_x) in enumerate(((10.0, chips[0][0]), (24.9, chips[1][0]))):
         head = Vector((tx(t), STRIP_Y - 0.05, 0.42))
         b.cyl(f"s4_pin{k}_needle", 0.018, 0.34, head - Vector((0, 0, 0.2)), "grey", g, seg=10)
         b.sphere(f"s4_pin{k}_head", 0.11, head, "seal", g, u=18, v=12)
         start = mw @ Vector((chip_x, 0.04, -0.15))
         mid = start.lerp(head, 0.5) + Vector((0, 0, -0.25))
         b.tube(f"s4_thread{k}", [start, mid, head], 0.016, "seal", g)
+    # the note it wrote before answering (remember), on the desk beside the tray
+    note = b.box("s4_note", (0.66, 0.6, 0.02), (TRAY.x - 0.05, -0.12, 0.012), "note", g, bevel=0.01,
+                 rot=(0, 0, math.radians(5)))
+    for j, wdt in enumerate((0.44, 0.32, 0.38)):
+        b.box(f"s4_note_l{j}", (wdt, 0.04, 0.008), (-0.08 + wdt / 2 - 0.12, 0.15 - j * 0.14, 0.014), "ink", note,
+              bevel=0)
     b.empty("pin_s4_answer", ANSWER + Vector((0, 0, 0.72)), g)
     b.empty("pin_s4_pins", (tx(17.4), STRIP_Y - 0.05, 0.6), g)
+    b.empty("pin_s4_note", (TRAY.x - 0.05, -0.12, 0.15), g)
 
 
 def step5_browser(b, g):
@@ -468,17 +559,9 @@ def step5_browser(b, g):
     b.box("s5_lock", (0.16, 0.05, 0.13), (lx, by, 0.2), "green", g, bevel=0.02)
     b.torus("s5_lock_shackle", 0.055, 0.016, (lx, by, 0.27), "green", g, maj=20, mnr=6, arc=math.pi,
             rot=(math.pi / 2, 0, 0))
-    # the model cloud, outside the window behind the title bar, wired to Argus's head
-    cx, cy, cz = 2.6, SD / 2 + 1.6, 3.3
-    for k, (dx, dy, dz, r) in enumerate([(0, 0, 0, 0.62), (-0.6, 0.05, -0.15, 0.46), (0.6, 0.02, -0.12, 0.5),
-                                         (-0.2, 0.1, 0.42, 0.46), (0.3, -0.05, 0.36, 0.42),
-                                         (0.0, -0.25, -0.22, 0.44)]):
-        b.sphere(f"s5_cloud{k}", r, (cx + dx, cy + dy, cz + dz), "cloud", g, u=24, v=14)
-    head = Vector((ARGUS_POS[0], ARGUS_POS[1], 1.62))
-    b.tube("s5_cable", [head, head + Vector((0.3, 0.6, 0.9)), Vector((0.0, SD / 2 + 0.2, 2.6)),
-                        Vector((cx - 0.7, cy - 0.2, cz - 0.25))], 0.04, "ink", g)
-    b.empty("pin_s5_browser", (-3.4, by, 0.3), g)
-    b.empty("pin_s5_cloud", (cx, cy, cz + 1.0), g)
+    b.empty("pin_s5_browser", (SW / 2 - 0.9, by, 0.12), g)  # the right end, clear of the wire's label
+    b.empty("pin_s5_cloud", CLOUD + Vector((0, 0, 1.0)), g)
+    b.empty("pin_s5_wire", along(PATHS["s1_cable"], 0.76) + Vector((0, 0, 0.25)), g)
 
 
 # ---------------------------------------------------------------------------
@@ -589,11 +672,12 @@ def build():
     sc.collection.children.link(studio_coll)
     b = Builder(coll)
     root = b.empty("ArgusStory", (0, 0, 0), size=0.6)
-    fns = (step0_video, step1_scan, step2_zoom, step3_notes, step4_answer, step5_browser)
+    PATHS.clear()
+    fns = (step0_video, step1_scan, step2_refine, step3_helpers, step4_answer, step5_browser)
     for name, fn in zip(STEPS, fns):
         fn(b, b.empty(name, (0, 0, 0), root, size=0.4))
-    focus = [(tx(45) - 0.6, STRIP_Y + 0.3, 0.75), (-0.9, 0.0, 1.15), (tx(15), STRIP_Y + 0.1, 1.05),
-             (1.0, -1.55, 0.6), (-1.5, 0.35, 1.45)]
+    focus = [(tx(45) - 0.6, STRIP_Y + 0.3, 0.75), (-0.6, 1.2, 1.7), (tx(17.5), FUNNEL_Y + 0.25, 0.8),
+             (-0.65, -0.3, 0.6), (-1.5, 0.35, 1.45)]
     for i, loc in enumerate(focus):
         b.empty(f"focus_step{i}", loc, root)
     studio(sc, studio_coll)
@@ -643,6 +727,13 @@ def camera_info(path):
     return info
 
 
+def paths_info(path):
+    """The sampled wire in glTF axes, for the page to move the frames and the tool call along it."""
+    to_gl = lambda v: [round(v.x, 4), round(v.z, 4), round(-v.y, 4)]
+    with open(path, "w") as f:
+        json.dump({k: [to_gl(p) for p in v] for k, v in PATHS.items() if k == "s1_cable"}, f)
+
+
 def pin_screen_coords(path):
     """Each pin's spot on the poster (0-1 from the top left), so the page can label the poster too."""
     from bpy_extras.object_utils import world_to_camera_view
@@ -664,5 +755,6 @@ if __name__ == "__main__" and bpy.app.background:
     export_glb(f"{out}/argus-story.glb")
     pin_screen_coords(f"{out}/argus-story-pins.json")
     camera_info(f"{out}/argus-story-camera.json")
+    paths_info(f"{out}/argus-story-paths.json")
     bpy.context.scene.render.filepath = f"{out}/argus-story-poster.png"
     bpy.ops.render.render(write_still=True)

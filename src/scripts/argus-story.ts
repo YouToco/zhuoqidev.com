@@ -28,13 +28,25 @@ function init(root: HTMLElement) {
   let scene: StoryScene | null = null;
 
   // Labels and time marks sit on pins: fixed spots on the poster, projected points once the 3D scene
-  // runs. A label stays inside the picture (its box slides sideways, its stem stays on the point) and
-  // sits beside the point when there is no room above it. Label sizes are read once, before any
-  // write, so moving the labels along with the 3D camera never forces a layout.
+  // runs. A label hangs above its point; with no room above it sits beside the point (right, else
+  // left), and with no room there either, below it. Its box slides sideways to stay inside the
+  // picture and to clear the step's other labels; the stem stays on the point. Label sizes are read
+  // once, before any write, so moving the labels along with the 3D camera never forces a layout.
   let coords = JSON.parse(root.dataset.pins!) as PinCoords;
   let w = 0;
   let h = 0;
   const sizes = new Map<HTMLElement, [number, number]>();
+  type Spot = { el: HTMLElement; x: number; y: number; bw: number; bh: number; dx: number; mode: string };
+  const MODES = ["side", "side-l", "below"];
+  const slides = (b: Spot) => b.mode === "" || b.mode === "below";
+  const rect = (b: Spot) => {
+    const l = b.mode === "side" ? b.x + 12 : b.mode === "side-l" ? b.x - 12 - b.bw : b.x + b.dx - b.bw / 2;
+    const t = b.mode === "" ? b.y - 20 - b.bh : b.mode === "below" ? b.y + 20 : b.y - b.bh / 2;
+    return { l, r: l + b.bw, t, b: t + b.bh };
+  };
+  const slide = (b: Spot, by: number) => {
+    b.dx = Math.min(Math.max(b.dx + by, b.bw / 2 + 8 - b.x), w - b.bw / 2 - 8 - b.x);
+  };
   const place = (next: PinCoords) => {
     coords = next;
     for (const el of w ? labels : []) {
@@ -42,6 +54,7 @@ function init(root: HTMLElement) {
       const box = el.firstElementChild as HTMLElement;
       sizes.set(el, [box.offsetWidth, box.offsetHeight]);
     }
+    const spots: Spot[] = [];
     for (const el of pinned) {
       const p = coords[el.dataset.pin!];
       el.classList.toggle("out", !p);
@@ -52,12 +65,31 @@ function init(root: HTMLElement) {
       if (!size) continue;
       const [bw, bh] = size;
       const x = p[0] * w;
-      const side = p[1] * h < bh + 30;
-      const left = side && x + bw + 24 > w;
-      const half = bw / 2 + 8;
-      el.style.setProperty("--dx", side ? "0px" : `${Math.min(Math.max(x, half), w - half) - x}px`);
-      el.classList.toggle("side", side && !left);
-      el.classList.toggle("side-l", left);
+      const y = p[1] * h;
+      const mode = y >= bh + 30 ? "" : x + 12 + bw + 8 <= w ? "side" : x - 12 - bw >= 8 ? "side-l" : "below";
+      const spot = { el, x, y, bw, bh, dx: 0, mode };
+      if (slides(spot)) slide(spot, 0);
+      spots.push(spot);
+    }
+    // Two of the step's labels whose boxes overlap (a narrow screen, a long English label): the ones
+    // that can slide move apart sideways.
+    spots.forEach((p, i) => {
+      for (const q of spots.slice(i + 1)) {
+        const first = rect(p).l <= rect(q).l;
+        const a = first ? p : q;
+        const b = first ? q : p;
+        const ra = rect(a);
+        const rb = rect(b);
+        const lap = ra.r + 6 - rb.l;
+        if (lap <= 0 || ra.t >= rb.b || rb.t >= ra.b || (!slides(a) && !slides(b))) continue;
+        const was = a.dx;
+        if (slides(a)) slide(a, slides(b) ? -lap / 2 : -lap);
+        if (slides(b)) slide(b, lap - (was - a.dx));
+      }
+    });
+    for (const b of spots) {
+      b.el.style.setProperty("--dx", `${b.dx}px`);
+      for (const m of MODES) b.el.classList.toggle(m, b.mode === m);
     }
   };
 
