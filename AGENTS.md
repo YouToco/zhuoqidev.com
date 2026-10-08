@@ -125,6 +125,13 @@
 - `public/_routes.json` keeps static assets out of Functions (assets are free and unmetered;
   Function calls count against the free 100,000 requests a day). The project is set to "fail open",
   so if the allowance runs out pages are still served and only the counts and guestbook stop.
+- `/visitors/` is the public face of the counts: readers by country and, in China, by province
+  (`server/regions.ts` turns Cloudflare's region names into the map's codes), on a 3D globe and a 3D
+  map of China, plus crawlers by kind and by name. It reads `GET /api/stats?range=7|30|all`
+  (`functions/api/stats.ts`, `server/public-stats.ts`), which Cloudflare caches for five minutes.
+  City-level counts and anything per visitor stay on `/admin/`. The 3D scenes
+  (`src/scripts/visitors-globe.ts`, `visitors-china.ts`) load after the reader's first input, like
+  the Argus scene; their map data is built by `npm run geo` (tools/geo/README.md).
 - `/admin/` (served by `functions/admin/index.ts`, page in `server/admin.html`) shows the counts and
   the guestbook review queue; it and `/api/admin/*` need the `ADMIN_TOKEN` Pages secret. Guestbook
   notes are text only, stay `pending` until approved there, and are rendered with `textContent` on

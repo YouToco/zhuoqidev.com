@@ -13,6 +13,7 @@
     "verify": "node scripts/verify-dist.mjs",
     "diagrams": "test -d tools/diagrams/node_modules || npm --prefix tools/diagrams ci --no-audit --no-fund; node tools/diagrams/generate.mjs",
     "poster": "test -d tools/models/node_modules || npm --prefix tools/models ci --no-audit --no-fund; node tools/models/argus-poster.mjs",
+    "geo": "test -d tools/geo/node_modules || npm --prefix tools/geo ci --no-audit --no-fund; node tools/geo/build.mjs",
     "test": "node --test \"server/**/*.test.ts\" \"scripts/**/*.test.ts\"",
     "dev:functions": "wrangler d1 migrations apply DB --local && wrangler pages dev dist --port 8788"
   },

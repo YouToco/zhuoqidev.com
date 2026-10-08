@@ -1,0 +1,118 @@
+---
+// Visitor map: the page is static; the counts come from functions/api/stats.ts and the two 3D maps
+// (src/scripts/visitors-globe.ts, visitors-china.ts) load after the reader's first scroll or move.
+// Without them, or without WebGL, the lists beside the maps carry every number.
+import { type Lang, langParams, t } from "../../../i18n";
+import Base from "../../../layouts/Base.astro";
+
+export const getStaticPaths = langParams;
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const L = t[lang];
+const V = L.vis;
+const kpis = ["views", "visitors", "countries", "crawlers"] as const;
+---
+
+<Base lang={lang} title={L.visitors} description={V.description} path="/visitors/" bodyClass="dotgrid">
+  <main class="shelf visitors" id="main" data-vis data-lang={lang} data-msg={JSON.stringify(V)}>
+    <header class="shelf-head">
+      <div class="crumb">~/visitors/ <b>cat stats.json</b></div>
+      <h1>✦ {L.visitors}</h1>
+      <p>{V.intro}</p>
+    </header>
+
+    <div class="vis-bar">
+      <div class="vis-range" role="group" aria-label={V.rangeLabel}>
+        {
+          (["7", "30", "all"] as const).map((r) => (
+            <button class="chip-btn" type="button" data-range={r} aria-pressed={r === "30" ? "true" : "false"}>
+              {V.ranges[r]}
+            </button>
+          ))
+        }
+      </div>
+      <p class="vis-status" role="status" aria-live="polite" data-status>{V.loading}</p>
+    </div>
+
+    <dl class="vis-kpis">
+      {
+        kpis.map((k) => (
+          <div class="vis-kpi card">
+            <dt>{V.kpi[k]}</dt>
+            <dd>
+              <span data-kpi={k}>–</span>
+              {k === "visitors" && <small>{V.visitorsNote}</small>}
+            </dd>
+          </div>
+        ))
+      }
+    </dl>
+
+    <section class="vis-map" aria-labelledby="vis-globe-h">
+      <h2 class="vis-h" id="vis-globe-h">{V.globe}</h2>
+      <p class="vis-hint">{V.globeHint}</p>
+      <div class="vis-grid">
+        <div class="vis-stage globe" data-stage="globe">
+          <div class="vis-poster" aria-hidden="true"><span>{V.poster}</span></div>
+          <div class="vis-tip" data-tip hidden></div>
+        </div>
+        <div class="vis-side">
+          <h3>{V.places}</h3>
+          <ol class="vis-list" data-list="countries"></ol>
+        </div>
+      </div>
+    </section>
+
+    <section class="vis-map" aria-labelledby="vis-china-h">
+      <h2 class="vis-h" id="vis-china-h">{V.china}</h2>
+      <p class="vis-hint">{V.chinaHint}</p>
+      <div class="vis-grid">
+        <div class="vis-stage china" data-stage="china">
+          <div class="vis-poster" aria-hidden="true"><span>{V.poster}</span></div>
+          <div class="vis-tip" data-tip hidden></div>
+        </div>
+        <div class="vis-side">
+          <h3>{V.provinces}</h3>
+          <ol class="vis-list" data-list="provinces"></ol>
+        </div>
+      </div>
+    </section>
+
+    <section class="vis-crawlers" aria-labelledby="vis-crawlers-h">
+      <h2 class="vis-h" id="vis-crawlers-h">{V.crawlersH}</h2>
+      <div class="vis-grid even">
+        <div>
+          <h3>{V.byCategory}</h3>
+          <ul class="vis-cats" data-cats></ul>
+        </div>
+        <div>
+          <h3>{V.byBot}</h3>
+          <div class="vis-table-wrap">
+            <table class="vis-table">
+              <thead>
+                <tr><th scope="col">{V.table.bot}</th><th scope="col">{V.table.company}</th><th scope="col">{V.table.cf}</th><th scope="col">{V.table.cn}</th></tr>
+              </thead>
+              <tbody data-bots></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="vis-days" aria-labelledby="vis-days-h">
+      <h2 class="vis-h" id="vis-days-h">{V.daily}</h2>
+      <div class="vis-chart" data-days></div>
+    </section>
+
+    <aside class="vis-method card">
+      <ul>{V.method.map((m) => <li>{m}</li>)}</ul>
+      <p data-since></p>
+    </aside>
+  </main>
+</Base>
+
+<script>
+  import "../../../scripts/visitors";
+</script>

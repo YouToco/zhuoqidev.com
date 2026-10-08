@@ -1,7 +1,7 @@
 ---
 title: Privacy Policy
 description: Privacy Policy for ZhuoQi Dev
-date: 2026-10-07
+date: 2026-10-08
 ---
 
 ## The short version
@@ -24,7 +24,7 @@ The providers collect and store this data. I only look at aggregate reports in t
 
 ## The site's own count
 
-Besides the three services above, the site counts two things itself. The numbers live in a Cloudflare database (D1), and only I see the totals:
+Besides the three services above, the site counts two things itself. The numbers live in a Cloudflare database (D1). Totals by country, province and crawler are public on the [visitor map](/en/visitors/); the city-level breakdown is for my eyes only:
 
 - **Page views by people**: each page you open sends one empty request to `api.zhuoqidev.com` (no cookie, and not even which page it was). The server records only the date and the country, region, and city that Cloudflare derives from your IP address at that moment. **The IP address itself is not stored.** To count how many different visitors came that day, the server hashes the IP address and browser identifier (User-Agent) together with a salt that is generated at random each day; the next day the salt and the hashes are deleted, after which nobody can turn a hash back into an IP address.
 - **Crawler visits**: the User-Agent of a request tells which company's crawler it is (such as Googlebot, Baidu, or ClaudeBot), and only "which crawler came how many times" is kept per day. Outside mainland China the Cloudflare server counts live; for mainland China the site reads the Alibaba Cloud CDN access log once a day and keeps only these counts.
@@ -69,4 +69,4 @@ For privacy-related inquiries:
 
 ## Policy updates
 
-This policy is updated when the site changes, and the latest version is always posted here. Last updated: 2026-10-07 (adds the guestbook and the site's own count; an earlier version said no third-party analytics were enabled, which was inaccurate and has been corrected).
+This policy is updated when the site changes, and the latest version is always posted here. Last updated: 2026-10-08 (the site's own counts, totalled by country, province and crawler, are now public on the visitor map). The 2026-10-07 version added the guestbook and the site's own count; an earlier version said no third-party analytics were enabled, which was inaccurate and has been corrected.
