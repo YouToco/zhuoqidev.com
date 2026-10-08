@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>访问统计 · zhuoqidev.com</title>
+    <style>
+      :root {
+        --paper: #fbf8f1;
+        --card: #ffffff;
+        --ink: #1f1d1a;
+        --muted: #6b665d;
+        --line: #e6dfd2;
+        --accent: #c23a22;
+        --accent-soft: #f6d9d1;
+        --crawl: #4a5d7a;
+        --crawl-cn: #93a3bd;
+        --ok: #2f7a4b;
+        --yellow: #fff1a8;
+        --pink: #ffd6e0;
+        --blue: #d4e8ff;
+        --green: #d6f2d2;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #14161b;
+          --card: #1d2027;
+          --ink: #ece8df;
+          --muted: #a29d93;
+          --line: #2f333c;
+          --accent: #f07a62;
+          --accent-soft: #4a2a24;
+          --crawl: #8ea6cc;
+          --crawl-cn: #56657e;
+          --ok: #7fcf9b;
+          --yellow: #5a5022;
+          --pink: #5a2f3b;
+          --blue: #263f5c;
+          --green: #2b4a2f;
+          color-scheme: dark;
+        }
+      }
+      * { box-sizing: border-box; }
+      [hidden] { display: none !important; }
+      body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.55 system-ui, -apple-system, "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+      header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 18px 20px; border-bottom: 1px solid var(--line); }
+      h1 { margin: 0; font-size: 20px; }
+      h1 small { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 6px; }
+      h2 { font-size: 16px; margin: 0 0 12px; }
+      h2 small { color: var(--muted); font-weight: 400; }
+      .spacer { flex: 1; }
+      button, .seg button { font: inherit; border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+      button:hover { border-color: var(--muted); }
+      button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+      .seg { display: inline-flex; gap: 4px; }
+      .seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+      main { max-width: 1180px; margin: 0 auto; padding: 20px; display: grid; gap: 20px; }
+      section { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; min-width: 0; }
+      .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; background: none; border: 0; padding: 0; }
+      .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+      .card b { display: block; font-size: 28px; font-variant-numeric: tabular-nums; }
+      .card span { color: var(--muted); font-size: 13px; }
+      .two { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; background: none; border: 0; padding: 0; }
+      .two > div { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; min-width: 0; }
+      @media (max-width: 860px) { .two { grid-template-columns: 1fr; } }
+      table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+      th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+      th { color: var(--muted); font-weight: 500; font-size: 13px; }
+      td.n, th.n { text-align: right; white-space: nowrap; }
+      .scroll { overflow-x: auto; }
+      .tag { display: inline-block; font-size: 12px; padding: 0 6px; border-radius: 6px; background: var(--paper); border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+      .bar { display: grid; grid-template-columns: 9em 1fr auto; gap: 10px; align-items: center; margin: 7px 0; font-size: 14px; }
+      .bar .track { height: 12px; display: flex; border-radius: 6px; overflow: hidden; background: var(--paper); }
+      .bar .cf { background: var(--crawl); }
+      .bar .cn { background: var(--crawl-cn); }
+      .bar .num { color: var(--muted); font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+      .legend { display: flex; flex-wrap: wrap; gap: 14px; color: var(--muted); font-size: 13px; margin: 8px 0 0; }
+      .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+      svg text { fill: var(--muted); font-size: 11px; }
+      .fine { color: var(--muted); font-size: 13px; }
+      .fine p { margin: 4px 0; }
+      #login { max-width: 420px; margin: 12vh auto; display: grid; gap: 10px; }
+      #login input { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); width: 100%; }
+      .err { color: var(--accent); min-height: 1.5em; margin: 0; }
+      .notes { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+      .note { border-radius: 10px; padding: 12px 14px; border: 1px solid var(--line); display: grid; gap: 8px; align-content: start; }
+      .note.yellow { background: var(--yellow); } .note.pink { background: var(--pink); }
+      .note.blue { background: var(--blue); } .note.green { background: var(--green); }
+      .note p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+      .note .who { font-weight: 600; }
+      .note .meta { font-size: 12px; color: var(--muted); }
+      .note .acts { display: flex; gap: 8px; }
+      .note .approve { border-color: var(--ok); color: var(--ok); }
+      .note .del { color: var(--accent); }
+      .empty { color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>访问统计 <small>zhuoqidev.com</small></h1>
+      <span class="spacer"></span>
+      <div class="seg" id="range" role="group" aria-label="时间范围">
+        <button type="button" data-days="1">今天</button>
+        <button type="button" data-days="7" aria-pressed="true">7 天</button>
+        <button type="button" data-days="30">30 天</button>
+        <button type="button" data-days="90">90 天</button>
+      </div>
+      <button type="button" id="logout" hidden>退出</button>
+    </header>
+
+    <form id="login" hidden>
+      <label for="token">管理口令</label>
+      <input id="token" type="password" autocomplete="current-password" required />
+      <button type="submit">进入</button>
+      <p class="err" role="alert"></p>
+    </form>
+
+    <main id="app" hidden>
+      <div class="cards">
+        <div class="card"><b id="k-views">–</b><span>真人浏览（跑了页面统计脚本的）</span></div>
+        <div class="card"><b id="k-visitors">–</b><span>真人访客（每天去重，再按天相加）</span></div>
+        <div class="card"><b id="k-crawl">–</b><span id="k-crawl-split">爬虫请求</span></div>
+        <div class="card"><b id="k-pending">–</b><span>待审留言</span></div>
+      </div>
+
+      <section>
+        <h2>每天</h2>
+        <svg id="trend" role="img" aria-label="每天的真人浏览和爬虫请求" width="100%" height="180"></svg>
+        <p class="legend"><span><i style="background: var(--accent)"></i>真人浏览</span><span><i style="background: var(--crawl)"></i>爬虫 · 海外线</span><span><i style="background: var(--crawl-cn)"></i>爬虫 · 国内线</span></p>
+      </section>
+
+      <div class="two">
+        <div>
+          <h2>爬虫按类别</h2>
+          <div id="cats"></div>
+          <p class="legend"><span><i style="background: var(--crawl)"></i>海外线</span><span><i style="background: var(--crawl-cn)"></i>国内线</span></p>
+        </div>
+        <div>
+          <h2>真人按国家 / 地区</h2>
+          <div class="scroll"><table id="countries"><thead><tr><th>国家 / 地区</th><th class="n">浏览</th><th class="n">访客</th></tr></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+
+      <section>
+        <h2>爬虫明细 <small>哪家的哪个爬虫</small></h2>
+        <div class="scroll"><table id="bots"><thead><tr><th>公司</th><th>爬虫</th><th>类别</th><th class="n">海外线</th><th class="n">国内线</th><th class="n">合计</th></tr></thead><tbody></tbody></table></div>
+      </section>
+
+      <section>
+        <h2>真人按城市 <small>前 50</small></h2>
+        <div class="scroll"><table id="cities"><thead><tr><th>地方</th><th class="n">浏览</th><th class="n">访客</th></tr></thead><tbody></tbody></table></div>
+      </section>
+
+      <section>
+        <h2>留言</h2>
+        <div class="seg" id="note-tabs" role="group" aria-label="留言状态">
+          <button type="button" data-status="pending" aria-pressed="true">待审</button>
+          <button type="button" data-status="approved">已上墙</button>
+        </div>
+        <div class="notes" id="note-list" style="margin-top: 12px"></div>
+      </section>
+
+      <div class="fine">
+        <p>海外线（Cloudflare）的爬虫实时计数；国内线（阿里云 CDN）的爬虫每天上午从 CDN 日志导入前一天，<span id="cn-latest">还没有导入过</span>。</p>
+        <p>爬虫按 User-Agent 认，这个标识可以冒充；现实里不可能存在的浏览器（比如 PowerPC Mac 上的手机版 Chrome）归到「伪造浏览器标识」。真人只算打开了页面、跑了统计脚本的，地点是 Cloudflare 按 IP 查的，不存 IP。日期按北京时间。</p>
+      </div>
+    </main>
+
+    <script>
+      (() => {
+        const $ = (s) => document.querySelector(s);
+        const KEY = "zq-admin-token";
+        const store = {
+          get: () => { try { return localStorage.getItem(KEY) || ""; } catch { return ""; } },
+          set: (v) => { try { v ? localStorage.setItem(KEY, v) : localStorage.removeItem(KEY); } catch {} },
+        };
+        let token = store.get();
+        let days = 7;
+        let noteStatus = "pending";
+        let categories = {};
+
+        const h = (tag, props, ...kids) => {
+          const el = document.createElement(tag);
+          for (const [k, v] of Object.entries(props || {})) {
+            if (k === "class") el.className = v;
+            else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+            else el.setAttribute(k, v);
+          }
+          for (const k of kids.flat()) if (k != null) el.append(k instanceof Node ? k : document.createTextNode(String(k)));
+          return el;
+        };
+        const fmt = (n) => Number(n || 0).toLocaleString("zh-CN");
+        const beijingDay = (ms) => new Date(ms + 8 * 3600e3).toISOString().slice(0, 10);
+        const regionName = (() => {
+          let names;
+          try { names = new Intl.DisplayNames(["zh-CN"], { type: "region" }); } catch {}
+          return (code) => {
+            if (code === "XX" || !code) return "未知";
+            if (code === "T1") return "Tor 网络";
+            try { return (names && names.of(code)) || code; } catch { return code; }
+          };
+        })();
+
+        async function api(path, init = {}) {
+          const res = await fetch("/api/admin/" + path, { ...init, headers: { ...(init.headers || {}), Authorization: "Bearer " + token } });
+          if (res.status === 401) { logout("口令不对，或者还没在 Cloudflare 上设置 ADMIN_TOKEN。"); throw new Error("unauthorized"); }
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          return res.json();
+        }
+
+        function logout(message) {
+          token = "";
+          store.set("");
+          $("#app").hidden = true;
+          $("#logout").hidden = true;
+          $("#login").hidden = false;
+          $("#login .err").textContent = message || "";
+          $("#token").focus();
+        }
+
+        $("#login").addEventListener("submit", (e) => {
+          e.preventDefault();
+          token = $("#token").value.trim();
+          $("#token").value = "";
+          start();
+        });
+        $("#logout").addEventListener("click", () => logout());
+        $("#range").addEventListener("click", (e) => {
+          const b = e.target.closest("button");
+          if (!b) return;
+          days = Number(b.dataset.days);
+          for (const x of $("#range").children) x.setAttribute("aria-pressed", String(x === b));
+          loadStats();
+        });
+        $("#note-tabs").addEventListener("click", (e) => {
+          const b = e.target.closest("button");
+          if (!b) return;
+          noteStatus = b.dataset.status;
+          for (const x of $("#note-tabs").children) x.setAttribute("aria-pressed", String(x === b));
+          loadNotes();
+        });
+
+        function start() {
+          if (!token) return logout();
+          $("#login").hidden = true;
+          Promise.all([loadStats(), loadNotes()]).then(() => {
+            store.set(token);
+            $("#login .err").textContent = "";
+            $("#app").hidden = false;
+            $("#logout").hidden = false;
+            if (trend) drawTrend(...trend);
+          }, (e) => { if (e.message !== "unauthorized") $("#login .err").textContent = "读不到数据：" + e.message; });
+        }
+
+        async function loadStats() {
+          const to = beijingDay(Date.now());
+          const from = beijingDay(Date.now() - (days - 1) * 86400e3);
+          const s = await api(`stats?from=${from}&to=${to}`);
+          categories = s.categories;
+          const views = s.places.reduce((n, p) => n + p.views, 0);
+          const visitors = s.places.reduce((n, p) => n + p.visitors, 0);
+          const cf = s.crawlers.filter((c) => c.line === "cf").reduce((n, c) => n + c.hits, 0);
+          const cn = s.crawlers.filter((c) => c.line === "cn").reduce((n, c) => n + c.hits, 0);
+          $("#k-views").textContent = fmt(views);
+          $("#k-visitors").textContent = fmt(visitors);
+          $("#k-crawl").textContent = fmt(cf + cn);
+          $("#k-crawl-split").textContent = `爬虫请求（海外线 ${fmt(cf)} · 国内线 ${fmt(cn)}）`;
+          $("#k-pending").textContent = fmt(s.pending);
+          $("#cn-latest").textContent = s.cnLatestDay ? `最近导入到 ${s.cnLatestDay}` : "还没有导入过";
+          drawTrend(from, to, s.viewDays, s.crawlerDays);
+          drawCategories(s.crawlers);
+          drawBots(s.crawlers);
+          drawPlaces(s.places);
+        }
+
+        // Drawn to the chart's real width, so it is redrawn once the page is visible and on resize.
+        let trend = null;
+        addEventListener("resize", () => trend && drawTrend(...trend));
+        function drawTrend(from, to, viewDays, crawlerDays) {
+          trend = [from, to, viewDays, crawlerDays];
+          const svg = $("#trend");
+          svg.replaceChildren();
+          const list = [];
+          for (let t = Date.parse(from + "T00:00:00Z"); t <= Date.parse(to + "T00:00:00Z"); t += 86400e3) list.push(new Date(t).toISOString().slice(0, 10));
+          const by = (rows, key) => Object.fromEntries(rows.map((r) => [r.day + (r.line ? "|" + r.line : ""), r[key]]));
+          const v = by(viewDays, "views");
+          const c = by(crawlerDays, "hits");
+          const data = list.map((d) => ({ d, v: v[d] || 0, cf: c[d + "|cf"] || 0, cn: c[d + "|cn"] || 0 }));
+          const max = Math.max(1, ...data.map((x) => Math.max(x.v, x.cf + x.cn)));
+          const W = Math.max(svg.clientWidth || 600, 300), H = 180, top = 10, bottom = 22, left = 34;
+          svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+          const ns = "http://www.w3.org/2000/svg";
+          const el = (tag, attrs, text) => {
+            const e = document.createElementNS(ns, tag);
+            for (const [k, val] of Object.entries(attrs)) e.setAttribute(k, val);
+            if (text != null) e.textContent = text;
+            svg.append(e);
+            return e;
+          };
+          const plotH = H - top - bottom;
+          const y = (n) => top + plotH - (n / max) * plotH;
+          el("text", { x: 0, y: top + 8 }, fmt(max));
+          el("text", { x: 0, y: H - bottom }, "0");
+          const slot = (W - left) / data.length;
+          const bw = Math.max(2, Math.min(18, slot / 2 - 2));
+          const step = Math.ceil(data.length / 10);
+          data.forEach((x, i) => {
+            const cx = left + i * slot + slot / 2;
+            const bar = (bx, from, n, fill, label) => {
+              if (!n) return;
+              el("rect", { x: bx, y: y(from + n), width: bw, height: Math.max(1, y(from) - y(from + n)), fill, rx: 2 }).append(Object.assign(document.createElementNS(ns, "title"), { textContent: `${x.d} ${label} ${fmt(n)}` }));
+            };
+            bar(cx - bw - 1, 0, x.v, "var(--accent)", "真人浏览");
+            bar(cx + 1, 0, x.cf, "var(--crawl)", "爬虫 · 海外线");
+            bar(cx + 1, x.cf, x.cn, "var(--crawl-cn)", "爬虫 · 国内线");
+            if (i % step === 0) el("text", { x: cx, y: H - 6, "text-anchor": "middle" }, x.d.slice(5));
+          });
+        }
+
+        function drawCategories(crawlers) {
+          const by = {};
+          for (const c of crawlers) {
+            const x = (by[c.category] ||= { cf: 0, cn: 0 });
+            x[c.line] += c.hits;
+          }
+          const rows = Object.entries(by).sort((a, b) => b[1].cf + b[1].cn - (a[1].cf + a[1].cn));
+          const max = Math.max(1, ...rows.map(([, x]) => x.cf + x.cn));
+          $("#cats").replaceChildren(
+            ...(rows.length
+              ? rows.map(([cat, x]) =>
+                  h("div", { class: "bar" },
+                    h("span", {}, categories[cat] || cat),
+                    h("span", { class: "track" },
+                      h("span", { class: "cf", style: `width:${(x.cf / max) * 100}%` }),
+                      h("span", { class: "cn", style: `width:${(x.cn / max) * 100}%` })),
+                    h("span", { class: "num" }, `${fmt(x.cf + x.cn)}（${fmt(x.cf)} / ${fmt(x.cn)}）`)))
+              : [h("p", { class: "empty" }, "这段时间还没有记录到爬虫。")]),
+          );
+        }
+
+        function drawBots(crawlers) {
+          const by = new Map();
+          for (const c of crawlers) {
+            const x = by.get(c.bot) || { ...c, cf: 0, cn: 0 };
+            x[c.line] += c.hits;
+            by.set(c.bot, x);
+          }
+          const rows = [...by.values()].sort((a, b) => b.cf + b.cn - (a.cf + a.cn));
+          $("#bots tbody").replaceChildren(
+            ...(rows.length
+              ? rows.map((x) => h("tr", {}, h("td", {}, x.company), h("td", {}, x.bot), h("td", {}, h("span", { class: "tag" }, categories[x.category] || x.category)), h("td", { class: "n" }, fmt(x.cf)), h("td", { class: "n" }, fmt(x.cn)), h("td", { class: "n" }, fmt(x.cf + x.cn))))
+              : [h("tr", {}, h("td", { colspan: 6, class: "empty" }, "暂无"))]),
+          );
+        }
+
+        function drawPlaces(places) {
+          const countries = new Map();
+          for (const p of places) {
+            const x = countries.get(p.country) || { views: 0, visitors: 0 };
+            x.views += p.views;
+            x.visitors += p.visitors;
+            countries.set(p.country, x);
+          }
+          const empty = (cols) => [h("tr", {}, h("td", { colspan: cols, class: "empty" }, "暂无"))];
+          const cRows = [...countries].sort((a, b) => b[1].views - a[1].views);
+          $("#countries tbody").replaceChildren(...(cRows.length ? cRows.map(([code, x]) => h("tr", {}, h("td", {}, regionName(code)), h("td", { class: "n" }, fmt(x.views)), h("td", { class: "n" }, fmt(x.visitors)))) : empty(3)));
+          const cities = places.slice(0, 50);
+          $("#cities tbody").replaceChildren(
+            ...(cities.length
+              ? cities.map((p) => h("tr", {}, h("td", {}, [regionName(p.country), p.region, p.city].filter(Boolean).join(" · ")), h("td", { class: "n" }, fmt(p.views)), h("td", { class: "n" }, fmt(p.visitors))))
+              : empty(3)),
+          );
+        }
+
+        async function loadNotes() {
+          const { notes } = await api("notes?status=" + noteStatus);
+          const when = (iso) => new Date(iso).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
+          $("#note-list").replaceChildren(
+            ...(notes.length
+              ? notes.map((n) =>
+                  h("article", { class: "note " + n.color },
+                    h("div", {}, h("span", { class: "who" }, n.name || "匿名"), " ", h("span", { class: "tag" }, n.lang === "en" ? "英文页" : "中文页")),
+                    h("p", {}, n.body),
+                    h("div", { class: "meta" }, when(n.created_at), " · ", [regionName(n.country), n.region, n.city].filter(Boolean).join(" · ")),
+                    h("div", { class: "acts" },
+                      noteStatus === "pending" ? h("button", { type: "button", class: "approve", onclick: () => act(n.id, "approve") }, "通过，贴上墙") : null,
+                      h("button", { type: "button", class: "del", onclick: () => confirm("删除这条留言？删了找不回来。") && act(n.id, "delete") }, "删除"))))
+              : [h("p", { class: "empty" }, noteStatus === "pending" ? "没有待审的留言。" : "墙上还没有留言。")]),
+          );
+        }
+
+        async function act(id, what) {
+          await api(what === "approve" ? `notes/${id}/approve` : `notes/${id}`, { method: what === "approve" ? "POST" : "DELETE" });
+          await Promise.all([loadNotes(), loadStats()]);
+        }
+
+        start();
+      })();
+    </script>
+  </body>
+</html>

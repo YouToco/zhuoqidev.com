@@ -9,3 +9,4 @@ __pycache__/
 .local-tools/
 zhuoqidev-project-status.md
 urls.txt
+.dev.vars

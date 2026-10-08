@@ -1,0 +1,22 @@
+{
+  // Pages Functions run on Cloudflare Workers, not Node: they get their own type environment.
+  // `npm run check` type-checks them after `astro check`.
+  "compilerOptions": {
+    "target": "ES2024",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2024"],
+    "types": ["@cloudflare/workers-types"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": ["./**/*.ts", "../server/**/*.ts"],
+  "exclude": ["../server/**/*.test.ts"]
+}

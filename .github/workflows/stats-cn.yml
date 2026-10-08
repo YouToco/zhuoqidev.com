@@ -1,0 +1,72 @@
+name: Mainland crawler counts
+
+# Readers in mainland China are served by Aliyun CDN, where the Pages middleware never runs, so
+# crawler visits there are counted from Aliyun's hourly CDN access logs (scripts/stats-cn.ts) and
+# sent to the stats database behind https://api.zhuoqidev.com/admin/. Only per-crawler counts leave
+# the runner. Re-importing a day replaces it, so the day before yesterday is redone to pick up logs
+# that Aliyun published late.
+on:
+  schedule:
+    # 09:23 Beijing time: each hour's log appears a few hours late, so yesterday is complete by then.
+    - cron: "23 1 * * *"
+  workflow_dispatch:
+    inputs:
+      day:
+        description: "Beijing day to import (YYYY-MM-DD). Empty: yesterday and the day before."
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zhuoqidev-stats-cn
+  cancel-in-progress: false
+
+jobs:
+  import:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out trusted default-branch code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Install pinned Alibaba Cloud CLI
+        run: bash scripts/install-aliyun.sh
+
+      - name: Configure Alibaba Cloud CLI profile
+        env:
+          ALIYUN_ACCESS_KEY_ID: ${{ secrets.ALIYUN_ACCESS_KEY_ID }}
+          ALIYUN_ACCESS_KEY_SECRET: ${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}
+        run: |
+          "$RUNNER_TEMP/aliyun-3.5.1/aliyun" configure set \
+            --profile default \
+            --mode AK \
+            --access-key-id "$ALIYUN_ACCESS_KEY_ID" \
+            --access-key-secret "$ALIYUN_ACCESS_KEY_SECRET" \
+            --region cn-shenzhen
+
+      - name: Import crawler counts
+        env:
+          ALIYUN_BIN: ${{ runner.temp }}/aliyun-3.5.1/aliyun
+          STATS_ADMIN_TOKEN: ${{ secrets.STATS_ADMIN_TOKEN }}
+          DAY: ${{ inputs.day }}
+        run: |
+          if [[ -z $STATS_ADMIN_TOKEN ]]; then
+            echo "::notice::STATS_ADMIN_TOKEN is not set, so there is nowhere to send the counts yet"
+            exit 0
+          fi
+          if [[ -n $DAY ]]; then
+            days=("$DAY")
+          else
+            days=("$(TZ=Asia/Shanghai date -d '2 days ago' +%F)" "$(TZ=Asia/Shanghai date -d yesterday +%F)")
+          fi
+          for day in "${days[@]}"; do
+            node scripts/stats-cn.ts --day "$day"
+          done

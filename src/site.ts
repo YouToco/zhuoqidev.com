@@ -34,6 +34,12 @@ export const analytics = {
   cloudflare: "b0f04d4943724cd895def6aa7251580e",
 } as const;
 
+// Guestbook and visit counts run as Pages Functions (functions/) on the overseas line only. Pages on
+// the mainland line come from Aliyun CDN, so the published site always calls the API on its own
+// host, which points at Cloudflare on every DNS line. Local previews and pages.dev call their own origin.
+export const api = "https://api.zhuoqidev.com";
+export const apiBase = (hostname: string) => (/(^|\.)zhuoqidev\.com$/.test(hostname) ? api : "");
+
 // Mainland China filing numbers; must appear in the footer of every page.
 export const beian = {
   icp: "湘ICP备2026017384号",

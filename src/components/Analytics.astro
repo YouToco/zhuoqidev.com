@@ -1,8 +1,8 @@
 ---
-import { analytics } from "../site";
+import { analytics, api } from "../site";
 ---
 
-<script is:inline define:vars={{ a: analytics }}>
+<script is:inline define:vars={{ a: analytics, api }}>
   // Only the published site reports traffic; local builds and previews stay out of the stats, and so
   // do pages opened in a window on the desk (the desk itself already counted the visit).
   if (/(^|\.)zhuoqidev\.com$/.test(location.hostname) && !document.documentElement.classList.contains("embedded")) {
@@ -27,6 +27,11 @@ import { analytics } from "../site";
     var start = function () {
       if (started) return;
       started = true;
+      // The site's own count (functions/api/hit.ts): one empty POST, no cookie. It records where the
+      // visitor is, not who; crawlers never run this, so they are counted from the server side.
+      try {
+        navigator.sendBeacon(api + "/api/hit");
+      } catch (e) {}
       add("https://www.googletagmanager.com/gtag/js?id=" + a.google);
       add("https://hm.baidu.com/hm.js?" + a.baidu);
       add("https://static.cloudflareinsights.com/beacon.min.js", {

@@ -6,7 +6,9 @@
   ],
   "exclude": [
     "dist",
-    "public"
+    "public",
+    "functions",
+    "server"
   ],
   "compilerOptions": {
     "types": [
