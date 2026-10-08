@@ -15,9 +15,9 @@ date: 2026-08-30
 
 ## 架构亮点
 
-- **手写 Agent Loop** — 基于 Vercel AI SDK `streamText` 手动驱动工具循环：拿到 tool calls 自行执行，把抽帧图片作为 `ImagePart` 注入下一轮，循环直到 agent 给出结论。
+- **Agent 循环** — 由 Vercel AI SDK `streamText` 驱动多步工具调用（`stopWhen` 限制步数），产品的核心两处自己写：`prepareStep` 把新抽的帧作为一条用户消息注入下一步，任何视觉模型都看得到（工具结果里带图，在各家 OpenAI 兼容网关之间不通用）；旧图自动裁掉，长任务的上下文不会失控。
 - **8 个视频理解工具** — `get_video_info` / `extract_frames`（范围+频率抽帧带时间戳）/ `extract_frame_at` / `list_frames` / `inspect_region`（局部放大细看）/ `remember` / `recall`（状态记忆，防长上下文遗忘）/ `spawn_subagent`（超长视频分段，防上下文爆炸）。
-- **浏览器本地硬解码抽帧** — 原生 `<video>` + `<canvas>` seeked + rAF 抽帧（含黑帧重试），mediainfo.js（wasm 懒加载）只用于 fps/编码/码率等富信息，加载本地性能优先。
+- **浏览器本地硬解码抽帧** — 主路径用 mediabunny（基于 WebCodecs 解封装 + 解码，不用拖 `<video>` 的进度条）；解不了时退回 `<video>` + `<canvas>`（含黑帧重试）；AVI / WMV / FLV 这类容器第一次遇到时才从 CDN 懒加载 ffmpeg.wasm 在本地转码；mediainfo.js 只在退回路径上补 fps / 编码 / 码率。
 - **211 个 Provider 运行时目录** — 接入 models.dev 目录并归一化为 provider 预设，下拉可搜；自动标记视觉模型并优先默认选中（适配视频理解）；OpenAI 兼容 / Anthropic / Gemini 三类传输自动判定，附带 CORS 提示与连接测试。
 - **子代理隔离上下文** — 子代理 = 去掉 `spawn_subagent` 工具的嵌套 agent 运行，长视频分段理解的中间过程不污染主上下文。
 

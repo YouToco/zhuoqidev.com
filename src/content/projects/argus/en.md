@@ -15,9 +15,9 @@ The hard part of long-video understanding isn't the model — it's **how you fee
 
 ## Architecture Highlights
 
-- **Hand-built Agent Loop** — a manual tool loop on top of Vercel AI SDK `streamText`: tool calls are executed by the harness itself, and extracted frames are injected back as `ImagePart`s until the agent reaches a conclusion.
+- **Agent Loop** — Vercel AI SDK `streamText` runs the multi-step tool loop (capped with `stopWhen`); the two parts that make the product are ours: `prepareStep` injects freshly extracted frames as a user message so any vision model can see them (images inside tool results don't carry across OpenAI-compatible gateways), and old images are pruned so long runs keep their context bounded.
 - **8 Video-Understanding Tools** — `get_video_info` / `extract_frames` (range + rate sampling with timestamps) / `extract_frame_at` / `list_frames` / `inspect_region` (zoom into a region) / `remember` / `recall` (state memory against long-context drift) / `spawn_subagent` (segment very long videos, preventing context blow-up).
-- **Browser-Native Hardware-Decoded Frame Extraction** — plain `<video>` + `<canvas>` with seeked + rAF (plus black-frame retries); mediainfo.js (lazy-loaded wasm) is used only for rich metadata like fps/codec/bitrate. Local loading performance first.
+- **Browser-Native Hardware-Decoded Frame Extraction** — the main path is mediabunny (WebCodecs demux + decode, no `<video>` seeking); when it can't decode a file, Argus falls back to `<video>` + `<canvas>` (with black-frame retries); containers like AVI / WMV / FLV are transcoded locally with ffmpeg.wasm, fetched from a CDN only the first time one shows up; mediainfo.js only fills in fps / codec / bitrate on the fallback path.
 - **211 Providers via a Runtime Catalog** — integrates the models.dev catalog, normalized into provider presets with a searchable dropdown; vision models are auto-flagged and selected by default; OpenAI-compatible / Anthropic / Gemini transports are detected automatically, with CORS hints and a connection test.
 - **Sub-Agent Context Isolation** — a sub-agent is a nested agent run without the `spawn_subagent` tool, so the intermediate work of segment-level understanding never pollutes the main context.
 
