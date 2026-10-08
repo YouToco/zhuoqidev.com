@@ -5,13 +5,13 @@
   "name": "zhuoqidev",
   "pages_build_output_dir": "dist",
   "compatibility_date": "2026-10-07",
-  // Guestbook and visit counts (functions/, migrations/). The id is filled in once the database
-  // exists; `wrangler pages dev` keeps a local copy under .wrangler/ whatever the id says.
+  // Guestbook and visit counts (functions/, migrations/). The database lives in Asia Pacific;
+  // `wrangler pages dev` uses a local copy under .wrangler/, never this one.
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "zhuoqidev-stats",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "d82a2eb1-efef-496f-b7f2-189ed8fb0571",
       "migrations_dir": "migrations"
     }
   ]
