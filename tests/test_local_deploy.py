@@ -70,6 +70,7 @@ class LocalDeployTests(unittest.TestCase):
         self.assertIn('--exclude "_headers"', script)
         self.assertIn("--delete", script)
         self.assertIn("--disable-ignore-error", script)
+        self.assertIn("--jobs 32", sync_command)
         self.assertIn("aliyun cdn RefreshObjectCaches", script)
         self.assertIn("--ObjectType Directory", script)
         self.assertIn("wrangler pages deployment list", script)
@@ -80,6 +81,7 @@ class LocalDeployTests(unittest.TestCase):
         self.assertIn('--connect-to "$primary_domain:443:$primary_edge:443"', script)
         self.assertIn('--connect-to "$san_domain:443:$san_edge:443"', script)
         self.assertIn('cloudflare_sha == "$commit_sha"', script)
+        self.assertEqual(script.count("--connect-timeout 10 --max-time 20"), 3)
 
     def test_text_twins_declare_utf8_on_both_providers(self) -> None:
         script = self.script()
@@ -87,6 +89,7 @@ class LocalDeployTests(unittest.TestCase):
 
         self.assertIn('aliyun oss cp dist/ "oss://${oss_bucket}/"', script)
         self.assertIn('--meta "Content-Type:${rule#*|}"', script)
+        self.assertIn("--disable-dir-object", script)
         self.assertIn('"*.md|text/markdown; charset=utf-8"', script)
         self.assertIn('"*.txt|text/plain; charset=utf-8"', script)
         self.assertIn("/*.md\n  Content-Type: text/markdown; charset=utf-8", headers)
