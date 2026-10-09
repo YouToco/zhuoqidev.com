@@ -1,10 +1,10 @@
 ---
-title: 'Cloudflare or a Chinese Cloud for Your LLM Gateway? Real Prices, Queried by CLI, for Three Traffic Tiers'
-short: 'LLM gateway: Cloudflare vs Chinese clouds'
-description: A request through an LLM gateway hangs on for 20 seconds while the upstream model streams tokens, yet the gateway does only about 10 ms of real work. Cloudflare bills those milliseconds and charges nothing for egress, but bills every read and write of state; Alibaba Cloud and Tencent Cloud make state almost free but bill every byte of the prompts the gateway forwards. This article queries prices as of 2026-10-09 with the aliyun CLI, tccli and Cloudflare's official pricing pages, works out the bill line by line for 10 million, 100 million and 1 billion requests a month, adds latency, reachability and real-world cases, and ends with when to choose which.
+title: 'Cloudflare, a Chinese Cloud or a Global Hyperscaler for Your LLM Gateway? Real Prices from Seven Clouds for Three Traffic Tiers'
+short: 'Where to run an LLM gateway'
+description: "A request through an LLM gateway hangs on for 20 seconds while the upstream model streams tokens, yet the gateway does only about 10 ms of real work. Cloudflare bills those milliseconds and charges nothing for egress, but bills every read and write of state; Alibaba Cloud, Tencent Cloud, AWS, Google Cloud and Azure make state almost free but bill every byte of the prompts the gateway forwards; Oracle, with its first 10 TB of egress free each month, is the one exception. This article queries prices as of 2026-10-09 with the aliyun CLI, tccli, the clouds' public pricing APIs and official pricing pages, works out the bill line by line for seven providers at 10 million, 100 million and 1 billion requests a month, adds latency, reachability and real-world cases, and ends with when to choose which."
 date: 2026-10-09
 updated: 2026-10-09
-lead: "At 10 million requests a month, Cloudflare is an order of magnitude cheaper than Alibaba Cloud. At 1 billion, the gap shrinks to 1.4–1.8×, and once a request sends out less than about 30 KB, self-hosting on Alibaba Cloud is actually cheaper. **What decides it is not compute but three questions: who bills you for waiting, who bills you for carrying bytes, and who bills you for state.**"
+lead: "At 10 million requests a month, Cloudflare is an order of magnitude cheaper than any cloud's self-hosted setup. At 1 billion, self-hosting on Alibaba Cloud, Tencent Cloud or the three big Western clouds all lands at \u00a544,000\u201358,000 a month, Cloudflare is only 1.3\u20132.3\u00d7 cheaper, and Oracle, with almost free egress, costs \u00a58,832. **What decides it is not compute but three questions: who bills you for waiting, who bills you for carrying bytes, and who bills you for state.**"
 tags:
 - LLM Gateway
 - Cloudflare Workers
@@ -17,7 +17,7 @@ categories:
 - Deep Dives
 ---
 
-**Version scope**: prices are public list prices as of 2026-10-09, excluding negotiated discounts, new-customer deals and promotions. Alibaba Cloud prices come from the pricing APIs of aliyun CLI 3.5.1 (`DescribePrice`, `GetPayAsYouGoPrice`), and Tencent Cloud prices from tccli 3.1.180.1 (`InquiryPrice*`, `DescribeDBPrice`). Cloudflare has no pricing API (wrangler 4.148.0 has none either), so its numbers come from that day's pricing and limits pages on developers.cloudflare.com. Exchange rate: 1 USD = 6.7153 CNY (open.er-api.com, 2026-10-09).
+**Version scope**: prices are public list prices as of 2026-10-09, excluding negotiated discounts, new-customer deals and promotions. Alibaba Cloud prices come from the pricing APIs of aliyun CLI 3.5.1 (`DescribePrice`, `GetPayAsYouGoPrice`), and Tencent Cloud prices from tccli 3.1.180.1 (`InquiryPrice*`, `DescribeDBPrice`). Cloudflare has no pricing API (wrangler 4.148.0 has none either), so its numbers come from that day's pricing and limits pages on developers.cloudflare.com. The four Western clouds (AWS, Google Cloud, Azure, Oracle) were added the same day, from public pricing APIs that need no account (AWS Price List, Azure Retail Prices API, Oracle's price list API) plus Google's official pricing pages, for US East and Singapore, all at on-demand prices. Exchange rate: 1 USD = 6.7153 CNY (open.er-api.com, 2026-10-09).
 
 > [!NOTE]
 > **The most important caveat: the monthly bills rest on a set of illustrative assumptions.** Each request lasts 20 seconds, uses 10 ms of gateway CPU and sends out 50 KB, and the machine sizes were not load-tested. Change these numbers and the conclusion changes, above all the outbound bytes per request. Every table therefore comes with a sensitivity check so you can plug in your own numbers.
@@ -26,26 +26,42 @@ categories:
 
 ## The conclusion first
 
-| Monthly cost (CNY, list price) | T1: 10M requests | T2: 100M | T3: 1B |
+Monthly cost of a **self-hosted gateway** (load balancer + machines in two zones + Redis + MySQL + logs + egress) and of Cloudflare, in CNY at list prices:
+
+| Option | T1: 10M requests | T2: 100M | T3: 1B |
 |---|---|---|---|
 | Cloudflare (Workers + KV + Durable Objects + Queues + D1) | 140 | 2,756 | 32,574 |
 | Cloudflare, optimized (usage summed inside the Durable Object, no Queues) | 67 | 2,115 | 25,139 |
-| Alibaba Cloud self-hosted · Shenzhen (ALB + ECS + Redis + RDS + SLS) | 1,625 | 5,854 | 45,696 |
-| Alibaba Cloud self-hosted · Hong Kong (reference for an offshore node) | 1,981 | 6,114 | 40,426 |
-| Tencent Cloud self-hosted · Guangzhou (CLB + CVM + Redis + MySQL + CLS) | 1,422 | 5,359 | 45,179 |
+| Alibaba Cloud · Shenzhen | 1,625 | 5,854 | 45,696 |
+| Alibaba Cloud · Hong Kong (reference for an offshore node) | 1,981 | 6,114 | 40,426 |
+| Tencent Cloud · Guangzhou | 1,422 | 5,359 | 45,179 |
+| AWS · US East / Singapore | 2,467 / 3,227 | 6,646 / 8,572 | 47,179 / 53,327 |
+| Google Cloud · US East / Singapore | 3,056 / 4,031 | 7,387 / 8,583 | 43,798 / 48,564 |
+| Azure · US East / Singapore | 4,794 / 6,215 | 9,125 / 11,934 | 49,848 / 57,957 |
+| **Oracle · US East / Singapore** | 1,973 / 1,973 | 2,388 / 2,388 | **8,832 / 13,237** |
+
+**Managed gateways and serverless** (also including Redis, database, logs and egress):
+
+| Option | T1 | T2 | T3 |
+|---|---|---|---|
 | Alibaba Cloud AI Gateway (managed) | 5,428 | 10,195 | 60,518 |
 | Alibaba Cloud Function Compute (100 concurrent requests per instance) | 1,419 | 7,703 | 68,877 |
 | Tencent Cloud SCF (official docs: one instance serves one SSE stream at a time) | 3,756 | 32,543 | 321,865 |
+| AWS Lambda (128 MB Arm, US East) | 4,134 | 28,784 | 277,566 |
+| Google Cloud Run (80 / 250 concurrent requests per instance, US East) | 2,672 / 2,405 | 12,556 / 7,752 | 107,676 / 59,634 |
+| Azure Container Apps (100 streams per replica, US East) | 2,916 | 9,596 | 79,376 |
+| OCI Functions (Oracle, US East) | 4,071 | 27,445 | 264,894 |
 
-Divide by 6.7153 for USD: Cloudflare at T3 is about $4,851, Alibaba Cloud Shenzhen about $6,805.
+Divide by 6.7153 for USD: Cloudflare at T3 is about $4,851, AWS US East about $7,026, Oracle US East about $1,315.
 
-Five judgments:
+Six judgments:
 
-1. **At small scale Cloudflare is an order of magnitude cheaper.** At 10 million requests a month Cloudflare costs ¥67–140, while the cheapest self-hosted setup on a Chinese cloud costs about ¥1,400. On a Chinese cloud you pay mostly for the floor: two machines, a database and a Redis instance cost the same with or without traffic.
-2. **At scale the gap shrinks to 1.4–1.8×.** The big items are completely different on each side. On Cloudflare the money goes to **state**: every Durable Object read and write, every queue message and every KV read is billed separately, and at T3 these make up about 80% of the bill. On Alibaba Cloud the money goes to **egress**, 83% of the bill at T3.
-3. **What really decides it is the outbound bytes per request.** At T3, if each request sends out less than about 24–34 KB, self-hosting on Alibaba Cloud beats Cloudflare. For coding agents, whose requests often carry hundreds of kilobytes, Cloudflare is more than 5× cheaper.
-4. **Serverless billed by wall-clock time is the worst choice.** Function Compute and SCF both bill the full 20 seconds spent waiting for upstream tokens. The Chinese edge-function products (Alibaba Cloud ESA, Tencent Cloud EdgeOne) are cheap, but hard limits such as a 10-second first byte, a 120-second total duration or a 1 MB request body keep them from serving as a general LLM gateway.
-5. **The other half is where your users are.** From China Telecom in Shenzhen, Cloudflare lands in Los Angeles at about 162 ms round trip; Alibaba Cloud and Tencent Cloud entry points in Shenzhen, Guangzhou and Hong Kong are 7–13 ms away. Cloudflare's mainland-China nodes (China Network) need the Enterprise plan plus ICP filing, and their product list leaves out Durable Objects, D1 and Queues. **If your users are mostly in mainland China, run on a Chinese cloud (with a separate offshore node for overseas models); if they are mostly overseas, run on Cloudflare.**
+1. **At small scale Cloudflare is an order of magnitude cheaper.** At 10 million requests a month Cloudflare costs ¥67–140, while the cheapest self-hosted setup among the six cloud providers costs about ¥1,400. With a cloud provider you pay mostly for the floor: two machines, a high-availability database and a Redis instance cost the same with or without traffic.
+2. **At scale, Cloudflare's money goes to state and most clouds' money goes to egress.** Cloudflare bills every Durable Object read and write, every queue message and every KV read separately, and at T3 these make up about 80% of the bill. Self-hosting on Alibaba Cloud, Tencent Cloud, AWS, Google Cloud or Azure lands at ¥44,000–58,000 at T3, with egress at 53–89% of the bill. **On this point the three big Western clouds and the Chinese clouds keep the same books.**
+3. **Oracle is the exception.** Its first 10 TB of egress each month is free in each source region group, and beyond that it costs $0.0085/GB in North America, about a tenth of the others. Self-hosting in Oracle US East costs ¥8,832 at T3, 2.8–3.7× cheaper than Cloudflare, and that holds as long as each request sends out less than about 340–470 KB. The price is running your own machines, and Singapore has only one availability domain (Oracle's term for an availability zone).
+4. **For the others, what really decides it is the outbound bytes per request.** At T3, if each request sends out less than about 10–34 KB (it varies by provider; US East and Shenzhen figures), self-hosting on Alibaba Cloud, AWS, Google Cloud or Azure beats Cloudflare. For coding agents, whose requests often carry hundreds of kilobytes, Cloudflare is more than 5× cheaper.
+5. **Serverless billed by wall-clock time is the worst choice, at all six cloud providers.** Function Compute, SCF, Lambda, Cloud Run, Container Apps and OCI Functions all bill the 20 seconds spent waiting for upstream tokens. Edge functions (Alibaba Cloud ESA, Tencent Cloud EdgeOne, CloudFront Functions, Lambda@Edge) hit hard limits on first byte, duration or request body and cannot serve as a general LLM gateway.
+6. **The other half is where your users are.** From China Telecom in Shenzhen, Alibaba Cloud and Tencent Cloud entry points in Shenzhen, Guangzhou and Hong Kong are 7–13 ms away and Alibaba Cloud Singapore 57 ms; Cloudflare lands in Los Angeles at 162 ms; AWS and Oracle Singapore take over 200 ms. **If your users are mostly in mainland China, run on a Chinese cloud (with overseas models exiting from an offshore node that connects well to China, such as Alibaba Cloud's or Tencent Cloud's); if they are mostly overseas, run on Cloudflare when small, and consider self-hosting on Oracle when large and egress-heavy.**
 
 ---
 
@@ -176,11 +192,25 @@ TENCENTCLOUD_REGION=ap-guangzhou tccli cvm InquiryPriceRunInstances --cli-unfold
   --InternetAccessible.InternetMaxBandwidthOut 0 --InstanceCount 1
 ```
 
+I have no accounts with the four Western clouds, but AWS, Azure and Oracle all have public pricing APIs that need no login and return the data behind their pricing pages. Google Cloud's pricing API needs an API key, so its numbers come from the official pricing pages.
+
+```bash
+# AWS: egress tiers from us-east-1 to the internet (public Price List file, AWSDataTransfer service)
+curl -s https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSDataTransfer/current/us-east-1/index.json
+
+# Azure: egress tiers in eastus (Retail Prices API)
+curl -s "https://prices.azure.com/api/retail/prices?\$filter=serviceName%20eq%20'Bandwidth'%20and%20armRegionName%20eq%20'eastus'%20and%20meterName%20eq%20'Standard%20Data%20Transfer%20Out'"
+
+# Oracle: egress originating in North America (price list API, B88327 = Outbound Data Transfer - Originating in North America, Europe, and UK)
+curl -s "https://apexapps.oracle.com/pls/apex/cetools/api/v1/products/?currencyCode=USD&partNumber=B88327"
+```
+
 A few ground rules first:
 
 - **List prices only.** Alibaba Cloud's pricing APIs also return account discounts; my account, for example, gets 15% off load balancers and NAT. Such discounts are left out.
 - **Where no API works, the documented price is used and marked.** Alibaba Cloud's AI Gateway pricing API returned errors and Tencent Cloud's AI gateway has no pricing API, so both use documented prices.
 - **All Cloudflare numbers come from the official pricing pages.** wrangler and the Cloudflare API only report your own account's usage; they cannot return a price list.
+- **The four Western clouds use on-demand prices and 720-hour months.** Reserved instances or Savings Plans can save another 30–50%, but only on machines, not on egress.
 
 ### Key unit prices
 
@@ -193,6 +223,17 @@ A few ground rules first:
 | Key lookup | KV reads $0.50 per million (10M included) | The same Redis | The same Redis |
 | Usage / billing database | Queues $0.40 per million operations (3 per message); D1 writes $1.00 per million rows, **10 GB max per database** | RDS MySQL high-availability: 2c4g ¥660/month, 4c16g ¥1,370/month | MySQL two-node: 2c4g ¥480/month, 4c16g ¥1,704/month |
 | Logs | Workers Logs, **from 2026-12-01** $0.25/GB ingested + $0.10 per GB-month stored | SLS ¥0.4/GB (indexing and 30 days of storage included) | CLS billed by feature, about ¥0.83/GB |
+
+US East unit prices of the four Western clouds (USD; Singapore egress in parentheses):
+
+| | AWS | Google Cloud | Azure | Oracle |
+|---|---|---|---|---|
+| Egress | 100 GB free per month; $0.09/GB up to 10 TB, $0.085 for 10–50 TB (Singapore first tier $0.12) | Premium Tier to North America: $0.12/GiB up to 1 TiB, $0.11 up to 10 TiB, $0.08 beyond (Singapore to Asia first tier $0.12) | 100 GB free per month; $0.087/GB up to 10 TB, $0.083 for 10–50 TB (Singapore first tier $0.12) | **First 10 TB free per month**, then $0.0085/GB (Singapore $0.025) |
+| 4 vCPU 8 GiB machine (monthly) | c8i.xlarge $134.94 | c4-highcpu-4 $122.47 | F4als_v7 $174.24 | E6.Flex 2 OCPU $54.72 |
+| Load balancer | ALB $16.20/month + LCU (about $0.008/GB processed) | Forwarding rule $18/month + $0.008/GiB | Application Gateway v2 $0.20/hour + $0.008 per capacity unit | Flexible LB $9–41/month, no charge for data handled |
+| ~1 GB high-availability Redis (monthly) | Valkey primary-replica $36.86 | Memorystore Standard $46.08 | Azure Managed Redis B1 $46.08 | OCI Cache $55.87 |
+| ~2-vCPU high-availability MySQL (monthly) | RDS Multi-AZ $115.88 | Cloud SQL HA $192.80 | Flexible Server zone-redundant HA (smallest: 2 vCore 8 GiB) $272.84 | HeatWave HA $170.11 |
+| Logs | CloudWatch Logs ingestion $0.50/GB | Cloud Logging $0.50/GiB, 50 GiB free per project per month | Basic Logs $0.50/GB | Ingestion free, storage $0.05 per GB-month |
 
 ---
 
@@ -219,7 +260,7 @@ First, the marginal cost of a single request at T3 overage prices.
 | 1 KB of logs | about 0.27 | | |
 | **Total** | **about 4.8 (≈ ¥32)** | **Total** | **about ¥45** |
 
-**One request costs about ¥0.00003 on Cloudflare and about ¥0.000045 on Alibaba Cloud.** Compare that with the model bill (a rough estimate: a 30 KB prompt is about 7,500 tokens, the answer 300 tokens):
+**One request costs about ¥0.00003 on Cloudflare and about ¥0.000045 on Alibaba Cloud.** Spreading the T3 bill over every request for the Western clouds: AWS US East about ¥0.000047, Oracle US East about ¥0.000009. Compare that with the model bill (a rough estimate: a 30 KB prompt is about 7,500 tokens, the answer 300 tokens):
 
 - At DeepSeek V4.1-Flash peak prices (¥2 input, ¥8 output per million tokens), one call costs about ¥0.017, and the gateway is only 0.2–0.3% of it;
 - At Qwen qwen-flash prices (¥0.15 input, ¥1.5 output), one call costs about ¥0.0016, and the gateway is 2–3% of it.
@@ -233,6 +274,8 @@ Model prices come from the two vendors' official pricing pages (checked 2026-10-
 | Cloudflare | Queues 55%, Workers subscription 24% | DO row writes 37%, Queues 29%, KV reads 11% | DO row writes 40%, Queues 25%, KV reads 10% |
 | Alibaba Cloud self-hosted · Shenzhen | RDS 41%, ECS 25%, egress 24% | **Egress 68%**, ECS 13% | **Egress 83%**, ECS 7%, ALB 5% |
 | Tencent Cloud self-hosted · Guangzhou | MySQL 34%, egress 28%, CVM 22% | **Egress 75%** | **Egress 89%** |
+| AWS self-hosted · US East | EC2 37%, RDS 32%, egress 10% | **Egress 45%**, EC2 27%, RDS 12% | **Egress 61%**, EC2 15%, RDS 7%, logs 7% |
+| Oracle self-hosted · US East | MySQL 58%, Redis 19%, machines 19% | MySQL 48%, machines 31% | Machines 33%, **egress 26%**, MySQL 25% |
 
 ### Sensitivity 1: outbound bytes per request
 
@@ -251,6 +294,8 @@ Where the two break even:
 - **T3**: about 24 KB per request (against optimized Cloudflare) to 34 KB (against plain Cloudflare) in Shenzhen, and about 24–37 KB in Hong Kong.
 - **T2**: about 6–14 KB in Shenzhen.
 - **T1**: the Chinese clouds' fixed floor already costs more than Cloudflare's whole bill, so there is no break-even point.
+- **The Western clouds (T3, against optimized to plain Cloudflare)**: AWS US East 15–27 KB, Google Cloud US East 16–30 KB, Azure US East 10–22 KB; Singapore egress costs more, so the break-even points are lower.
+- **Oracle US East**: 336–466 KB. From 5 KB to 500 KB its T3 bill only moves from ¥6,562 to ¥34,518, while AWS US East moves from ¥18,896 to ¥236,506 over the same range.
 
 So "Cloudflare is cheaper" **holds only when traffic is heavy or scale is small**. If your business is a flood of short Q&A (about 5 KB out per request), at 1 billion requests a month self-hosting on a Chinese cloud is about 3× cheaper than Cloudflare.
 
@@ -315,6 +360,47 @@ Doubling Cloudflare CPU time from 5 ms to 20 ms moves the T3 bill from ¥31,902 
 
 Reasoning models often take more than 10 seconds to the first token and more than 120 seconds for long outputs, and agents' long-context requests easily exceed 1 MB. Neither product has strongly consistent state like a DO, so rate limits and balances still have to go back to a central region. **They can sit in front of a gateway for caching and authentication pre-checks; they cannot replace it.**
 
+## The four Western clouds: the big three keep the same books as the Chinese clouds, Oracle is the exception
+
+**The big three's egress prices are in the same range as the Chinese clouds'.** AWS and Azure charge $0.087–0.09 per GB in the first tier and $0.12 in Singapore, and Google Cloud's Premium Tier $0.11–0.12 per GiB; that is ¥0.58–0.81, close to Alibaba Cloud's and Tencent Cloud's ¥0.80. At volume the big three drop to $0.083–0.085 (about ¥0.56), slightly below Alibaba Cloud's ¥0.75.
+
+**Machines, databases and logs cost more.** So at T1, AWS US East (¥2,467) costs 50% more than Alibaba Cloud Shenzhen (¥1,625), and Azure US East (¥4,794) nearly three times as much. Logs stand out: CloudWatch Logs, Cloud Logging and Azure Basic Logs all charge $0.50 per GB (about ¥3.4), more than 8× Alibaba Cloud SLS. The two effects cancel out, and at T3 the big three in US East and the Chinese clouds all land at ¥44,000–50,000.
+
+If your clients are in mainland China, the traffic Google Cloud sends back to them is priced as "to mainland China", $0.20–0.23 per GiB. Pricing all egress that way (an upper bound) raises T3 in US East from ¥43,798 to ¥80,636.
+
+**Oracle's egress is almost free.** Its price list states that the first 10 TB of egress each month is free, and beyond that it costs $0.0085/GB in North America and $0.025/GB in Asia-Pacific. Traffic within a region (including across availability domains) is free, data handled by the load balancer is not billed separately, and log ingestion is free, with only storage billed. So 50 TB of egress at T3 costs $338 in US East, against ¥37,997 for the same traffic on Alibaba Cloud Shenzhen. The costs show up elsewhere:
+
+- The price list API gives each "source region group" its own 10 TB free tier, so I counted 10 TB each for US East and Singapore; but the official pages only say "the first 10 TB per month" without saying on what basis.
+- Singapore has only one availability domain, so you cannot spread across zones, only across fault domains.
+- A pay-as-you-go account gets only 6 OCPUs per availability domain by default; T3 needs 16, so you must request a quota increase first.
+- The NAT gateway allows only about 20,000 concurrent connections to the same destination address and port; the 23,148 streams of the T3 peak all going to one upstream would hit it, so machines should exit through their own public IPs.
+- The smallest high-availability MySQL is billed as 3 instances, $170 a month, the largest item at T1 and T2.
+
+**Default load balancer timeouts are the easiest trap on the Western clouds:**
+
+| | Default | Effect on SSE |
+|---|---|---|
+| Alibaba Cloud ALB | 60 s request timeout | Raise it before long reasoning streams |
+| AWS ALB | 60 s idle timeout, up to 4,000 s | A reasoning model that thinks for over 60 s before its first token gets cut off; raise it or send SSE heartbeats |
+| Google Cloud external Application Load Balancer | 30 s backend service timeout, **counting the whole response** | Not an idle timeout: streams over 30 s are cut off, so raise it to hundreds or thousands of seconds before launch |
+| Azure Application Gateway v2 | 20 s request timeout, counted as time without data | After a timeout it retries the request on another backend, **so one POST may be forwarded twice and billed twice upstream**; SSE also needs the response buffer, on by default, switched off |
+| Oracle flexible load balancer | 60 s idle timeout, up to 7,200 s | Sending data does not reset the receive timer |
+
+**Serverless and edge functions fail overseas too:**
+
+- **AWS Lambda**: one execution environment handles one request at a time, a streamed response is billed until the whole stream ends, even if the client disconnects; default concurrency is 1,000, so the T2 and T3 peaks need a quota increase.
+- **Google Cloud Run**: one instance can handle up to 1,000 requests at once, the best fit for long-lived connections of the lot; but it bills instance wall-clock time, and at 250 concurrent requests per instance T3 still costs ¥59,634.
+- **Azure**: Functions Flex defaults to 16 concurrent requests per instance, so T3 would need 1,447 instances, above the 1,000-instance cap; Container Apps at 100 concurrent streams per replica costs ¥79,376 at T3.
+- **OCI Functions**: one instance handles one request at a time, synchronous calls last at most 300 seconds, and the docs describe no streamed responses.
+- **Edge**: neither CloudFront Functions nor Lambda@Edge can relay a 20-second SSE stream; Azure Front Door's docs state that it does not support SSE.
+
+**Managed AI gateways** exist at three of them, not at Oracle, but none is built for reselling:
+
+- **Azure API Management**: all three v2 tiers pass SSE through and offer per-token rate-limit policies such as `llm-token-limit`. T1 on Basic v2 is about $148 a month; T3 on Premium v2 is $2,762–17,951 a month, depending on how many concurrent connections to one upstream each unit allows, which I could not confirm.
+- **AWS**: Bedrock AgentCore Gateway can proxy OpenAI, Anthropic and any OpenAI-compatible endpoint, passing SSE through unchanged, and since 2026-08 supports per-user TPM limits. But authentication is IAM, JWT or none, with no per-customer API keys or prepaid balances. API Gateway REST APIs have supported streamed responses since 2025-11, but cannot read usage from the stream.
+- **Google**: Apigee passes SSE through, but its per-token rate-limit policy only works on the most expensive proxy type, $64–100 per million calls, which comes to $73,000 a month in call fees alone at T3.
+- **Oracle**: no general LLM gateway. Its generative AI service only calls models in its own catalog.
+
 ---
 
 ## Beyond the bill: latency and reachability
@@ -327,11 +413,21 @@ Reasoning models often take more than 10 seconds to the first token and more tha
 | Tencent Cloud Hong Kong | 13 ms | 20 ms |
 | Cloudflare anycast address (this blog's Pages / Functions endpoint) | 162–164 ms | 166–186 ms |
 
+Each provider's overseas regions, measured again on the same line at about 11:55 (20 ICMP round trips, average):
+
+| Singapore | Average | US East | Average |
+|---|---|---|---|
+| Alibaba Cloud Singapore | 57 ms | Alibaba Cloud Virginia | 231 ms |
+| Tencent Cloud Singapore | 89 ms | AWS us-east-1 (S3 endpoint) | 224 ms |
+| AWS ap-southeast-1 (S3 endpoint) | 203 ms | Oracle us-ashburn-1 | 236 ms |
+| Oracle ap-singapore-1 | 230 ms | | |
+
 A few notes:
 
 - **Method**: my local network transparently proxies every TCP connection, so any handshake takes 2–3 ms; that is why I used ping.
 - **Route**: `mtr` shows packets to Cloudflare jumping from about 9 ms to about 160 ms on China Telecom's 163 backbone, which is where they leave China, and ending at a Cloudflare address in Los Angeles.
 - **Limits**: this is one line at one time of day. Two evenings earlier, a TCP handshake test from the same network measured 193 ms.
+- **Singapore is not necessarily close**: in the same city, Alibaba Cloud is 57 ms away while AWS and Oracle take over 200 ms, about as much as US East. Chinese clouds' overseas regions usually interconnect far better with Chinese carriers. Azure's and Google Cloud's endpoints are global anycast addresses, so ping cannot measure a specific region, and they are left out.
 
 **Effect on time to first token**: a new HTTPS connection needs at least three round trips (TCP, TLS 1.3, sending the request). At 162 ms per round trip that adds about 0.45 seconds before the first token; with a reused connection it adds about 0.15 seconds. Chat users will notice; long agent tasks barely will.
 
@@ -378,12 +474,13 @@ flowchart LR
     Q(["Where are your paying users?"])
     Q --> CN["Mainland China"] --> CN1["Mostly Chinese models<br>→ Alibaba / Tencent Cloud mainland: long-running gateway (Higress or your own) + Redis<br>avoid Function Compute / SCF; edge functions only in front"]
     CN --> CN2["Overseas models too<br>→ mainland entry + offshore node for overseas models<br>exit from a region OpenAI / Anthropic support (e.g. Singapore, Tokyo)<br>switch Alibaba Cloud offshore nodes to CDT by hand"]
-    Q --> OS["Overseas"] --> OS1["→ Cloudflare Workers + one DO per key<br>billing split by month or an external database; logs without payloads"]
+    Q --> OS["Overseas"] --> OS1["Small, no machines to run<br>→ Cloudflare Workers + one DO per key<br>billing split by month or an external database; logs without payloads"]
+    OS --> OS2["Large and egress-heavy<br>→ self-host on Oracle (first 10 TB of egress free each month)<br>already on AWS / GCP / Azure: egress bill similar to Chinese clouds"]
     Q --> BOTH["Both"] --> BOTH1["→ two entry points, each close to its users<br>billing in one place only, no dual writes"]
     classDef q fill:#fff3bf,stroke:#f08c00
     classDef pick fill:#d3f9d8,stroke:#2f9e44
     class Q q
-    class CN1,CN2,OS1,BOTH1 pick
+    class CN1,CN2,OS1,OS2,BOTH1 pick
 ```
 
 *Figure: a decision tree for choosing by where users are (this article's judgment, not official advice).*
@@ -391,16 +488,17 @@ flowchart LR
 **When to choose Cloudflare:**
 
 - Your users are mostly overseas, or they are developers calling overseas models;
-- You are still small (tens of millions of requests a month or fewer) and want a near-zero floor with no machines to run;
+- You are still small (tens of millions of requests a month or fewer) and want a near-zero floor with no machines to run; no self-hosted setup at the six cloud providers can match it;
 - Your requests are large (agents, long context, multimodal), so egress would dominate a Chinese cloud bill;
 - Your team can accept state-driven design work such as one DO per key and periodic D1 archiving.
 
 **When not to use Cloudflare:**
 
 - Your users are mostly in mainland China and sensitive to time to first token (chat products);
-- You are at around 1 billion requests a month with short requests (under about 30 KB out per request), where self-hosting on a Chinese cloud is cheaper;
+- You are at around 1 billion requests a month with short requests (under about 30 KB out per request), where self-hosting on a Chinese cloud or one of the big three is cheaper;
 - You need strongly consistent global state (global concurrency, a credit pool across keys) and do not want to shard it yourself;
-- You need nodes in mainland China but cannot afford Enterprise, or you rely on DO, D1 or Queues.
+- You need nodes in mainland China but cannot afford Enterprise, or you rely on DO, D1 or Queues;
+- Your users are overseas, you are large, and you are willing to run your own machines: self-hosting on Oracle is 2.8–3.7× cheaper at T3.
 
 ---
 
@@ -439,5 +537,10 @@ All checked on 2026-10-09.
   - [Alibaba Cloud Hong Kong Zone C outage notice (2022-12)](https://www.alibabacloud.com/zh/notice/resolved_service_outage_in_zone_c_of_the_china_hong_kong_region_1ae)
   - [Higress](https://github.com/higress-group/higress), [Alibaba Cloud AI Gateway product page](https://www.aliyun.com/product/apigateway)
   - [GreatFire: workers.dev](https://en.greatfire.org/domain/workers.dev) (third-party monitoring)
+- The four Western clouds (prices from public pricing APIs or official pricing pages, rules from the docs):
+  - AWS: [EC2 on-demand pricing (including data transfer)](https://aws.amazon.com/ec2/pricing/on-demand/), [Lambda pricing](https://aws.amazon.com/lambda/pricing/), [Lambda response streaming](https://docs.aws.amazon.com/lambda/latest/dg/configuration-response-streaming.html), [ALB idle timeout](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/edit-load-balancer-attributes.html), [AgentCore Gateway inference targets](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway-targets-inference.html)
+  - Google Cloud: [Network pricing](https://cloud.google.com/vpc/network-pricing), [Cloud Run pricing](https://cloud.google.com/run/pricing), [Load balancer timeouts](https://cloud.google.com/load-balancing/docs/https/request-distribution#timeouts_and_retries), [Apigee pricing](https://cloud.google.com/apigee/pricing)
+  - Azure: [Bandwidth pricing](https://azure.microsoft.com/en-us/pricing/details/bandwidth/), [Application Gateway and SSE](https://learn.microsoft.com/en-us/azure/application-gateway/use-server-sent-events), [Application Gateway 502 troubleshooting (timeout retries)](https://learn.microsoft.com/en-us/troubleshoot/azure/application-gateway/application-gateway-troubleshooting-502), [API Management AI gateway capabilities](https://learn.microsoft.com/en-us/azure/api-management/genai-gateway-capabilities), [Front Door, WebSocket and SSE](https://learn.microsoft.com/en-us/azure/frontdoor/standard-premium/websocket)
+  - Oracle: [Price list (networking)](https://www.oracle.com/cloud/price-list/#pricing-networking), [VCN pricing](https://www.oracle.com/cloud/networking/virtual-cloud-network/pricing/)
 - Model prices: [DeepSeek pricing](https://api-docs.deepseek.com/zh-cn/quick_start/pricing), [Qwen qwen-flash](https://help.aliyun.com/zh/model-studio/qwen-flash)
-- Tool versions: aliyun CLI 3.5.1, tccli 3.1.180.1, wrangler 4.148.0 (latest on npm: 4.149.0).
+- Tool versions: aliyun CLI 3.5.1, tccli 3.1.180.1, wrangler 4.148.0 (latest on npm: 4.149.0); no CLI was used for the four Western clouds, only the public pricing APIs above.
