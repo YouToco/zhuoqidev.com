@@ -47,6 +47,17 @@
   (`> [!NOTE]`), `![alt](./image.png "caption")` for figures, ```` ```mermaid ````
   fences (shown as hand-drawn Excalidraw sketches, see below) and ```` ```html demo height=320 ````
   fences for live CSS demos. The same source is served to agents as `index.md`.
+- Numbers that compare things go in a chart, not in prose or a wall of table cells:
+  a ```` ```chart ```` fence holds JSON for `bars` (with `panels` behind tabs),
+  `stack` or `line`; the types and fields are in `src/lib/markdown/chart.ts`. It is
+  drawn at build time as plain HTML (an SVG only for lines) with no script, and
+  `index.md` shows it as a Markdown table. Keep prose to one or two numbers per
+  paragraph, name scales in plain words ("1 billion requests a month") rather than
+  coined labels like T1/T2/T3, and fold commands and full reference tables into a
+  `<details>` appendix. A JSON error fails the build.
+- Readers pick the article width (narrow / default / wide / full) in the rail; it is
+  stored as `zq-width` and applied by the head script in `Base.astro`. Charts, tables
+  and diagrams must work from a 640 px column up to a full-width one.
 - `npm run build` runs `astro build`, subsets the CJK display fonts per page
   (`scripts/subset-fonts.mjs`), screenshots the social cards
   (`scripts/og-images.mjs`) and builds the Pagefind search index.
