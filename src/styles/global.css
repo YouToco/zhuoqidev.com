@@ -220,6 +220,9 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 .terminal a.y { text-decoration: none; }
 .terminal .y { background: var(--yellow); color: #161a22; padding: 1px 6px; border-radius: 3px; }
 .cursor { display: inline-block; width: 8px; height: 15px; background: var(--term-green); vertical-align: -2px; animation: blink 1.1s steps(1) infinite; }
+/* Looping decorations pause off screen (site.ts), so a scroll elsewhere on the page does not pay a
+   style and paint pass for them on every frame. */
+.cursor.idle, .back-top span.idle { animation-play-state: paused; }
 @keyframes blink { 50% { opacity: 0; } }
 
 .feature { padding: 26px 26px 22px; }
@@ -1156,7 +1159,14 @@ html.booting .board > .pin { animation-play-state: paused; }
       animation-name: read-grow; animation-timing-function: linear; animation-fill-mode: both; animation-timeline: scroll(root);
     }
     .embedded .read-progress { top: 0; }
-    .topbar { animation-name: bar-lift; animation-timing-function: linear; animation-fill-mode: both; animation-timeline: scroll(root); animation-range: 0 120px; }
+    .progress { display: none; }
+    /* The shadow sits on its own layer and fades in by opacity: animating box-shadow itself would
+       repaint the frosted bar on every frame of the first 120px. */
+    .topbar::after {
+      content: ""; position: absolute; inset: 0 0 -2px; z-index: -1; pointer-events: none; opacity: 0;
+      box-shadow: 0 12px 28px -20px rgba(28, 34, 48, .6);
+      animation-name: bar-lift; animation-timing-function: linear; animation-fill-mode: both; animation-timeline: scroll(root); animation-range: 0 120px;
+    }
     .prose :is(figure, .code, blockquote, .callout, table), .post-item, .proj, .writing li, .cols > div, .quote-card {
       animation-name: rise; animation-timing-function: linear; animation-fill-mode: both; animation-timeline: view(); animation-range: entry 0% entry 75%;
     }
@@ -1169,7 +1179,7 @@ html.booting .board > .pin { animation-play-state: paused; }
   }
 }
 @keyframes read-grow { from { scale: 0 1; } }
-@keyframes bar-lift { to { box-shadow: 0 12px 28px -20px rgba(28, 34, 48, .6); } }
+@keyframes bar-lift { to { opacity: 1; } }
 @keyframes rise { from { opacity: 0; translate: 0 36px; scale: .97; } }
 /* The lid swings on its hinge (bottom edge), so the near edge never grows wider than the page. */
 @keyframes lid-open { from { opacity: .35; transform: perspective(1100px) rotateX(32deg) translateY(24px); } }

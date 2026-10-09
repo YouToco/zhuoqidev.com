@@ -55,10 +55,12 @@ if (toc) {
   mark();
 }
 
-// Reading progress bar.
+// Reading progress bar, for browsers without scroll timelines (or with reduced motion). Where the
+// CSS bar (.read-progress) runs, this one is hidden and never listens to scroll.
 const bar = document.querySelector<HTMLElement>(".progress");
 const article = document.querySelector<HTMLElement>(".paper");
-if (bar && article) {
+const cssBar = CSS.supports("animation-timeline: view()") && matchMedia("(prefers-reduced-motion: no-preference)").matches;
+if (bar && article && !cssBar) {
   const update = () => {
     const r = article.getBoundingClientRect();
     const total = r.height - window.innerHeight;
