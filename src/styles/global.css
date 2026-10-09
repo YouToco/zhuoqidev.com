@@ -447,6 +447,27 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 .series-nav a:hover b { color: var(--blue); }
 .rail { position: sticky; top: 84px; align-self: start; display: grid; gap: 10px; }
 .rail .chip-btn { text-align: center; }
+/* Reading width: the picker in the rail sets data-width on <html>; the head script restores it
+   before first paint. "default" is the original 780px column. */
+.width-pick { display: grid; gap: 8px; margin-top: 10px; }
+.width-pick .kicker { text-align: center; }
+.width-pick .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border: 1px dashed var(--ink-3); border-radius: 10px; }
+.width-pick button { font: 500 12.5px/1 var(--f-sans); color: var(--ink-2); padding: 8px 4px; border: 0; border-radius: 7px; background: transparent; cursor: pointer; }
+.width-pick button:hover { color: var(--ink); background: var(--card); }
+.width-pick button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.width-pick button:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+@media (min-width: 1241px) {
+  :root[data-width="narrow"] .post-layout { grid-template-columns: minmax(200px, 250px) minmax(0, 640px) minmax(120px, 200px); }
+  :root[data-width="wide"] .post-layout { grid-template-columns: minmax(200px, 250px) minmax(0, 1040px) minmax(120px, 200px); }
+  :root[data-width="full"] .post-layout { grid-template-columns: minmax(200px, 250px) minmax(0, 1fr) minmax(120px, 200px); }
+}
+@media (min-width: 641px) and (max-width: 1240px) {
+  :root[data-width="narrow"] .post-layout { grid-template-columns: minmax(0, 640px); }
+  :root[data-width="wide"] .post-layout { grid-template-columns: minmax(0, 1040px); }
+  :root[data-width="full"] .post-layout { grid-template-columns: minmax(0, 1fr); }
+}
+/* The hand-written margin note lives in the gap that a wider column takes over. */
+:root[data-width="wide"] .margin-note, :root[data-width="full"] .margin-note { display: none; }
 
 /* ---------- 关于页 ---------- */
 .about { max-width: 1120px; margin: 0 auto; padding: 72px 24px 140px; }

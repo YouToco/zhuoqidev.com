@@ -1,4 +1,6 @@
 // Article page enhancements. Everything here is optional: the article is complete without JS.
+import { store } from "./store";
+
 const zh = document.documentElement.lang.startsWith("zh");
 const label = zh
   ? { copy: "复制", done: "已复制", fail: "复制失败" }
@@ -67,6 +69,38 @@ if (bar && article) {
   };
   window.addEventListener("scroll", update, { passive: true });
   update();
+}
+
+// Reading width: four column widths for the article, kept per reader. The head script applies the
+// stored one before first paint; switching keeps the paragraph at the top of the window in view.
+const picker = document.querySelector<HTMLElement>(".width-pick");
+if (picker) {
+  const root = document.documentElement;
+  const buttons = [...picker.querySelectorAll<HTMLButtonElement>("[data-width-set]")];
+  const paint = () => {
+    const now = root.dataset.width ?? "default";
+    for (const b of buttons) b.setAttribute("aria-pressed", String(b.dataset.widthSet === now));
+  };
+  for (const b of buttons) {
+    b.addEventListener("click", () => {
+      const next = b.dataset.widthSet!;
+      const anchor = [...document.querySelectorAll<HTMLElement>(".prose > *")].find(
+        (el) => el.getBoundingClientRect().bottom > 90,
+      );
+      const before = anchor?.getBoundingClientRect().top;
+      if (next === "default") {
+        delete root.dataset.width;
+        store.del("zq-width");
+      } else {
+        root.dataset.width = next;
+        store.set("zq-width", next);
+      }
+      paint();
+      if (anchor && before !== undefined) window.scrollBy(0, anchor.getBoundingClientRect().top - before);
+    });
+  }
+  paint();
+  picker.hidden = false;
 }
 
 // Click an article image to see it large. Figures render at the column width; the viewer opens
