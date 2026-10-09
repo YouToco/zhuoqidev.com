@@ -44,13 +44,13 @@ Erase the Rust function names, OpenAI protocol names, and GPT-5.6 model labels f
 
 The minimum architecture in this article is therefore one chain:
 
-```text
-limited desk space
-  → every tool manual cannot stay open
-  → keep a few common tools and a catalog
-  → retrieve the best few complete manuals
-  → model calls a tool
-  → the program executes it and returns the result
+```mermaid
+flowchart TD
+    A["limited desk space"] --> B["every tool manual cannot stay open"] --> C["keep a few common tools and a catalog"] --> D["retrieve the best few complete manuals"] --> E["model calls a tool"] --> F["the program executes it<br>and returns the result"]
+    classDef cause fill:#fff3bf,stroke:#f08c00
+    classDef out fill:#d3f9d8,stroke:#2f9e44
+    class A cause
+    class F out
 ```
 
 Once that chain is clear, it becomes easy to decide what must stay and what can be removed:
@@ -630,13 +630,13 @@ Memory is harder than a collection of Tool cards, however. The same event may be
 
 A more reliable production pipeline is:
 
-```text
-metadata filters for user / project / time
-  → BM25 lexical recall  ||  embedding semantic recall
-  → fuse both candidate sets (for example, RRF)
-  → weight recency, importance, trust, and usage
-  → lightweight reranking
-  → return source spans and provenance
+```mermaid
+flowchart TD
+    A["metadata filters for user / project / time"] --> B1["BM25 lexical recall"] & B2["embedding semantic recall"]
+    B1 & B2 --> C["fuse both candidate sets<br>(for example, RRF)"]
+    C --> D["weight recency, importance, trust, and usage"] --> E["lightweight reranking"] --> F["return source spans and provenance"]
+    classDef out fill:#d3f9d8,stroke:#2f9e44
+    class F out
 ```
 
 For a small local Memory dominated by technical logs, starting with BM25 is entirely reasonable; it adds meaningful ranking over the current substring list. As paraphrase, multilingual use, and contradictory memories grow, hybrid retrieval becomes more valuable. This is a general architecture recommendation—**not a claim that Codex already implements this pipeline.**

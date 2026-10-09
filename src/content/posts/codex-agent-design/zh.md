@@ -158,10 +158,14 @@ Codex 的 [`goal` extension](https://github.com/openai/codex/tree/bb5054fe47abe7
 
 如果要把同一套 Codex Runtime 嵌入 IDE 或企业产品，可以把 [Codex App Server](https://learn.chatgpt.com/docs/app-server) 理解成一个“标准化前台”：你的产品不必自己重写后厨，只需按统一表单送入任务，再持续接收进度、审批请求和最终结果。技术上这套表单是双向 JSON-RPC；它暴露 Thread（整件事）、Turn（一轮处理）、Item（一个事件或产物）、Skill、Goal 与 Approval 等对象。
 
-```text
-initialize → thread/start 或 thread/resume → turn/start
-           → 消费 item/*、plan、diff、approval 与 delta
-           → 只以 turn/completed 关闭本轮 UI 生命周期
+```mermaid
+flowchart TD
+    A["initialize"] --> B1["thread/start"] & B2["thread/resume"]
+    B1 & B2 --> C["turn/start"]
+    C --> D["消费 item/*、plan、diff、approval 与 delta"]
+    D --> E["只以 turn/completed<br>关闭本轮 UI 生命周期"]
+    classDef out fill:#d3f9d8,stroke:#2f9e44
+    class E out
 ```
 
 App Server 客户端可用 `skills/list` 取得“菜单”，也可在 `turn/start` 时直接指定操作手册；Goal 可通过 `thread/goal/*` 管理，运行中可用 `turn/steer` 像给施工队发变更单一样纠偏。远程 WebSocket transport 目前仍是实验性能力，生产客户端应固定 Codex 版本，并从对应版本生成 TypeScript 类型或 JSON Schema。

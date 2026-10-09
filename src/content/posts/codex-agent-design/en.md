@@ -158,10 +158,14 @@ The implementation can be summarized as a division of responsibility:
 
 To embed the same runtime in an IDE or enterprise product, think of [Codex App Server](https://learn.chatgpt.com/docs/app-server) as a standardized front desk. Your product need not rebuild the entire workshop; it submits work through standard forms and receives progress, approval requests, and results. Technically those forms use bidirectional JSON-RPC and expose Threads (whole cases), Turns (rounds of work), Items (events or artifacts), Skills, Goals, and approvals.
 
-```text
-initialize → thread/start or thread/resume → turn/start
-           → consume item/*, plan, diff, approval, and delta events
-           → close the active UI lifecycle only on turn/completed
+```mermaid
+flowchart TD
+    A["initialize"] --> B1["thread/start"] & B2["thread/resume"]
+    B1 & B2 --> C["turn/start"]
+    C --> D["consume item/*, plan, diff,<br>approval, and delta events"]
+    D --> E["close the active UI lifecycle<br>only on turn/completed"]
+    classDef out fill:#d3f9d8,stroke:#2f9e44
+    class E out
 ```
 
 Clients can use `skills/list` to build a capability picker or send a structured `skill` item in `turn/start`. They can manage Goals through `thread/goal/*` and correct active work with `turn/steer`. The remote WebSocket transport remains experimental; production clients should pin the Codex version and generate TypeScript types or JSON Schema from that exact build.

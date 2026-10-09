@@ -418,12 +418,11 @@ The core implementation is visible in [`knowledge/extraction.py`](https://github
 
 Cognee describes its product as converting raw data into AI memory. The mature code path resembles an ECL knowledge pipeline:
 
-```text
-add
-  → classify / chunk
-  → cognify (LLM entity and relation extraction)
-  → graph + vector + relational storage
-  → search / memify
+```mermaid
+flowchart TD
+    A["add"] --> B["classify / chunk"] --> C["cognify<br>LLM entity and relation extraction"] --> D["graph + vector + relational storage"] --> E["search / memify"]
+    classDef out fill:#d3f9d8,stroke:#2f9e44
+    class E out
 ```
 
 [`cognify.py`](https://github.com/topoteretes/cognee/blob/88aa09b4e3289e3dbf12c0c090080920816e2fb7/cognee/api/v1/cognify/cognify.py) orchestrates the pipeline. The storage layer exposes graph and vector interfaces, while upper layers include datasets, users, roles, and ACLs.
@@ -527,12 +526,11 @@ Add embeddings only when cross-language paraphrase or thousands of records make 
 
 Start with a Mem0- or LangMem-style path:
 
-```text
-conversation
-  → write gate
-  → fact / profile extraction
-  → user-scoped store
-  → semantic retrieval
+```mermaid
+flowchart TD
+    A["conversation"] --> B["write gate"] --> C["fact / profile extraction"] --> D["user-scoped store"] --> E["semantic retrieval"]
+    classDef out fill:#d3f9d8,stroke:#2f9e44
+    class E out
 ```
 
 The vector database is not the first design choice. Decide:
@@ -685,15 +683,17 @@ No single “most brain-like” project is likely to dominate soon. A more plaus
 2. **Memory service:** events, facts, relations, skills, time, provenance, and deletion.
 3. **Model:** longer context, stronger test-time learning, and possibly architectural memory modules.
 
-The stable interface will not remain `vector_db.search(text)`. It will look more like:
+Today most agents remember in exactly one way: drop a sentence into a vector database and fetch a few that mean something similar (`vector_db.search(text)`). That is an assistant who can only flip through an old notebook looking for similar sentences. The interface that eventually settles will look more like a dependable secretary, one who can do at least five things:
 
-```text
-remember(event, policy)
-recall(query, scope, time, budget)
-revise(memory, evidence)
-forget(subject, reason)
-explain(memory_id)
-```
+| What the secretary does | Roughly the interface | In plain words |
+|---|---|---|
+| **Note it down** | `remember(event, policy)` | Something happened; decide by the rules whether it is worth keeping and for how long, instead of copying everything into the notebook |
+| **Recall it** | `recall(query, scope, time, budget)` | Look things up only for the right person, project, and period, and only as much as fits — don't hand the model someone else's, stale, or far too many notes |
+| **Correct it** | `revise(memory, evidence)` | When new evidence arrives, update the old memory: "stopped drinking coffee" replaces "likes coffee" instead of sitting next to it |
+| **Forget it** | `forget(subject, reason)` | When a user says "forget my address", delete it along with the summaries and indexes derived from it, and record why |
+| **Cite the source** | `explain(memory_id)` | Answer "why do you remember that?": which conversation it came from, when, and whether it still holds |
+
+**Today's memory can only "find something similar". Tomorrow's has to note down, recall, correct, forget, and cite its source.**
 
 Human memory science spent more than a century moving from “where is memory stored?” to “how do multiple systems reconstruct the past during retrieval?” Agent memory engineering is undergoing the same conceptual upgrade:
 
