@@ -18,7 +18,7 @@ categories:
 - 深度调研
 ---
 
-**版本范围**：价格是 2026-10-09 查到的公开目录价，不含商务折扣、新人价和活动价。阿里云用 aliyun CLI 3.5.1 的询价接口（`DescribePrice`、`GetPayAsYouGoPrice`），腾讯云用 tccli 3.1.180.1 的询价接口（`InquiryPrice*`、`DescribeDBPrice`）。Cloudflare 没有价格接口（wrangler 4.148.0 也没有），用的是 developers.cloudflare.com 当天的价目页和限制页。海外四家（AWS、Google Cloud、Azure、Oracle）是同一天追加的：没有账号也能查的公开价格接口（AWS Price List、Azure Retail Prices API、Oracle 价目 API）加 Google 的官方价目页，查美东和新加坡两个地域，一律按需价。汇率 1 美元 = 6.7153 元（open.er-api.com，2026-10-09）。
+**版本范围**：价格是 2026-10-09 查到的公开目录价，不含商务折扣、新人价和活动价。阿里云用 aliyun CLI 3.5.1 的询价接口（`DescribePrice`、`GetPayAsYouGoPrice`），腾讯云用 tccli 3.1.180.1 的询价接口（`InquiryPrice*`、`DescribeDBPrice`）。Cloudflare 没有价格接口（wrangler 4.148.0 也没有），用的是 developers.cloudflare.com 当天的价目页和限制页。海外四家（AWS、Google Cloud、Azure、Oracle）是同一天追加的：没有账号也能查的公开价格接口（AWS Price List、Azure Retail Prices API、Oracle 价目 API）加 Google 的官方价目页，查美东和新加坡两个地域，一律按需价。同一天又把前两轮标为「未核实」的事项逐项查了官方原文：查实的已改进正文，仍查不实的（多半要账号、压测或真实账单）照旧标出。汇率 1 美元 = 6.7153 元（open.er-api.com，2026-10-09）。
 
 > [!NOTE]
 > **最重要的一句提醒：表里的月费建立在一组示意假设上**：每个请求挂 20 秒、网关 CPU 10 毫秒、出方向 50 KB，机器规格也没有压测过。这几个数一变，结论就会变，尤其是每个请求的出方向字节数。所以每张表我都给了敏感度，你可以换成自己的数。
@@ -47,11 +47,13 @@ categories:
 |---|---|---|---|
 | 阿里云 AI 网关（托管） | 5,428 | 10,195 | 60,518 |
 | 阿里云函数计算（单实例并发 100） | 1,419 | 7,703 | 68,877 |
-| 腾讯云云函数（官方文档：一个实例同时只服务一条 SSE） | 3,756 | 32,543 | 321,865 |
-| AWS Lambda（128 MB Arm，美东） | 4,134 | 28,784 | 277,566 |
-| Google Cloud Run（单实例并发 80 / 250，美东） | 2,672 / 2,405 | 12,556 / 7,752 | 107,676 / 59,634 |
+| 腾讯云云函数（默认单并发 / 开请求多并发*） | 3,756 / 1,296 | 32,543 / 7,947 | 321,865 / 75,903 |
+| AWS Lambda（128 MB Arm，美东，含平台日志） | 4,142 | 28,874 | 278,460 |
+| Google Cloud Run（单实例并发 80 / 250，美东，不含自动请求日志**） | 2,672 / 2,405 | 12,556 / 7,752 | 107,676 / 59,634 |
 | Azure Container Apps（每副本 100 条流，美东） | 2,916 | 9,596 | 79,376 |
 | OCI Functions（Oracle，美东） | 4,071 | 27,445 | 264,894 |
+
+\* 腾讯云的 SSE 文档写「一个实例同一时刻只处理一条 SSE 连接」，多并发文档又把长连接列为主要用途，只举了 WebSocket 的例子；开多并发那组数按每实例 100 并发、装填率 70% 估算，没实测。\*\* Cloud Run 会自动写请求日志、按 $0.50/GiB 计费，可以用排除过滤器关掉；按每条 1 KB 算，T3 两种并发分别多约 ¥3,100。
 
 六条判断：
 
@@ -59,7 +61,7 @@ categories:
 2. **规模上去以后，Cloudflare 的钱花在状态上，其余大多数云的钱花在流量上。** Cloudflare 每次读写 Durable Object、发队列消息、读 KV 都单独计费，T3 时这几项约占八成。阿里云、腾讯云、AWS、Google Cloud、Azure 的自建在 T3 都落在 ¥4.4–5.8 万，出方向流量占 53–89%。**三大海外云和国内云在这件事上是同一本账。**
 3. **Oracle 是例外。** 它每个大区每月前 10 TB 出流量免费，超出后北美 $0.0085/GB，约为其他几家的十分之一。T3 美东自建只要 ¥8,832，比 Cloudflare 还便宜 2.8–3.7 倍；只要每个请求的出方向低于约 340–470 KB，这个结论都成立。代价是要自己运维机器，新加坡只有一个可用域（Oracle 对可用区的叫法）。
 4. **对其他几家，真正决定胜负的是每个请求的出方向字节数。** T3 档每个请求出方向低于约 10–34 KB 时（各家略有不同，按美东和深圳算），阿里云、AWS、Google Cloud、Azure 自建反而比 Cloudflare 便宜；编码 Agent 这类请求体动辄几百 KB 的流量，Cloudflare 便宜 5 倍以上。
-5. **按挂钟时间计费的 Serverless 是最差的选择，六家云厂商没有例外。** 函数计算、云函数、Lambda、Cloud Run、Container Apps、OCI Functions 都要为等上游吐 token 的那 20 秒付钱。边缘函数（阿里云 ESA、腾讯云 EdgeOne、CloudFront Functions、Lambda@Edge）则有首包、时长或请求体的硬限制，做不了通用模型网关。
+5. **量大以后，按挂钟时间计费的 Serverless 是最差的选择，六家云厂商没有例外。** 函数计算、云函数、Lambda、Cloud Run、Container Apps、OCI Functions 都要为等上游吐 token 的那 20 秒付钱。只有在 T1、并且开了单实例多并发时，函数计算、Cloud Run、Container Apps 才比自建便宜一点，因为省掉了常驻机器和负载均衡；到 T2 就反过来了。边缘函数（阿里云 ESA、腾讯云 EdgeOne、CloudFront Functions、Lambda@Edge）则有首包、时长或请求体的硬限制，做不了通用模型网关。
 6. **账单之外还有一半：用户在哪。** 从深圳电信访问阿里云、腾讯云的深圳、广州、香港入口是 7–13 毫秒，阿里云新加坡 57 毫秒；Cloudflare 落在洛杉矶，162 毫秒；AWS 和 Oracle 的新加坡反而要 200 多毫秒。**用户主要在中国大陆，就放国内云（海外模型的出口放在阿里云、腾讯云这类到大陆线路好的境外节点）；用户主要在海外，量小放 Cloudflare，量大、流量重就考虑 Oracle 自建。**
 
 ---
@@ -207,7 +209,7 @@ curl -s "https://apexapps.oracle.com/pls/apex/cetools/api/v1/products/?currencyC
 几个口径要先说清：
 
 - **一律用目录价。** 阿里云的询价接口会同时返回账号折扣，比如我的账号负载均衡和 NAT 有 85 折，这类折扣不计入。
-- **查不到接口的用官方文档价，并标出来。** 阿里云 AI 网关的询价接口报错、腾讯云 AI 网关没有询价接口，这两项都用的文档价。
+- **查不到接口的用官方文档价，并标出来。** 阿里云 AI 网关在计费系统里没有计价模块，询价接口查不了，用的是文档价。
 - **Cloudflare 全部来自官方价目页。** wrangler 和 Cloudflare API 只能查自己账号的用量，查不到价格表。
 - **海外四家一律按需价、月按 720 小时。** 预留实例、Savings Plans 能再省三到五成，但只省机器，不省流量。
 
@@ -298,7 +300,7 @@ Cloudflare 的账单和字节数无关，国内云几乎和字节数成正比。
 
 所以「Cloudflare 便宜」这句话**只在流量大或规模小时成立**。如果你的业务是海量短问答（每请求出方向约 5 KB），规模到每月 10 亿次时，国内云自建比 Cloudflare 便宜约 3 倍。
 
-还有一个只有国内云才有的杠杆：**上游如果在同一家云的内网里**（比如在阿里云上调用百炼），转发 prompt 的那 30 KB 可以不走公网。这条路要配私网连接，私网连接的费用我没有查。
+还有一个只有国内云才有的杠杆：**上游如果在同一家云的内网里**（比如在阿里云上调用百炼），转发 prompt 的那 30 KB 可以不走公网。百炼的私网连接目前只开了北京和香港，终端节点每个可用区 ¥0.07/时，处理流量进出都按 ¥0.07/GB 收。网关和百炼同地域、上游全是百炼的话，T3 的出流量加私网连接费用合计约 ¥19,100，原来光出流量就是 ¥37,997；网关在深圳、跨地域连北京就基本省不下来。
 
 ### 敏感度二：网关 CPU 时间
 
@@ -308,7 +310,7 @@ Cloudflare 的 CPU 时间从 5 毫秒翻到 20 毫秒，T3 月费从 ¥31,902 �
 
 ## Cloudflare 这边：流量免费，状态按次收费
 
-**省钱的原因有两条，都写在官方定价页上。** 第一，Standard 计费模式下挂钟时长不收费，也不设上限；限制页专门说明，等 `fetch()`、KV、数据库的时间不计入 CPU 时间。第二，出方向流量和带宽不收费，Worker 发出的子请求也不收费。所以 20 秒的流和 0.2 秒的流价格一样，转发 30 KB prompt 给上游也不花钱。
+**省钱的原因有两条，都写在官方定价页上。** 第一，Standard 计费模式下挂钟时长不收费，也不设上限；限制页专门说明，等 `fetch()`、KV、数据库的时间不计入 CPU 时间。第二，出方向流量和带宽不收费，Worker 发出的子请求也不收费。所以 20 秒的流和 0.2 秒的流价格一样，转发 30 KB prompt 给上游也不花钱。条款里也没有带宽上限：Cloudflare 2023 年改条款后，「不能大量传非网页内容」只约束 CDN，开发者平台不受此限（[条款更新说明](https://blog.cloudflare.com/updated-tos/)）。
 
 **贵在哪：每次读写状态都单独计费。**
 
@@ -317,12 +319,13 @@ Cloudflare 的 CPU 时间从 5 毫秒翻到 20 毫秒，T3 月费从 ¥31,902 �
 3. **KV 是最终一致的。** 其他机房要 60 秒以上才看得到改动，所以吊销 key、改余额不能只靠 KV。Pydantic 开源的 AI 网关在旧版 README 里就承认，用 KV 缓存状态时额度控制只能做成「软上限」。
 4. **D1 单库最大 10 GB，而且不能提。** 按分钟聚合的用量表，T3 约 1.2 个月写满、T2 约 4.6 个月写满。所以要定期汇总、按月分库（每账号可建 5 万个库），冷数据归档到 R2。
 
-**两个能把账单放大十倍的坑：**
+**三个能把账单放大好几倍的坑：**
 
-- **让 DO 在整条流期间保持活跃。** 比如让流经过 DO 转发，或者在 DO 里挂一个 `setTimeout` 做租约超时，DO 就会按挂钟时长计费。T3 一个月最多会多出 **$32,000（约 ¥21.5 万）**。租约超时要用 `setAlarm`。
+- **让 DO 在整条流期间保持活跃。** 比如让流经过 DO 转发，或者在 DO 里挂一个 `setTimeout` 做租约超时，DO 就会按挂钟时长计费。T3 一个月最多会多出 **$32,000（约 ¥21.5 万）**。租约超时要用 `setAlarm`。2026-10-01 起，DO 里没完成的出站调用、`waitUntil` 也会让它保持活跃、最多 15 分钟，更容易踩到。
 - **AI Gateway 默认把完整的 prompt 和 response 存进日志。** 2026-09-24 以后新开 AI Gateway 的账号，日志按 Workers Logs 的价格计费；按 12-01 起的新价，T3 一个月约 **$13,927（约 ¥9.4 万）**。要么关掉 payload 记录，要么关日志。另外，用 Cloudflare 统一付费（Unified Billing）时，每个 gateway 每分钟只允许 200 次请求，T1 的平均速率就超了，转售场景只能用自己的上游 key（BYOK）。
+- **默认的日志配置。** 新建的 Worker 默认开日志，每次调用自动写一条调用日志，DO 的每次 RPC 按文档推断也会写一条，一个请求就是约 4 条。官方给的 Workers 日志平均每条 4.84 KB，按这个粗算，T3 的日志费会从约 $260 涨到约 $5,300。给网关和 DO 所在的 Worker 关掉调用日志或采样。
 
-**一个时间点要注意**：Workers Logs 在 2026-12-01 从按条计费改成按 GB 计费（Cloudflare 2026-10-02 的博客公布）。本文按新价算，T3 日志费约 $260；按旧价是 $588。
+**一个时间点要注意**：Workers Logs 在 2026-12-01 从按条计费改成按 GB 计费（Cloudflare 2026-10-02 的博客公布）。本文按新价算，T3 日志费约 $260；按旧价是 $588。计量包含正文和 Cloudflare 自动附加的字段，所以「每条 1 KB」只是下限；按官方平均 4.84 KB 一条算，T3 总价是 ¥39,622（优化版 ¥32,188）。
 
 ---
 
@@ -333,16 +336,16 @@ Cloudflare 的 CPU 时间从 5 毫秒翻到 20 毫秒，T3 月费从 ¥31,902 �
 **贵在哪：出方向流量。**
 
 1. **转发 prompt 也算出方向流量。** 每个请求 50 KB 里有 30 KB 是网关替客户送给上游的，T3 时阿里云深圳这一项就是 ¥37,997/月。
-2. **境外节点的流量阶梯更便宜，但要手动开 CDT。** 以香港为例（新加坡、东京没有查），阿里云香港 10 TB 以上 ¥0.54/GB，比深圳的 ¥0.75 低。所以 T3 档香港总价（¥40,426）反而低于深圳（¥45,696），尽管香港 ECS 是深圳的 1.9 倍。但从 2024-12-12 起，ECS、EIP **不会自动按 CDT 阶梯计费**，要手动「升级至 CDT 计费」（免费，开了不能关）。不升级的话香港按 ¥1.00/GB 算，T3 要多付 ¥21,470。
+2. **境外节点的流量阶梯更便宜，但开不开 CDT 要先算一下。** 阿里云香港、新加坡、东京的 CDT 阶梯一样，10 TB 以上 ¥0.54/GB，比深圳的 ¥0.75 低；非内地地域每月共用 200 GB 免费额度。所以 T3 档香港总价（¥40,426）反而低于深圳（¥45,696），尽管香港 ECS 是深圳的 1.9 倍。但从 2024-12-12 起，ECS、EIP **不会自动按 CDT 阶梯计费**，要手动「升级至 CDT 计费」（免费，开了不能关）。不升级的话香港按 ¥1.00/GB 算，T3 要多付 ¥21,470。新加坡、东京反过来：不升级时 ECS 原价是 ¥0.53、¥0.60/GB，比 CDT 首档 ¥0.70 还低，月流量在一定区间内不升级更省。
 3. **上游请求别走 NAT。** 阿里云 NAT 网关从 2025-09-26 起按处理流量收费（1 CU = 1 GiB），上游请求走 NAT 会在流量费之外再加约 23%，T3 多 ¥8,665。给每台 ECS 直接挂按流量计费的公网 IP 更省。
 4. **长连接不会让负载均衡变贵，但会被超时掐断。** ALB 的 1 个 LCU 能容纳 3,000 个并发连接，T3 峰值 2.3 万条流只折合 7.7 个 LCU；真正决定 LCU 的是处理的字节数，每 GB 相当于 ¥0.049。腾讯云 CLB 共享型干脆不收 LCU。但 **ALB 的请求超时默认 60 秒**，推理模型的长流要先调大，否则会 504。
 
-**托管 AI 网关**（阿里云云原生 API 网关的 AI 网关，内核是开源的 Higress）：多模型路由、Fallback、消费者 API key、Token 限流都有，计费项里看不到为这些功能单独收的钱，但最小规格每月 ¥3,997.5（文档价）。按客户计费需要的余额、用量库还得自己配 Redis 和 RDS，所以 T1 时它比整套自建贵两倍多。它适合 T2 以上、不想自己写网关的团队。
+**托管 AI 网关**（阿里云云原生 API 网关的 AI 网关，内核是开源的 Higress）：多模型路由、Fallback、消费者 API key、Token 限流都有，计费项里看不到为这些功能单独收的钱，但最小规格每月 ¥3,997.5（文档价）。按客户计费需要的余额、用量库还得自己配 Redis 和 RDS，所以 T1 时专享实例比整套自建贵两倍多。2026-09-01 起收费的 Serverless 版没有保底实例费（企业版 ¥0.245/时），请求按万次计、流式每 30 秒算一次，T1 估算约 ¥1,350–1,750，和自建差不多；但它的公网流量进出都按 ¥0.8/GB 收、不走 CDT 阶梯，量大以后更贵。
 
-**Serverless 是最差的选择：**
+**量大以后，Serverless 是最差的选择：**
 
 - **阿里云函数计算**按实例活跃时长计费。规格费按配置收、不按实际用量收，所以等上游的 20 秒 vCPU 全额计费，也进不了 vCPU 免费的「浅休眠」。唯一的省钱办法是单实例多并发：并发开到 100 时，T3 的计算费是 ¥28,750；并发为 1 时，计算费是它的约 95 倍。
-- **腾讯云云函数**的 SSE 文档写明，一个函数实例同一时刻只处理一条 SSE 连接。这样算 T3 是 ¥321,865/月，而且 T2、T3 的峰值都超出了每个地域默认的并发配额。
+- **腾讯云云函数**的 SSE 文档写明，默认一个函数实例同一时刻只处理一条 SSE 连接，这样算 T3 是 ¥321,865/月，T2、T3 的峰值也超出了每个地域默认的并发配额。Web 函数可以开「请求多并发」，文档把长连接列为主要用途，但只举了 WebSocket、没说 SSE；如果对 SSE 也生效，T3 约 ¥75,903，仍是自建的 1.7 倍。
 
 **国内边缘函数做不了通用模型网关**，问题出在限制上，不在价格：
 
@@ -351,9 +354,9 @@ Cloudflare 的 CPU 时间从 5 毫秒翻到 20 毫秒，T3 月费从 ¥31,902 �
 | 怎么计费 | 请求 + CPU 时间 | 按次，¥5/百万次 | 请求 ¥1.7/百万次 + CPU ¥0.11/百万毫秒 |
 | 单次总时长 | 不限（客户端连着就行） | **120 秒**（等待也算） | 文档没写上限；`fetch` 超时最大可配 300 秒 |
 | 首包 | 文档没列限制 | **10 秒内不出数据就回 504** | 文档没列限制 |
-| 请求体 | 100 MB 起（看域名套餐） | 未查到 | **1 MB** |
+| 请求体 | 100 MB 起（看域名套餐） | 函数文档没写；站点上传上限默认 300 MB | **1 MB** |
 | 单次 CPU | 默认 30 秒，可配到 5 分钟 | 文档没写数值 | **200 毫秒** |
-| 子请求 | 默认 1 万次 | **4 次** | 64 次 |
+| 子请求 | 默认 1 万次 | **4 个**（中文文档写每次 4 个，英文写同时 4 个、可申请提额） | 64 次 |
 | 强一致状态 | Durable Objects | 没有（KV 最终一致，最长 300 秒） | KV 内测，只对企业版，每个命名空间每天 100 万次读 |
 | 中国大陆节点 | 只有 China Network（Enterprise + ICP） | 有，要 ICP 备案 | 有，要 ICP 备案 |
 
@@ -365,38 +368,38 @@ Cloudflare 的 CPU 时间从 5 毫秒翻到 20 毫秒，T3 月费从 ¥31,902 �
 
 **机器、数据库、日志更贵。** 所以 T1 时 AWS 美东（¥2,467）比阿里云深圳（¥1,625）贵 50%，Azure 美东（¥4,794）是它的近 3 倍。日志尤其明显：CloudWatch Logs、Cloud Logging、Azure Basic Logs 都是每 GB $0.50（约 ¥3.4），是阿里云 SLS 的 8 倍多。两边一抵，T3 美东的三大云和国内云都落在 ¥4.4–5 万。
 
-如果客户端在中国大陆，Google Cloud 回给客户端的那部分流量按「到中国内地」计价，每 GiB $0.20–0.23。把全部出流量都按这个价算（上限），T3 美东会从 ¥43,798 涨到 ¥80,636。
+如果客户端在中国大陆，Google Cloud 回给客户端的那部分流量要按价目表里「到中国内地」那一档计，每 GiB $0.20–0.23（官方没写目的地按什么判定）。把全部出流量都按这个价算（上限），T3 美东会从 ¥43,798 涨到 ¥80,636。
 
 **Oracle 的出流量几乎免费。** 价目表写明每月前 10 TB 出流量免费，超出后北美 $0.0085/GB、亚太 $0.025/GB。同地域内（包括跨可用域）的流量不收费，负载均衡转发的数据不另收费，日志写入也免费、只收存储。所以 T3 美东 50 TB 出流量只要 $338，阿里云深圳同样的流量是 ¥37,997。它的代价在别处：
 
-- 价目 API 给每个「来源大区」各列一个 10 TB 免费档，我按「美东、新加坡各 10 TB」算；但官方页面只说「每月前 10 TB」，没写按什么维度算。
+- 10 TB 免费额度按「来源大区」各算一份：Oracle 2021 年的[新闻稿](https://www.oracle.com/news/announcement/oracle-joins-cloudflare-bandwidth-alliance-2021-11-10/)和 2025 年的官方白皮书都写明是每个 regional zone。美东（北美区）和新加坡（亚太区）各 10 TB，同一大区里的多个地域共用一份。
 - 新加坡只有一个可用域，做不到跨可用区，只能跨故障域。
-- 按量付费账户默认每个可用域只有 6 个 OCPU，T3 要 16 个，得先申请提额。
-- NAT 网关对同一个目的地址和端口只能开约 2 万条并发连接，T3 峰值 23,148 条流都打同一个上游时会撞上，所以机器要挂公网 IP 直接出去。
+- 按量付费账户默认每个可用域只有 6 个 OCPU，T3 要 16 个，得先申请提额；默认也只能开一个地域，美东和新加坡同时部署要再申请。
+- NAT 网关对同一个目的地址和端口的并发连接有上限：美东这种 3 个可用域的地域是每个可用域约 2 万条，新加坡约 6.5 万条。T3 峰值 23,148 条流都压在一个可用域、打同一个上游时会撞上，所以机器最好挂公网 IP 直接出去（预留公网 IP 官方写明不收费）。
 - 最小的 MySQL 高可用规格按 3 个实例收费，每月 $170，是 T1、T2 账单的大头。
 
 **负载均衡的默认超时，是海外几家最容易踩的坑：**
 
 | | 默认 | 对 SSE 的影响 |
 |---|---|---|
-| 阿里云 ALB | 请求超时 60 秒 | 推理模型的长流要先调大 |
+| 阿里云 ALB | 请求超时 60 秒，按 ALB 和后端多久没有数据往来算（WebSocket 文档的说法，SSE 没写） | 推理模型首 token 前思考超过 60 秒会 504，要先调大 |
 | AWS ALB | 空闲超时 60 秒，可调到 4,000 秒 | 推理模型思考超过 60 秒还没吐首个 token 就会断；调大或发 SSE 心跳 |
-| Google Cloud 外部应用负载均衡 | 后端服务超时 30 秒，**算的是整个响应的总时长** | 不是空闲超时，超过 30 秒的流直接被截断，上线前要调到几百到几千秒 |
-| Azure Application Gateway v2 | 请求超时 20 秒，按多久没收到数据算 | 超时后会把请求重试到另一台后端，**一条 POST 可能被转发两次、上游扣两次费**；跑 SSE 还要关掉默认开启的响应缓冲 |
+| Google Cloud 外部应用负载均衡 | 后端服务超时 30 秒，**算的是整个响应的总时长** | 不是空闲超时，超过 30 秒的流直接被截断；全局负载均衡最多可调到 86,400 秒，上线前要调大 |
+| Azure Application Gateway v2 | 请求超时 20 秒，按多久没收到数据算 | 官方排错文档写超时后会把请求再发给另一台后端，没说 POST 例外；如果 POST 也重试，首 token 超过 20 秒的请求**可能被转发两次、上游扣两次费**（推论，没实测）；跑 SSE 还要关掉默认开启的响应缓冲 |
 | Oracle 灵活负载均衡 | 空闲超时 60 秒，可调到 7,200 秒 | 发送数据不会重置接收计时 |
 
-**Serverless 和边缘函数，海外也一样不行：**
+**量大以后，Serverless 和边缘函数在海外也一样不行：**
 
 - **AWS Lambda**：一个执行环境同时只处理一个请求，流式响应要等整个流结束才停止计费，客户端断开也照扣；默认并发 1,000，T2、T3 的峰值都要申请提额。
 - **Google Cloud Run**：一个实例最多可以同时处理 1,000 个请求，这是几家里最适合长连接的；但它按实例的挂钟时间计费，单实例并发 250 时 T3 仍要 ¥59,634。
 - **Azure**：Functions Flex 默认单实例并发 16，T3 要 1,447 个实例，超过 1,000 个的上限；Container Apps 并发调到 100 后 T3 是 ¥79,376。
-- **OCI Functions**：一个实例一次只处理一个请求，同步调用最长 300 秒，文档里没有流式响应的写法。
+- **OCI Functions**：一个实例一次只处理一个请求，同步调用最长 300 秒，而且要等函数执行完才返回结果，做不了流式。
 - **边缘**：CloudFront Functions 和 Lambda@Edge 都转发不了 20 秒的 SSE；Azure Front Door 的文档写明不支持 SSE。
 
 **托管的 AI 网关**，三家有、Oracle 没有，但都不是为「转售」设计的：
 
-- **Azure API Management**：v2 的三个层级都能透传 SSE，带 `llm-token-limit` 这类按 token 限流的策略。T1 用 Basic v2 约 $148/月；T3 用 Premium v2 是 $2,762–17,951/月，差别在每个单元能开多少条到同一上游的并发连接，我没核实到。
-- **AWS**：Bedrock AgentCore Gateway 能代理 OpenAI、Anthropic 和任意 OpenAI 兼容端点，SSE 原样透传，2026-08 起支持按用户限 TPM。但鉴权只有 IAM、JWT 或不鉴权，没有「每个客户一个 API key」和预付费余额。API Gateway 的 REST API 从 2025-11 起支持流式响应，但它读不到流里的用量。
+- **Azure API Management**：v2 的三个层级都能透传 SSE，带 `llm-token-limit` 这类按 token 限流的策略。T1 用 Basic v2 约 $148/月（微软把 Basic v2 定位为开发测试用）。卡脖子的是每个上游主机最多 2,048 条并发后端连接：经典层写明按单元算，v2 只写 2,048，字面上是整个实例、加单元不涨。SSE 一条流占一条连接，T2 峰值 2,315 条就已经超了；T3 约 2.3 万条流都打同一家上游时，按单元算要 Premium v2 × 12 单元，$17,951/月，按字面要拆成 12 个实例，最便宜的 Basic v2 × 12 约 $4,415/月，还得另加一层分流。上游走 HTTP/2 在 v2 里还是预览。
+- **AWS**：Bedrock AgentCore Gateway（2026-07 起支持推理目标）能代理 OpenAI、Anthropic 和任意 OpenAI / Anthropic 兼容端点，SSE 原样透传，2026-08 起能按 JWT 用户或 IAM 身份限 RPM、TPM 和并发。但内置鉴权只有 IAM、JWT 或不鉴权，自定义校验要另挂 Lambda 拦截器，而文档写拦截器暂不支持流式；没有「每个客户一个 API key」、按客户的用量账单和预付费余额。API Gateway 的 REST API 从 2025-11 起支持流式响应（每 10 MB 响应算 1 次请求，最长 15 分钟），但它读不到流里的用量。
 - **Google**：Apigee 能透传 SSE，但按 token 限流的策略只能用在最贵的代理类型上，每百万次调用 $64–100，T3 光调用费就要 $73,000/月。
 - **Oracle**：没有通用的 LLM 网关。它的生成式 AI 服务只能调自己目录里的模型。
 
@@ -432,7 +435,7 @@ Cloudflare 的 CPU 时间从 5 毫秒翻到 20 毫秒，T3 月费从 ¥31,902 �
 
 **另外三件事：**
 
-- **China Network 搬不进这套架构。** Cloudflare 官方说明，不开 China Network 时，中国大陆用户连的是境外机房。China Network 要 Enterprise 套餐、单独订阅、每个主域名的 ICP 备案或许可证，还要过京东云的内容审核；它的可用产品清单里有 Workers、KV、R2，**没有 DO、D1、Queues**。另据 GreatFire 的第三方观测，`*.workers.dev` 在大陆被封，必须绑自己的域名。
+- **China Network 搬不进这套架构。** Cloudflare 官方说明，不开 China Network 时，中国大陆用户连的是境外机房。China Network 要 Enterprise 套餐、单独订阅、每个主域名的 ICP 备案或许可证，还要过京东云的内容审核；它的可用产品清单里有 Workers、KV、R2，**没有 DO、D1、Queues**（官方没说这几项在京东云节点上是不能用还是绕回境外）。`*.workers.dev` 在大陆被封：Cloudflare 员工在[官方社区](https://community.cloudflare.com/t/cloudflare-workers-suspected-of-being-blocked-in-china/382155)确认过，GreatFire 的第三方观测到 10-07 仍是全部被封，所以必须绑自己的域名。
 - **海外模型的跨境那一跳躲不掉。** OpenAI 和 Anthropic 的 API 支持地区名单里，既没有中国大陆，也没有香港（[OpenAI](https://developers.openai.com/api/docs/supported-countries)、[Anthropic](https://www.anthropic.com/supported-countries)，2026-10-09 核对）。所以网关调这两家，出口要放在新加坡、日本、美国这类支持地区；香港节点只能做中转。从大陆用户的角度看，长距离的那一跳要么发生在「用户 → Cloudflare 洛杉矶」，要么发生在「境外网关 → 美国上游」。所以调用海外模型时，Cloudflare 的延迟劣势会小很多，差别主要在线路质量。
 - **两边都出过大故障，形态不同。** Cloudflare 2025-06-12 因 KV 依赖的第三方云宕机，AI Gateway 错误率峰值到 97%；2025-11-18 核心代理故障，KV 也大量报 5xx。每个请求都同步读 KV 或 DO 的网关，会跟着全球一起挂，没有「换个可用区」的退路。阿里云香港可用区 C 在 2022-12-18 因制冷故障中断十多个小时，但故障集中在一个可用区，跨可用区部署就有退路。
 
@@ -472,7 +475,7 @@ flowchart LR
     %% layout: tree
     Q(["付费用户主要在哪？"])
     Q --> CN["中国大陆"] --> CN1["国内模型为主<br>→ 阿里云 / 腾讯云内地：常驻网关（Higress 或自写）+ Redis<br>别用函数计算 / 云函数，边缘函数只挡在前面"]
-    CN --> CN2["也要海外模型<br>→ 内地入口 + 境外节点调海外模型<br>出口放在 OpenAI / Anthropic 支持的地区（如新加坡、东京）<br>阿里云境外节点记得手动升级 CDT"]
+    CN --> CN2["也要海外模型<br>→ 内地入口 + 境外节点调海外模型<br>出口放在 OpenAI / Anthropic 支持的地区（如新加坡、东京）<br>香港节点记得升级 CDT，新加坡、东京先算一下"]
     Q --> OS["海外"] --> OS1["量小、不想运维<br>→ Cloudflare Workers + 每个 key 一个 DO<br>账务按月分库或外接数据库，日志关掉 payload"]
     OS --> OS2["量大、流量重<br>→ Oracle 自建（出流量每月前 10 TB 免费）<br>已在 AWS / GCP / Azure 上的，流量账和国内云差不多"]
     Q --> BOTH["两边都有"] --> BOTH1["→ 两个入口各自就近<br>账务只放一处，别双写"]
@@ -527,19 +530,21 @@ flowchart LR
   - [函数计算计费](https://help.aliyun.com/zh/functioncompute/fc/product-overview/billing-overview-of-fc)、[单实例多并发](https://help.aliyun.com/zh/functioncompute/fc/configure-the-concurrency-of-a-single-instance)
   - [AI 网关规格与价格](https://help.aliyun.com/zh/api-gateway/ai-gateway/product-overview/free-product-templates)
   - [ESA 函数和 Pages 限制](https://help.aliyun.com/zh/edge-security-acceleration/esa/user-guide/what-is-functions-and-pages)、[ESA 函数计费](https://help.aliyun.com/zh/edge-security-acceleration/esa/user-guide/functions-and-pages-billing)
+  - [通过私网连接访问百炼](https://help.aliyun.com/zh/model-studio/access-model-studio-through-privatelink)、[私网连接计费](https://help.aliyun.com/zh/privatelink/private-link-billing-description)、[AI 网关 Serverless 计费](https://help.aliyun.com/zh/api-gateway/ai-gateway/product-overview/overview-of-billing-during-the-serverless-public-preview-of-the)
 - 腾讯云（价格来自 tccli 询价接口，规则来自文档）：
   - [公网流量价格](https://cloud.tencent.com/document/product/213/113026)、[CLB LCU 计费](https://cloud.tencent.com/document/product/214/58387)
-  - [云函数计费](https://cloud.tencent.com/document/product/583/12281)、[云函数 SSE](https://cloud.tencent.com/document/product/583/90617)
+  - [云函数计费](https://cloud.tencent.com/document/product/583/12281)、[云函数 SSE](https://cloud.tencent.com/document/product/583/90617)、[Web 函数请求多并发](https://cloud.tencent.com/document/product/583/123888)
   - [EdgeOne 套餐](https://cloud.tencent.com/document/product/1552/94158)、[EdgeOne 超额单价](https://cloud.tencent.com/document/product/1552/94159)、[边缘函数限制](https://cloud.tencent.com/document/product/1552/81344)
 - 案例与故障：
   - Cloudflare 故障复盘：[2025-06-12](https://blog.cloudflare.com/cloudflare-service-outage-june-12-2025/)、[2025-11-18](https://blog.cloudflare.com/18-november-2025-outage/)
   - [阿里云香港可用区 C 故障说明（2022-12）](https://www.alibabacloud.com/zh/notice/resolved_service_outage_in_zone_c_of_the_china_hong_kong_region_1ae)
   - [Higress](https://github.com/higress-group/higress)、[阿里云 AI 网关产品页](https://www.aliyun.com/product/apigateway)
-  - [GreatFire：workers.dev](https://en.greatfire.org/domain/workers.dev)（第三方观测）
+  - [GreatFire：workers.dev](https://en.greatfire.org/domain/workers.dev)（第三方观测）、[Cloudflare 社区：workers.dev 在大陆被封](https://community.cloudflare.com/t/cloudflare-workers-suspected-of-being-blocked-in-china/382155)
+  - [Cloudflare 条款更新（2023）](https://blog.cloudflare.com/updated-tos/)、[Cloudflare 日志数据集（平均条目大小）](https://developers.cloudflare.com/observability/logs/datasets/)
 - 海外四家（价格来自公开价格接口或官方价目页，规则来自文档）：
   - AWS：[EC2 按需价（含出流量）](https://aws.amazon.com/ec2/pricing/on-demand/)、[Lambda 定价](https://aws.amazon.com/lambda/pricing/)、[Lambda 响应流式](https://docs.aws.amazon.com/lambda/latest/dg/configuration-response-streaming.html)、[ALB 空闲超时](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/edit-load-balancer-attributes.html)、[AgentCore Gateway 推理目标](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway-targets-inference.html)
   - Google Cloud：[网络价格](https://cloud.google.com/vpc/network-pricing)、[Cloud Run 定价](https://cloud.google.com/run/pricing)、[负载均衡超时](https://cloud.google.com/load-balancing/docs/https/request-distribution#timeouts_and_retries)、[Apigee 定价](https://cloud.google.com/apigee/pricing)
-  - Azure：[带宽价格](https://azure.microsoft.com/en-us/pricing/details/bandwidth/)、[Application Gateway 与 SSE](https://learn.microsoft.com/en-us/azure/application-gateway/use-server-sent-events)、[Application Gateway 502 排查（超时重试）](https://learn.microsoft.com/en-us/troubleshoot/azure/application-gateway/application-gateway-troubleshooting-502)、[API Management 的 AI 网关能力](https://learn.microsoft.com/en-us/azure/api-management/genai-gateway-capabilities)、[Front Door 与 WebSocket / SSE](https://learn.microsoft.com/en-us/azure/frontdoor/standard-premium/websocket)
-  - Oracle：[价目表（网络）](https://www.oracle.com/cloud/price-list/#pricing-networking)、[VCN 价格](https://www.oracle.com/cloud/networking/virtual-cloud-network/pricing/)
+  - Azure：[带宽价格](https://azure.microsoft.com/en-us/pricing/details/bandwidth/)、[Application Gateway 与 SSE](https://learn.microsoft.com/en-us/azure/application-gateway/use-server-sent-events)、[Application Gateway 502 排查（超时重试）](https://learn.microsoft.com/en-us/troubleshoot/azure/application-gateway/application-gateway-troubleshooting-502)、[API Management 的 AI 网关能力](https://learn.microsoft.com/en-us/azure/api-management/genai-gateway-capabilities)、[API Management 限制（并发后端连接）](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/azure-subscription-service-limits#api-management-limits)、[Front Door 与 WebSocket / SSE](https://learn.microsoft.com/en-us/azure/frontdoor/standard-premium/websocket)
+  - Oracle：[价目表（网络）](https://www.oracle.com/cloud/price-list/#pricing-networking)、[VCN 价格](https://www.oracle.com/cloud/networking/virtual-cloud-network/pricing/)、[10 TB 按大区计的新闻稿（2021-11-10）](https://www.oracle.com/news/announcement/oracle-joins-cloudflare-bandwidth-alliance-2021-11-10/)
 - 模型价格：[DeepSeek 定价](https://api-docs.deepseek.com/zh-cn/quick_start/pricing)、[通义 qwen-flash](https://help.aliyun.com/zh/model-studio/qwen-flash)
 - 工具版本：aliyun CLI 3.5.1、tccli 3.1.180.1、wrangler 4.148.0（npm 上最新是 4.149.0）；海外四家没有用 CLI，用的是上文的公开价格接口。
