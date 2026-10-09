@@ -1,11 +1,12 @@
 ---
-title: 让 Agent 自己验收、自己整理记忆——拆解 Claude Managed Agents 的 Outcomes 与 Dreaming
-description: Outcomes 让一个看不到写手思路的独立评审按评分标准逐条验收，不合格就返工；Dreaming 在会话之间读旧记忆和历史会话，另外生成一份整理好的记忆库，原库不动。本文从第一性原理推出这两个机制为什么必要，给出完整的请求与事件、一个真实的三轮返工案例，并把它们翻译成能搬到任何 Agent 技术栈的两份契约。
+title: 让 Agent 自己验收、自己整理记忆——Outcomes 与 Dreaming 的文档拆解，附 Claude Code /goal 实测
+description: Outcomes 让一个看不到写手思路的独立评审按评分标准逐条验收，不合格就返工；Dreaming 在会话之间读旧记忆和历史会话，另外生成一份整理好的记忆库，原库不动。这两个都是 Claude 开发者平台 Managed Agents 的接口，Claude Code 里没有。本文按官方文档讲清它们为什么必要、怎样工作，再找出 Claude Code 里的近亲（/goal 和没放开的 auto-dream），用同一个任务把 /goal 实测了 12 次，最后把设计翻译成能搬到任何 Agent 技术栈的两份契约。
 date: 2026-10-06
-updated: 2026-10-06
-lead: Agent 很擅长交出「看起来做完了」的东西，也很擅长把记忆越记越乱。Anthropic 在 Claude Managed Agents 里给这两个问题各配了一个机制：Outcomes 在一次会话里请一位独立评审逐条验收，Dreaming 在两次会话之间把记忆重新整理一遍。本文讲清它们怎样工作、为什么要这样设计，以及怎样在自己的 Agent 里复刻。
+updated: 2026-10-09
+lead: Agent 很擅长交出「看起来做完了」的东西，也很擅长把记忆越记越乱。Anthropic 在 Claude Managed Agents 里给这两个问题各配了一个机制：Outcomes 在一次会话里请一位独立评审逐条验收，Dreaming 在两次会话之间把记忆重新整理一遍。但在平时用的 Claude Code 里，你看不到这两个名字。本文先按文档拆开这两个机制，再讲 Claude Code 里实际能用到什么、实测效果如何，以及怎样在自己的 Agent 里复刻。
 tags:
 - Claude
+- Claude Code
 - Managed Agents
 - AI Agent
 - Agent 架构
@@ -20,7 +21,10 @@ series: Agent 架构深度
 seriesOrder: 4
 ---
 
-**版本范围**：本文依据 2026-10-06 核对的官方文档。Outcomes 和记忆库处于公开 beta；Dreaming 是研究预览，要先申请才能用。两者都在 2026-05-06 的 Code with Claude 大会上发布。beta 阶段字段和限额都可能变，接入前以当时的文档为准。
+**版本范围**：本文依据 2026-10-06 核对的官方文档，2026-10-09 补充了 Claude Code 2.1.294 上的核对和实测。Outcomes 和记忆库处于公开 beta；Dreaming 是研究预览，要先申请才能用。两者都在 2026-05-06 的 Code with Claude 大会上发布。beta 阶段字段和限额都可能变，接入前以当时的文档为准。
+
+> [!WARNING]
+> **先说清哪些是实测、哪些只是读文档。** Outcomes 和 Dreaming 是 Claude 开发者平台上 Managed Agents 的接口，要用 API 余额付费，**Claude Code 里没有这两个功能**。这两部分我没有亲自跑：Outcomes 需要充值 API 余额，这次没花这笔钱；Dreaming 的研究预览没开给我的账号。所以前半篇的请求、事件和三轮返工案例全部来自官方文档和 cookbook。我实测的是 Claude Code 里的近亲：`/goal` 用同一个任务跑了 12 次，用一套写手和评审都看不到的隐藏测试打分；auto-dream 则核对了它为什么在我的账号上从没运行过。见「[Claude Code 里能看到什么](#claude-code-里能看到什么)」和「[实测：/goal 的评审到底起了多大作用](#实测goal-的评审到底起了多大作用)」。
 
 > [!NOTE]
 > **最重要的一句提醒：Outcomes 的效果几乎完全取决于评分标准怎么写。** 标准写得含糊，评审会什么都放行，循环一轮就结束，你付了钱却什么都没检查。
@@ -233,9 +237,9 @@ sequenceDiagram
 
 同一时间只能有一个目标，但可以串起来：上一个目标结束后再发一个「定义目标」事件。目标结束后会话照样能继续对话，历史都在。产出物写在沙箱的 `/mnt/session/outputs/`，用文件接口按会话 ID 列出来下载。
 
-### 一个真实的三轮返工
+### 官方 cookbook 里的三轮返工
 
-Anthropic 的 cookbook 里有一个完整跑过的例子：让写手写一页美国直流快充站单位经济的研究简报，最多引 6 个来源，每个来源附一句原文引文。评分标准有两部分：
+下面这个例子是 Anthropic 在 cookbook 里跑过并公开记录的，不是我跑的。他们让写手写一页美国直流快充站单位经济的研究简报，最多引 6 个来源，每个来源附一句原文引文。评分标准有两部分：
 
 - **覆盖清单 7 项**，每项都比任务描述更具体。比如「运营商财务」一项要求：必须是某家上市充电运营商最近一份 10-K 或 10-Q 里的 GAAP 净利润或净亏损，**引用必须是 sec.gov 上的申报文件本身，不能是新闻稿、业绩会纪要或新闻报道**。
 - **引用核查 3 步**：每个链接必须真的能用网页抓取工具直接打开（不许拿镜像、转载或搜索摘要代替）；在页面里搜引文原文；判断引文是否真的支撑它被引用的那句话。
@@ -380,6 +384,132 @@ EOF
 
 ---
 
+## Claude Code 里能看到什么
+
+先把位置说清楚：Outcomes 和 Dreaming 是 **Claude 开发者平台**上 Managed Agents 的功能，要自己写代码调接口、按 token 付费。平时在终端或桌面版里用的 **Claude Code 里没有这两个名字**。它们各有一个近亲，名字和用途都像，关键设计却不一样。本节结论来自 2026-10-09 在 Claude Code 2.1.294 上的核对：官方文档、本机的程序与配置，以及下一节的实际运行。
+
+### Outcomes 的近亲：`/goal`
+
+`/goal <条件>` 给当前会话设一个完成条件。每轮结束后，Claude Code 把**条件和到目前为止的整段对话**交给一个小模型（默认 Haiku）判断，回答「未达成 / 达成 / 不可能」并附一句理由；未达成就把理由交回去，Claude 接着干。官方文档写明，它是一个「只在本会话生效、由提示词判断的 Stop 钩子」外面包了一层。
+
+| | Outcomes（Managed Agents） | `/goal`（Claude Code） |
+|---|---|---|
+| 评审是谁 | 平台每轮新拉起一个评审，默认和写手同一个模型 | 配置的小模型，默认 Haiku |
+| 评审看到什么 | 只有评分标准和产出物，**看不到写手的思路** | 条件 + **整段对话**：写手说了什么、跑了什么 |
+| 评审能不能自己查证 | 能，有写手的全部工具，可以打开文件、跑代码 | **不能**，不调工具，只能根据对话里已经出现的内容判断 |
+| 写手和标准的关系 | 任务描述给写手，评分标准给评审，两者分开写 | 条件本身就是给写手的指令，写手全看得到 |
+| 轮数上限 | `max_iterations`，默认 3、最多 20，平台强制 | 没有硬上限；「最多 N 轮」只能写进条件让评审去判断，硬刹车是 `/goal clear` 或 `claude -p` 的 `--max-budget-usd` |
+| 可能的结果 | 通过 / 需返工 / 到达上限 / 标准不适用 / 被中断 | 达成 / 未达成 / 不可能，外加出错自动清除、连续几轮不动手时停下 |
+| 评审的花费 | 按评审所用模型的标准价计费，会话另收运行时长费 | 走小模型，官方说通常可以忽略 |
+
+一句话：**Outcomes 的评审是另一个能动手核查的人，`/goal` 的评审是一个只读会议记录的人。** 前文说 Outcomes 的关键是评审和写手的上下文隔离，`/goal` 恰好没有这层隔离：写手在对话里跑出了什么、说了什么，评审就据此下结论。所以用 `/goal` 时，条件要写成「对话里能证明的东西」，比如「`npm test` 退出码为 0，汇总行显示 0 failed」，并要求写手把证据真的跑出来。
+
+### Dreaming 的近亲：auto-dream
+
+Claude Code 的 auto memory（Claude 自己往记忆目录里记笔记）还有一个后台整理功能，程序里叫 auto-dream：距上次整理满一定小时数、又攒够几次新会话后，后台派一个子 Agent 读最近的会话记录，合并、修正记忆目录里的文件。
+
+| | Dreaming（Managed Agents） | auto-dream（Claude Code） |
+|---|---|---|
+| 怎么触发 | 你调接口建任务 | 自动触发。程序里的默认门槛是距上次至少 24 小时、至少 5 次新会话；我的账号拿到的远程配置是 24 小时、3 次 |
+| 输入 | 一份记忆库 + 1 到 100 段会话 | 本项目的记忆目录 + 上次整理以来的会话记录 |
+| 输出 | **另出一份**新记忆库，原库不动，先审后用 | **直接改**记忆目录里的文件 |
+| 官方文档 | 有，研究预览，需申请 | 没有。设置项 `autoDreamEnabled` 不在官方设置参考里，只出现在程序内置的设置说明中 |
+| 谁能用 | 申请通过的账号 | 服务端灰度开关决定 |
+
+*auto-dream 一行的门槛和行为是我从 2.1.294 的程序和配置里读出来的，不是官方承诺，随时可能变。*
+
+我这台机器上，两条路都不通：
+
+- **API**：个人 key 调 `GET /v1/dreams` 返回 404，和请求一个根本不存在的路径一样；同一把 key 调会话、记忆库的列表接口都是 200。也就是 Managed Agents 能用，Dreaming 研究预览没开给这个账号。
+- **Claude Code**：`~/.claude.json` 里缓存的灰度开关 `tengu_onyx_plover` 是 `{"enabled": false, "minHours": 24, "minSessions": 3, "remoteEnabled": false}`；整个 `~/.claude` 和记忆目录里都找不到 auto-dream 运行时会留下的锁文件 `.consolidate-lock` 或任何整理状态，说明它从没跑过。在设置里写 `"autoDreamEnabled": true` 也没用：程序先看灰度开关，开关关着就根本不读这个设置。官方仓库的 [issue #86209](https://github.com/anthropics/claude-code/issues/86209) 报过一模一样的现象，后来因为长期没人跟进被自动关闭，没有修。
+
+### 名字都叫 Dreaming 的三样东西
+
+搜「Claude Dreaming」会搜到三样东西，名字一样，来源和用法都不同：
+
+| | Claude Code 的 auto-dream | Managed Agents 的 Dreaming | OpenClaw 的 Dreaming |
+|---|---|---|---|
+| 谁做的 | Anthropic | Anthropic | 开源项目 OpenClaw，和 Anthropic 无关 |
+| 给谁用 | Claude Code 用户，靠灰度开关逐步放出 | 在 Claude 开发者平台上自己搭 Agent 的团队 | 自己部署 OpenClaw 的人 |
+| 怎么触发 | 自动，攒够时间和会话数后在后台跑 | 调 `/v1/dreams` 建任务 | 定时任务，当前文档写的是默认开启 |
+| 改不改原件 | 直接改记忆目录里的文件 | 另出一份新记忆库，原库不动 | 改写 `MEMORY.md`，改之前把旧版存进插件状态，增删合并的摘要写进 `DREAMS.md` 供人看 |
+| 怎么防注入 | 没找到公开说明 | 文档没讨论整理任务本身（见下文「风险」） | 拼整理提示词之前，先剔除来源标记为不可信或由系统产生的候选 |
+| 官方文档 | 没有 | 有 | 有 |
+
+时间线：
+
+- **2026-03-24**：已经有用户在 Claude Code v2.1.81 的 `/memory` 里看到「Auto-dream: on · last ran 1d ago」（[issue #38461](https://github.com/anthropics/claude-code/issues/38461)），说明当时已在小范围放出。
+- **2026-03-31**：npm 上的 Claude Code v2.1.88 误带了 source map，完整源码外泄。按 Layer5、Soma 等分析文章的转述，里面的 `autoDream` 就是上表第一列：后台派一个子 Agent，满 24 小时、攒够 5 次会话、拿到锁才运行，分「定位、收集、整合、修剪」四步，只给只读的 shell。
+- **2026-04-05**：OpenClaw 仓库里 Dreaming 文档的第一次提交。时间上前后脚，我没有证据说明两者有关系。
+- **2026-05-06**：Anthropic 发布 Managed Agents 的 Dreaming 研究预览。
+- **2026-10-09**：Claude Code 官方更新日志全文没有一处提到 dream。
+
+所以，**在 Claude Code 里看不到 Dreaming，不是漏开了某个选项，而是账号没被放进灰度。** 能看到的「验收循环」只有 `/goal`，而它和 Outcomes 恰好差在最关键的那一点上。
+
+---
+
+## 实测：/goal 的评审到底起了多大作用
+
+Outcomes 这次没跑（原因见开头），这里实测它在 Claude Code 里的近亲 `/goal`。要回答的问题是：**每轮之后多一个评审，产出有没有变好？变好是因为评审，还是因为把标准写清楚了？**
+
+### 怎么测
+
+- **任务**：写一个 Python 函数 `parse_duration`，把 "1h30m"、"45s" 这样的时长换算成秒，并附 pytest 测试。给写手的说明只有一句：
+
+  ```text
+  Write a Python module `duration.py` that exposes `parse_duration(text: str) -> int`, converting compact duration strings such as "1h30m" or "45s" into a whole number of seconds. Invalid input must raise an exception. Also write a pytest file `test_duration.py` for it. Put both files in the current directory.
+  ```
+
+- **严格标准**：23 个例子，分四类，外加「测试覆盖每条规则并通过」。数值 7 个（含「组件之间允许一个空格」「首尾空白忽略」两条）；必须报 `ValueError` 的写法 13 个（空串、只有数字、只有单位、未知单位、大写 "1H"、小数、正负号、单位顺序颠倒 "30m1h"、单位重复 "1h1h"、数字和单位之间有空格、两个空格）；必须报 `TypeError` 的类型 3 个（`None`、`90`、`b"1h"`）。
+- **宽松标准**：只要求「常见格式能换算、非法输入抛异常、测试通过」。
+- **隐藏测试**：用严格标准的 23 个例子写了一个打分脚本，写手和评审都看不到，全部跑完后统一给每次的产出打分。脚本先自检过：参考实现得 23/23，一个故意写得粗糙的实现得 13/23。
+- **分组**：四组各跑 3 次，写手统一用 Claude Sonnet 5.5。每次都用 `claude -p` 在一个空目录里跑，不加载我的用户级设置和记忆。
+
+| 组 | 写手拿到什么 | 评审 |
+|---|---|---|
+| A 一句话 | 上面那一句 | 无 |
+| B 规则写进提示词 | 一句话 + 严格标准全文 | 无 |
+| C `/goal` + 严格条件 | 和 B 完全相同的文字，前面加 `/goal` | Haiku，每轮结束后读对话判断 |
+| D `/goal` + 宽松条件 | 一句话 + 宽松标准，前面加 `/goal` | 同上 |
+
+C、D 两组的条件原文：
+
+```text
+C: /goal Write a Python module `duration.py` that exposes `parse_duration(text: str) -> int`, converting compact duration strings such as "1h30m" or "45s" into a whole number of seconds, plus a pytest file `test_duration.py`, both in the current directory. The goal is met only when all of the following hold, each shown in this conversation by actually running the examples and pytest: (1) "1h30m" -> 5400, "45s" -> 45, "2d" -> 172800, "0s" -> 0, "1d2h3m4s" -> 93784, units d=86400 h=3600 m=60 s=1, return type int; (2) one space between components is allowed ("1h 30m" -> 5400) and leading/trailing whitespace is ignored (" 45s " -> 45); (3) each of these raises ValueError: "", "   ", "90", "h", "5w", "1H", "1.5h", "-5m", "+5m", "30m1h", "1h1h", "1 h", "1h  30m"; (4) None, 90 and b"1h" raise TypeError; (5) test_duration.py covers every rule above and `python -m pytest` passes.
+
+D: /goal Write a Python module `duration.py` that exposes `parse_duration(text: str) -> int`, converting compact duration strings such as "1h30m" or "45s" into a whole number of seconds, plus a pytest file `test_duration.py`, both in the current directory. The goal is met when parse_duration converts common duration strings such as "1h30m" and "45s" to seconds, invalid input raises an exception, and the tests in test_duration.py pass.
+```
+
+### 结果
+
+2026-10-09 跑的 12 次：
+
+| 组 | 隐藏测试得分（3 次，满分 23） | 评审判定 | 每次用时 | 每次花费（订阅额度折算） |
+|---|---|---|---|---|
+| A 一句话 | 22、20、19 | 无评审 | 14–15 秒 | 约 $0.05 |
+| B 规则写进提示词 | 23、23、23 | 无评审 | 15–26 秒 | $0.05–0.08 |
+| C `/goal` + 严格条件 | 23、23、23 | 3 次都在第一轮后判「达成」 | 24–27 秒 | 约 $0.07 |
+| D `/goal` + 宽松条件 | 18、18、18 | 3 次都在第一轮后判「达成」 | 13–20 秒 | $0.04–0.07 |
+
+评审每判一次耗时 1.6 到 8.2 秒。它的结论不在 `claude -p` 的输出流里，而是记在会话记录 `~/.claude/projects/<目录>/<会话 ID>.jsonl` 中一条 `goal_status` 记录里。D 组第 2 次的原样是：
+
+```json
+{"type": "goal_status", "met": true, "iterations": 1,
+ "reason": "The transcript shows duration.py and test_duration.py were written with the Write tool to the current directory. The test file asserts ('45s', 45) and ('1h30m', 5400), and test_invalid covers inputs such as '' , 'abc' and '30m1h' with pytest.raises(ValueError). The Bash run returned '19 passed in 0.01s', so the tests pass."}
+```
+
+*为便于阅读删去了 `durationMs`、`tokens` 两个字段。*
+
+三点观察：
+
+1. **这次起作用的是把标准写清楚，不是评审。** B 组没有任何评审，3 次同样满分；C 组的评审 3 次都在第一轮后就判「达成」，一次也没让 Claude 多干一轮。A 组丢的分全在说明里没写的规则上：「组件之间允许一个空格」3 次都没猜中；有两次自己加了「周」这个单位，把 "5w" 当成 5 周接受；另外分别有一次接受了大写 "1H"、接受了颠倒的 "30m1h"、拒绝了带首尾空白的 " 45s "。写手不是能力不够，而是不知道你要什么。
+2. **条件写松，评审照样放行。** D 组 3 次都判「达成」，隐藏测试却只有 18/23，而且 3 次错得一模一样：大写 "1H" 被当成 1 小时接受，`None`、`90`、`b"1h"` 抛的是 `ValueError` 而不是 `TypeError`，组件之间的空格被拒绝。评审的理由都是「pytest 通过了」（比如「19 passed」），而那份测试是写手按自己的理解写的。这就是开头那句提醒在 `/goal` 上的样子：标准含糊，评审就放行。D 组还比什么都不加的 A 组低，我的猜测是「非法输入抛异常」这句把写手引向了一律抛 `ValueError`，3 次样本不足以下结论。
+3. **评审只看对话。** 6 次判定的理由引用的全是对话里出现过的东西：「Bash 运行打印了……」「Write 工具报告 File created successfully」「pytest 显示 22 passed」。它没有、也没法自己打开 `duration.py` 跑一遍。
+
+**局限**：任务很小，Sonnet 5.5 一轮就做完，评审没有机会发挥 `/goal` 的本来用途，也就是把还没做完就想停下的 Claude 推回去接着干（长时间的迁移、清空待办这类任务）。每组只跑了 3 次。所以这组数据只能说明一件事：**在一轮就能做完的任务上，`/goal` 的评审不会替你补上没写进条件的要求。** Outcomes 的评审能用工具核查，换成 Outcomes 能不能抓住 D 组那几处错，仍然取决于评分标准里有没有写，这一点我没有实测，是按设计推断的。
+
+---
+
 ## 风险：记忆是注入的长期通道
 
 前面引过官方的警告：读写权限的记忆库，一次注入就能把恶意内容写进去，之后的会话都会信它。Dreaming 让这个风险多了一层。
@@ -391,6 +521,7 @@ EOF
 - **按信任度拆记忆库。** 处理不可信输入的 Agent，只给它挂只读的参考记忆库；需要写的记忆库，只挂给不碰外部输入的 Agent。这和 Meta 提出的 [Rule of Two](https://ai.meta.com/blog/practical-ai-agent-security/) 是同一个思路：「处理不可信输入」「接触敏感数据或系统」「改变状态或对外通信」三者，一个会话最多同时占两样；三样都占，就不能让它自主运行，至少要有人审批或别的可靠验证手段。
 - **整理结果先审后用。** Dreaming 默认不覆盖原库，审核这一步就是防线。处理不可信输入的场景，别配成自动采用。
 - **挑选喂给整理任务的会话。** 读过大量外部内容的会话，要么不喂，要么在 `instructions` 里明确只提炼某类信息。
+- **按来源过滤候选，而不只靠提示词。** OpenClaw 的 Dreaming 把这条做成了结构性规则：每条候选记忆都带来源标记，拼整理提示词之前，先把标记为不可信或由系统产生的候选剔除，模型根本看不到它们。自己实现时，给每条记忆记下来自哪次会话、什么类型的输入，比事后审核更早拦住注入。
 
 ---
 
@@ -467,7 +598,7 @@ def consolidate(store, transcripts, focus=None):
 
 ---
 
-## 最值得带走的六点
+## 最值得带走的七点
 
 1. **Outcomes 解决的是自评偏差。** 关键不是「多一个 Agent」，而是评审的上下文和写手隔离，手里只有标准和产出物。
 2. **评分标准决定一切。** 标准要比任务描述更具体，每一条都要逼评审拿出证据，否则它会什么都放行。
@@ -475,6 +606,7 @@ def consolidate(store, transcripts, focus=None):
 4. **Dreaming 解决的是记忆的熵增。** 它离线读很多次会话，另出一份整理好的记忆库，原库不动，先审后用。
 5. **记忆是注入的长期通道。** 默认读写的记忆库、加上会读会话原文的整理任务，都要按信任度拆分并保留审核点。
 6. **两者都能脱离 Anthropic 复刻。** 一个是有上限的独立验收循环，一个是不改原件的记忆整理，换任何模型和语言都成立。
+7. **Claude Code 里只有 `/goal`，它的评审只读对话。** 实测里起作用的是把标准写清楚；条件写松，它照样判「达成」。auto-dream 还在灰度，没被放进去的账号设置了也没用。
 
 **铁律：别让干活的人自己验收，也别让记忆只增不理。**
 
@@ -490,5 +622,14 @@ def consolidate(store, transcripts, focus=None):
 - [Memory for Claude Managed Agents（Anthropic 博客，2026-04-23）](https://claude.com/blog/claude-managed-agents-memory)：记忆库公开 beta、Rakuten 数据
 - [ZDNET：Your Claude agents can 'dream' now（2026-05-06）](https://www.zdnet.com/article/your-claude-agents-can-dream-now-how-anthropics-new-feature-works/)、[SiliconANGLE（2026-05-06）](https://siliconangle.com/2026/05/06/anthropic-letting-claude-agents-dream-dont-sleep-job/)、[Simon Willison 的 Code w/ Claude 2026 现场记录](https://simonwillison.net/2026/May/6/code-w-claude-2026/)：发布日期与第三方报道
 - [Meta：Agents Rule of Two: A Practical Approach to AI Agent Security（2025-10-31）](https://ai.meta.com/blog/practical-ai-agent-security/)
+- [Keep Claude working toward a goal（Claude Code 文档）](https://code.claude.com/docs/en/goal)：`/goal` 的评审方式、只读对话不调工具、评审 token 通常可忽略
+- [All settings（Claude Code 文档）](https://code.claude.com/docs/en/settings-reference)：2026-10-09 核对，没有 `autoDreamEnabled` 这一项
+- [anthropics/claude-code#86209](https://github.com/anthropics/claude-code/issues/86209)：灰度开关关着时 `autoDreamEnabled` 被静默忽略
+- [anthropics/claude-code#38461](https://github.com/anthropics/claude-code/issues/38461)：2026-03-24 已有用户看到「Auto-dream: on」
+- [Claude Code CHANGELOG](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md)：2026-10-09 核对，全文没有 dream
+- [Layer5：The Claude Code Source Leak](https://layer5.io/blog/engineering/the-claude-code-source-leak-512000-lines-a-missing-npmignore-and-the-fastest-growing-repo-in-github-history/)、[Soma：The Architecture of Forgetting（2026-04-03）](https://soma.gravicity.ai/blog/the-architecture-of-forgetting)：2026-03-31 源码外泄经过与 `autoDream` 的第三方分析
+- [Dreaming（OpenClaw 文档）](https://docs.openclaw.ai/concepts/dreaming)：OpenClaw 的三阶段整理、默认开启、按来源剔除不可信候选
+- [Pricing（官方文档）](https://platform.claude.com/docs/en/about-claude/pricing)：Managed Agents 按 token 加会话运行时长（$0.08 / 小时）计费
+- [为什么 Claude 订阅之外还要单独为 API 付费（Claude 帮助中心）](https://support.claude.com/en/articles/9876003-i-have-a-paid-claude-subscription-pro-max-team-or-enterprise-plans-why-do-i-have-to-pay-separately-to-use-the-claude-api-and-console)：订阅额度不含 API 用量
 
-> 核对日期：2026-10-06。Outcomes 与记忆库为公开 beta，Dreaming 为研究预览，字段、限额和支持的模型都可能变化；本文的请求示例均取自上述官方文档，伪代码只表达设计契约，不代表 Anthropic 的内部实现。
+> 核对日期：2026-10-06；2026-10-09 补充 Claude Code 2.1.294 的核对与 `/goal` 实测。Outcomes 与记忆库为公开 beta，Dreaming 为研究预览，字段、限额和支持的模型都可能变化；本文 Outcomes、Dreaming 和记忆库的请求示例均取自上述官方文档，我没有实际运行；伪代码只表达设计契约，不代表 Anthropic 的内部实现。
