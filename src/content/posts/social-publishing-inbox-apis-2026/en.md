@@ -19,14 +19,14 @@ categories:
 **Version scope**: every product capability, price and platform rule was checked on 2026-10-09 against official documentation, pricing pages and API references. Prices are list prices in US dollars, without discounts or promotions. GitHub stars, last commits and licences were queried with `gh api` the same day. This field moves fast: X changed its API rules twice in 2026, Reddit's public API closes in March 2027, and several of the MCP servers only appeared in September.
 
 > [!NOTE]
-> **What I tested: this article is mostly documentation reading.** Only two things were tested, both free: Zernio's read-only REST endpoints and its MCP handshake and tool list (the raw request is in section 7), and connecting that MCP server to Claude Code. **I have not yet connected a real social account to post, read comments or reply**, so those conclusions come from the documentation; I will add the results here after testing. No vendor sponsored this and there are no referral links.
+> **What I tested: this article is mostly documentation reading.** Only Zernio was tested (2026-10-09): its read-only REST endpoints, the MCP handshake and tool list, connecting it to Claude Code, and, with my own X account, publishing a post and then replying to a comment I left under it myself (section 7). **Whether replying to someone else's comment is blocked by X's "summoned" rule is not tested yet**; everything about the other vendors comes from documentation. No vendor sponsored this and there are no referral links.
 
 ---
 
 ## The short version
 
 1. **The platform decides what is possible.** Since 2026-02-23 X only lets a program reply to someone who mentioned or quoted you, and AI-generated replies posted automatically need X's approval first. A LinkedIn personal profile can post, but its comments and DMs are open only to legal entities and partners. A Facebook personal profile cannot post through the API. Instagram needs a professional account. Threads and YouTube have no DM API at all. **No tool gets around any of this.**
-2. **Developer-facing unified APIs (19 vendors)**: Zernio is first with 35.3. Without your own X developer key it reads and answers replies under your X posts and X DMs, connects all 17 accounts in the example, exposes comment and DM tools in its MCP server, and pushes new messages by webhook. Ayrshare (29.3) covers almost as much, but needs your own X key, needs a separate profile for each extra account on the same platform, and costs four times as much. SocialAPI.ai (29.5) is cheap, but posts only plain text to X and has no Reddit. OmniSocials (23.8) is the cheapest thanks to per-workspace pricing, but cannot read replies under your X posts.
+2. **Developer-facing unified APIs (19 vendors)**: Zernio is first with 35.3. Without your own X developer key it reads and answers replies under your X posts and X DMs (tested: reading needs a background switch that bills continuously), connects all 17 accounts in the example, exposes comment and DM tools in its MCP server, and pushes new messages by webhook. Ayrshare (29.3) covers almost as much, but needs your own X key, needs a separate profile for each extra account on the same platform, and costs four times as much. SocialAPI.ai (29.5) is cheap, but posts only plain text to X and has no Reddit. OmniSocials (23.8) is the cheapest thanks to per-workspace pricing, but cannot read replies under your X posts.
 3. **Established social media suites (23 vendors)**: only Vista Social (about $217–257 a month for the example accounts) and Eclincher ($134–149 a month, no Bluesky, some features unverified) can post, read the inbox and reply through MCP. Agorapulse's MCP server can only save drafts. Hootsuite's can only save drafts and read, and while it is switched on it blocks X, LinkedIn, Reddit and YouTube data. Metricool's REST API can answer comments and DMs, but its MCP server cannot.
 4. **Open source, self-hosted**: none is complete. Postiz is the most popular but has no inbox. BrightBean Studio has the most complete inbox tools but no X. OpenPost handles X comments and DMs but is seven months old.
 5. **Session-based APIs** (they take your password or cookies) add only things the platforms forbid in writing: LinkedIn personal DMs, a way around X's reply limit, a way around Instagram's 24-hour DM window.
@@ -161,7 +161,7 @@ Easy things to miss:
 - **"Your own X key" is a different way of paying.** Zernio and bundle.social use their own X app and pass X's price through. Ayrshare (mandatory since 2026-03-31), SocialAPI.ai and Outstand make you create an app in X's developer console, add a card and pay X yourself. With your own key, reading your own mentions costs $0.001; Zernio passes reads through at $0.005 each.
 - **OmniSocials prices differently**: $10–12 a month per workspace with unlimited accounts, but only one account per platform per workspace; it pays for X posts without links itself. Its inbox documentation says outright that comments and mentions on X are not part of the inbox.
 - **Newer vendors often contradict their own docs**: Aidelly, bundle.social and Upload-Post all have features that the marketing page lists and the API docs do not. RelayAPI's documented MCP install command installs an unrelated maintainer's npm package of the same name, a supply-chain risk. SocialAPI.ai is a one-engineer personal company with no public changelog.
-- **Zernio has catches too**: the X inbox must be switched on by hand; the X comment list returns only the first page, reply threads are cached for 2 minutes, and the comment list can lag by up to 10 minutes; Threads has no new-comment webhook; TikTok DMs can be answered but not started.
+- **Zernio has catches too**: every X read is off by default and needs a background switch that bills continuously (tested in section 7); the X comment list returns only the first page, reply threads are cached for 2 minutes, and the comment list can lag by up to 10 minutes; Threads has no new-comment webhook; TikTok DMs can be answered but not started.
 
 ---
 
@@ -261,6 +261,26 @@ What came back (a summary, not the raw response):
 
 The documentation doesn't mention that last point: an Agent that only reads the tool list will conclude Zernio has no DM support.
 
+### A run with a real account (evening of 2026-10-09)
+
+I connected my own X account to Zernio, published a test post, left a comment under it from the same account, and had the Agent reply to that comment:
+
+| Step | How | Result |
+|---|---|---|
+| Connect the X account | Authorize in the Zernio dashboard | The docs say a card is required before the first X account (X bills per call and Zernio passes it on); once connected, the account is healthy and can post |
+| Check before posting | `validate_post` | Free, no issues |
+| Publish a text-only post | `posts_create`, publish now | Success, about $0.015 |
+| Read the comments under it | `comments_get_inbox_post_comments` | **403**, `X_INBOX_NOT_ENABLED` |
+| Try search or lookup by ID instead | `twitter_engagement_search_tweets`, `twitter_engagement_get_tweet` | **403**, `X_ANALYTICS_NOT_ENABLED` |
+| Reply to a specific comment | REST `POST /v1/posts` with the comment's ID in `platformSpecificData.replyToTweetId` | Success, about $0.015; checked through X's public embed endpoint, the reply is attached to that comment |
+
+Four things came out of this run:
+
+- **Every X read on Zernio is off by default.** An X account has two switches: inbox (syncing replies under your posts and polling DMs) and analytics (periodic reads of post data). With both off you can only post and delete; reading comments, searching and looking up a post by ID all return 403. Once switched on, Zernio calls X's API in the background and each call is billed at X's price, and **the documentation doesn't say how often it polls**. If you want to watch X comments through it long term, budget for that ongoing cost; the dashboard lets you set a monthly X spending cap.
+- **The MCP posting tool can't target a specific post to reply to.** `posts_create` has no such parameter; use the REST API, or the full tool found through `search_tools`.
+- **Replying to my own comment was not blocked.** Whether replying to someone else's comment counts as "summoned" was not tested in this run.
+- After both posts, the usage endpoint still showed $0, possibly a delay; the end-of-month invoice is the final word.
+
 **The same flow carries over to other services**, because an inbox has these four steps and only the names differ:
 
 | Step | Zernio | OmniSocials | Ayrshare |
@@ -320,11 +340,12 @@ flowchart LR
 
 ## Facts, inference and what isn't verified
 
-- **Tested**: Zernio's read-only REST endpoints return 200; after the MCP handshake it lists 52 tools, and the DM tools have to be found through `search_tools`; after connecting it to Claude Code the tools appear only in a new session.
+- **Tested**: Zernio's read-only REST endpoints return 200; after the MCP handshake it lists 52 tools, and the DM tools have to be found through `search_tools`; after connecting it to Claude Code the tools appear only in a new session; with a real account, publishing and replying to a specific comment work, and every X read returns 403 while both switches are off.
 - **Official documentation**: each platform's limits, X's prices and "summoned" rule, every vendor's prices, the MCP tool names.
 - **My inference**: Vista Social and Metricool may read LinkedIn personal comments through partner permissions; the scoring weights.
 - **Not verified, to be tested**:
-  - whether a reply under your own post counts as "summoned";
+  - whether a reply under your own post counts as "summoned" (replying to your own comment works);
+  - how often Zernio calls X once the inbox or analytics switch is on, and what that costs a month;
   - whether Vista Social can answer DMs;
   - Eclincher's X DMs;
   - Ignix's and Aidelly's contradictory docs;
