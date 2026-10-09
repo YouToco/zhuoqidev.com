@@ -1,10 +1,10 @@
 ---
-title: 'Cloudflare, a Chinese Cloud or a Global Hyperscaler for Your LLM Gateway? Real Prices from Seven Clouds, from 10 Million to 1 Billion Requests a Month'
-short: 'Where to run an LLM gateway'
-description: "A request through an LLM gateway hangs on for 20 seconds while the upstream model streams tokens, yet the gateway does only about 10 ms of real work. Cloudflare bills those milliseconds and charges nothing for egress, but bills every read and write of state; Alibaba Cloud, Tencent Cloud, AWS, Google Cloud and Azure make state almost free but bill every byte of the prompts the gateway forwards; Oracle, with its first 10 TB of egress free each month, is the one exception. This article queries prices as of 2026-10-09 with the aliyun CLI, tccli, the clouds' public pricing APIs and official pricing pages, works out the bill line by line for seven providers at 10 million, 100 million and 1 billion requests a month, adds latency, reachability and real-world cases, and ends with when to choose which."
+title: 'Cloudflare, a Chinese Cloud or a Global Hyperscaler for Your Backend? Technical Fit and Cost by Service Type, with Real Bills for an LLM Gateway on Seven Clouds'
+short: 'Where to run a backend service'
+description: "Before choosing a platform, look at where a service spends its time and money: waiting or computing, how many bytes each request moves, and how it reads and writes state. This article first uses those three questions to sort common backend services and shows which kind of platform (edge functions, serverless billed by duration, always-on machines) suits which; then it works through an LLM gateway line by line. A request through an LLM gateway hangs on for 20 seconds while the upstream model streams tokens, yet the gateway does only about 10 ms of real work. Cloudflare bills those milliseconds and charges nothing for egress, but bills every read and write of state; Alibaba Cloud, Tencent Cloud, AWS, Google Cloud and Azure make state almost free but bill every byte of the prompts the gateway forwards; Oracle, with its first 10 TB of egress free each month, is the one exception. This article queries prices as of 2026-10-09 with the aliyun CLI, tccli, the clouds' public pricing APIs and official pricing pages, works out the bill line by line for seven providers at 10 million, 100 million and 1 billion requests a month, adds latency, reachability and real-world cases, and ends with when to choose which."
 date: 2026-10-09
 updated: 2026-10-09
-lead: "At small volumes Cloudflare is an order of magnitude cheaper than self-hosting on any cloud. At 1 billion requests a month most clouds' self-hosted setups cost only 30% to a little over 100% more than Cloudflare, and Oracle, with almost free egress, comes out cheapest of all. **What decides it is not compute but three questions: who bills you for waiting, who bills you for carrying bytes, and who bills you for state.**"
+lead: "Sort the service before choosing the platform: does its time go to waiting or computing, how many bytes does each request move, how does it write state? One platform can be the cheapest for one kind of service and the most expensive for another. Take an LLM gateway: at small volumes Cloudflare is an order of magnitude cheaper than self-hosting on any cloud. At 1 billion requests a month most clouds' self-hosted setups cost only 30% to a little over 100% more than Cloudflare, and Oracle, with almost free egress, comes out cheapest of all. **What decides it is not compute but three questions: who bills you for waiting, who bills you for carrying bytes, and who bills you for state.**"
 tags:
 - LLM Gateway
 - Cloudflare Workers
@@ -13,6 +13,7 @@ tags:
 - Tencent Cloud
 - Cost Modeling
 - Architecture
+- Serverless
 categories:
 - Deep Dives
 ---
@@ -20,13 +21,15 @@ categories:
 **Version scope**: prices are public list prices as of 2026-10-09, excluding discounts and promotions. The two Chinese clouds were priced through the pricing APIs of their official command-line tools, the others through public pricing APIs or official pricing pages; exchange rate 1 USD = 6.7153 CNY. The commands, tool versions and full tables are in the [appendix](#appendix-how-the-prices-were-queried-and-the-full-numbers) at the end.
 
 > [!NOTE]
-> **Every bill rests on a set of illustrative assumptions**: each request lasts 20 seconds, the gateway computes for 10 ms, 50 KB goes out, and the machine sizes were not load-tested. The most sensitive of these is the last one, the bytes per request. [This chart](#how-many-bytes-a-request-carries-decides-who-is-cheaper) shows which side your workload falls on.
+> **The LLM gateway bills rest on a set of illustrative assumptions**: each request lasts 20 seconds, the gateway computes for 10 ms, 50 KB goes out, and the machine sizes were not load-tested. The most sensitive of these is the last one, the bytes per request. [This chart](#how-many-bytes-a-request-carries-decides-who-is-cheaper) shows which side your workload falls on.
 
 ---
 
 ## The conclusion first
 
-First, what each self-hosted setup and Cloudflare cost per month at three volumes (switch volumes with the tabs on top):
+**Sort the service first, then pick the platform.** Whether its time goes to waiting or computing, how many bytes each request moves and how it writes state decide which platform fits technically and which is cheaper. One platform can be the cheapest for one kind of service and the most expensive for another: serverless billed by duration is the most expensive choice for services that wait, and a reasonable one for occasional compute-heavy work. The [section on sorting services](#sort-the-service-first-three-questions-decide-where-it-runs) has a table of where common services land.
+
+What follows takes an LLM gateway as the example, a typical service that waits. First, what each self-hosted setup and Cloudflare cost per month at three volumes (switch volumes with the tabs on top):
 
 ```chart
 {
@@ -82,7 +85,7 @@ First, what each self-hosted setup and Cloudflare cost per month at three volume
 }
 ```
 
-Six judgments:
+Six judgments for this kind of service:
 
 1. **At small volumes, Cloudflare is an order of magnitude cheaper.** At 10 million requests a month Cloudflare costs a little over ¥100, while the cheapest self-hosted setup costs about ¥1,400. With a cloud provider you pay for the floor: two machines, a high-availability database and a Redis instance cost the same with or without traffic.
 2. **At volume, the two sides spend their money in different places.** Cloudflare spends it on state, billing every key lookup and every bookkeeping write; the other clouds spend it on egress, billing every byte the gateway forwards for its customers. At 1 billion requests a month, self-hosting on Alibaba Cloud, Tencent Cloud or the three big Western clouds costs only 30% to a little over 100% more than Cloudflare.
@@ -95,7 +98,8 @@ Six judgments:
 
 ## Who this is for
 
-- You know how to call an LLM API and that streamed output arrives piece by piece over SSE. You have written or configured a reverse proxy or an API gateway.
+- You are choosing where to deploy a backend service (Cloudflare, a Chinese cloud, a Western cloud), not necessarily an LLM gateway. The first part sorts most backend services; the second part works through an LLM gateway in full.
+- The worked example assumes you know how to call an LLM API and that streamed output arrives piece by piece over SSE, and that you have written or configured a reverse proxy or an API gateway.
 - You **do not** need to have used Cloudflare Workers or Alibaba Cloud load balancers; the glossary below explains every product the article relies on.
 - The article **does not** cover model inference itself (GPUs, inference engines), and it touches compliance only where it shapes the architecture.
 
@@ -105,6 +109,7 @@ Six judgments:
 |---|---|
 | Wall-clock time | The real time from when a request arrives until it ends, including time spent waiting on others |
 | CPU time | The time the program is actually computing; waiting on the network or a database does not count |
+| Waiting / computing services | Whether a request's time goes mostly to waiting on others (network, upstream, database) or to computing itself; often called I/O-bound and CPU-bound |
 | SSE (server-sent events) | The format of streamed model output: one HTTP response stays open and a `data: …` line is pushed for each small piece generated |
 | Self-hosted | Running the gateway process yourself on cloud servers: load balancer + machines in two zones + Redis + MySQL + logs |
 | Workers | Cloudflare's edge functions; they run in data centers worldwide and are billed by requests and CPU time |
@@ -112,6 +117,79 @@ Six judgments:
 | KV / Queues / D1 | Cloudflare's global key-value cache (eventually consistent) / message queue / SQLite database |
 | Edge functions | Alibaba Cloud ESA's "Functions and Pages" and Tencent Cloud EdgeOne's edge functions, the Chinese counterparts of Workers |
 | ICP filing | The registration with China's Ministry of Industry and Information Technology that a site needs before serving from mainland servers or nodes |
+
+---
+
+## Sort the service first: three questions decide where it runs
+
+Before asking which provider is cheaper, ask where your service spends its time and money. Three questions are enough, and they are independent of one another:
+
+1. **Does its time go to waiting or to computing?** Gateways, proxies and backends that call LLMs spend most of a request waiting on others; image and video processing, PDF rendering, compression and encryption spend most of it computing.
+2. **How many bytes does each request move?** Ordinary APIs and short Q&A move a few kilobytes; long context, files, images and video move hundreds of kilobytes to megabytes.
+3. **How does it read and write state?** No state; read-mostly state that can be cached (settings, key lists); or strongly consistent writes on every request (counters, balances, stock, sessions).
+
+Add one constraint: **where your users are**. It does not change the shape of the bill, but it decides latency and whether a platform is usable at all: serving from mainland China needs an ICP filing, and Cloudflare has no mainland nodes except through Enterprise China Network.
+
+The three kinds of platform react to these questions in completely different ways. Think of a service as a switchboard operator: connecting a call takes seconds, but the call itself lasts twenty.
+
+- **Billed by CPU time (edge functions such as Cloudflare Workers)**: you pay only for the seconds the operator's hands are busy.
+- **Billed by active instance time (Lambda, Function Compute, SCF, Cloud Run)**: you pay for the whole call, including the operator sitting idle.
+- **Billed by reserved capacity (cloud servers, load balancers)**: you pay for how many operators you hire, busy or not.
+
+Two more items differ: Cloudflare charges nothing for egress and bills state per read and write; the other clouds bill egress per byte and state (Redis, databases) per instance. In one table (✓ fits, △ works with conditions, ✗ does not fit):
+
+| What the service does | Edge functions (Workers) | Serverless billed by duration | Always-on machines / containers |
+|---|---|---|---|
+| Waits a lot, computes little | ✓ waiting is free | ✗ you pay for every second of waiting | ✓ waiting holds a connection, not a CPU |
+| Computes a lot (hundreds of ms or more per request) | △ CPU billed per millisecond at a high unit price; at most 5 minutes of CPU and 128 MB of memory per request | ✓ best for occasional or bursty work: wall-clock time is almost all compute, so nothing is wasted; Lambda runs at most 15 minutes | ✓ cheapest for sustained load |
+| Heavy egress | ✓ Cloudflare egress is free | ✗ billed per byte | ✗ billed per byte (Oracle is the exception) |
+| Strongly consistent state writes on every request | △ every read and write is billed; split DOs per key | △ needs an external Redis or database, and its connections managed | ✓ Redis is paid per instance, cheap at volume |
+| Read-mostly, cacheable state | ✓ KV reads are cheap | ✓ | ✓ |
+| Users in mainland China | ✗ no mainland nodes | ✓ on a Chinese cloud | ✓ on a Chinese cloud |
+
+**For compute-heavy services, what matters is the price of a CPU-hour:**
+
+```chart
+{
+ "type": "bars",
+ "fmt": {"pre": "¥", "digits": 2},
+ "legend": [
+   {"color": "seal", "label": "billed per CPU millisecond"},
+   {"color": "gold", "label": "serverless billed by duration"},
+   {"color": "gray", "label": "machines (fully used)"}
+ ],
+ "rows": [
+   {"label": "Tencent Cloud CVM", "sub": "SA9, monthly", "value": 0.1, "color": "gray"},
+   {"label": "Oracle", "sub": "E6.Flex, on demand", "value": 0.128, "color": "gray"},
+   {"label": "Alibaba Cloud ECS", "sub": "c9i, monthly", "value": 0.136, "color": "gray"},
+   {"label": "Google Cloud", "sub": "c4, on demand", "value": 0.286, "color": "gray"},
+   {"label": "AWS EC2", "sub": "c8i, on demand", "value": 0.315, "color": "gray"},
+   {"label": "Azure", "sub": "F4als_v7, on demand", "value": 0.406, "color": "gray"},
+   {"label": "Cloudflare Workers", "sub": "per CPU millisecond", "value": 0.484, "color": "seal"},
+   {"label": "AWS Lambda", "sub": "Arm, 1,769 MB ≈ 1 vCPU", "value": 0.57, "color": "gold"},
+   {"label": "AWS Lambda", "sub": "x86", "value": 0.713, "color": "gold"}
+ ],
+ "caption": "Price per CPU-hour (CNY, 2026-10-09). Machines are their 4-vCPU monthly price per vCPU-hour, i.e. the price when fully used; at 30% average use, multiply by about three. Lambda counts 1,769 MB of memory as about one vCPU."
+}
+```
+
+Workers' CPU costs about 3.6 times an Alibaba Cloud monthly machine and about 1.5 times an AWS on-demand machine per CPU-hour. But machines are bought for the peak and sit partly idle: against Alibaba Cloud, if your machines average below about 30% use, Workers' per-millisecond billing comes out cheaper. Duration-billed serverless such as Lambda costs more per CPU-hour, but for compute-heavy work that is fair, since nearly all of its wall-clock time is computing; it suits occasional and bursty jobs, while compute that runs flat out all day is cheapest on machines. Mind the hard limits too: Workers allows at most 5 minutes of CPU and 128 MB of memory per request, too little for large image processing or long video transcoding.
+
+**Where common services land:**
+
+| Service | Time goes to | Bytes per request | State | Where it fits |
+|---|---|---|---|---|
+| LLM gateway or proxy (this article's example) | Waiting | Medium to heavy | Two strongly consistent writes per request | The rest of this article |
+| Backends that call LLMs (agents, RAG, AI support) | Waiting | Medium | Sessions, usage | Same class as the LLM gateway: edge functions or a long-running process, not duration-billed serverless |
+| Real-time push and chat (SSE, WebSocket) | Waiting (long-lived connections) | Light | Presence, rooms | Workers + DO (no duration charges while a WebSocket hibernates), or a long-running process + Redis |
+| Slow-API proxies, BFFs, webhook relays | Waiting | Light | None or little | Edge functions are cheapest; a long-running process also pays off at volume |
+| Image, PDF and video processing | Computing | Heavy | None | Duration-billed serverless when occasional, machines when sustained; edge functions are held back by their CPU and memory limits |
+| File and media downloads | Almost no compute | Very heavy | None | Object storage plus a CDN; for overseas users, Cloudflare R2 has free egress |
+| High-frequency short requests (auth, counters, rate-limit services) | Very little | Light | Read on every request, within milliseconds | A long-running process with an in-memory cache (the reason Unkey left Workers, see below) |
+
+*Table: common backend services sorted by the three questions (this article's judgment, not official advice).*
+
+**An LLM gateway sits in the first row**: it waits a lot and computes little, moves a medium to heavy amount of data per request, and writes state with strong consistency twice per request. The rest of the article works through it in full: the bill line by line, and how each of the three questions moves it.
 
 ---
 
@@ -143,15 +221,7 @@ These six steps make an LLM gateway differ from an ordinary API gateway in three
 | Short CPU time | 10 ms | Authentication, routing, relaying SSE chunk by chunk, finding the usage. Cloudflare's limits page gives as reference about 2.2 ms for an average Worker and typically 10–20 ms for heavier work such as authentication or parsing large payloads |
 | Heavy egress | 50 KB per request | 30 KB is the customer's prompt forwarded upstream and 20 KB is the SSE stream sent back to the client. **For a gateway, forwarding the prompt is outbound traffic too** |
 
-10 ms out of 20 s is 0.05%. In other words, the gateway spends 99.95% of its time waiting.
-
-That is what sets the three kinds of billing apart. Think of the gateway as a switchboard operator: connecting a call takes seconds, but the call itself lasts twenty.
-
-- **Billed by CPU time (Workers)**: you pay only for the seconds the operator's hands are busy.
-- **Billed by active instance time (Function Compute, SCF, DO)**: you pay for the whole call, including the operator sitting idle.
-- **Billed by reserved capacity (cloud servers, load balancers)**: you pay for how many operators you hire, busy or not.
-
-Add one more item where the providers differ completely: **traffic**. Cloudflare charges nothing for egress; Alibaba Cloud and Tencent Cloud charge ¥0.5–1 per GB.
+10 ms out of 20 s is 0.05%. In other words, the gateway spends 99.95% of its time waiting: exactly the waiting kind of service from the previous section. A platform billed by CPU time charges for little more than those 10 ms, one billed by duration charges for all 20 seconds, and one billed per machine has to be bought for peak concurrency. On traffic, Cloudflare charges nothing for egress; Alibaba Cloud and Tencent Cloud charge ¥0.5–1 per GB.
 
 The pseudocode below maps the six steps onto Workers, with comments marking which lines wait and which compute. It is illustrative, not any platform's real source:
 
@@ -449,6 +519,8 @@ On the Chinese side the mainstream approach is **a long-running gateway process 
 
 ## How to choose
 
+**By service type first**: go back to the two tables in the [section on sorting services](#sort-the-service-first-three-questions-decide-where-it-runs). For services that wait, look first at edge functions or a long-running process; for compute-heavy ones, ask whether the load is occasional or sustained; for heavy egress, look at how egress is billed; for state written on every request, look at how state is billed. **The decision tree and lists below are for LLM gateways.**
+
 ```mermaid
 flowchart LR
     %% layout: tree
@@ -485,7 +557,7 @@ flowchart LR
 
 ## Closing
 
-An LLM gateway is not compute-bound. It is **bound by waiting, by carrying bytes and by state**. Comparing two clouds on CPU price compares the smallest line on the bill.
+Sort the service before picking the platform: change the kind of service and the answers to the three questions change, and so does the conclusion. An LLM gateway is not compute-bound. It is **bound by waiting, by carrying bytes and by state**. Comparing two clouds on CPU price compares the smallest line on the bill.
 
 > **Rule: first ask three questions — who bills you for waiting, who bills you for carrying bytes, who bills you for state. Then look at which side your users are closer to.**
 
