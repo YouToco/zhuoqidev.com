@@ -630,7 +630,9 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 @media (max-width: 1000px) {
   .board-wrap { overflow: visible; }
   .board { height: auto; min-width: 0; display: flex; flex-direction: column; gap: 28px; padding: 28px 16px 40px; }
-  .pin { position: relative !important; left: auto !important; top: auto !important; width: auto !important; max-width: 560px; transform: none !important; }
+  /* Cards only drag on wide screens (board.ts); here touch-action: none would only stop a finger
+     on a card from scrolling the page, and the column is almost all cards. */
+  .pin { position: relative !important; left: auto !important; top: auto !important; width: auto !important; max-width: 560px; transform: none !important; touch-action: auto; }
   .pin.sticky { transform: rotate(-1deg) !important; }
   #hero { order: -2; }
   #feature { order: -1; }
