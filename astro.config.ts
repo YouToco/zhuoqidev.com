@@ -79,7 +79,20 @@ export default defineConfig({
   ],
   markdown: {
     syntaxHighlight: { type: "shiki", excludeLangs: ["mermaid", "math", "chart"] },
-    shikiConfig: { theme: "github-dark-dimmed", wrap: false },
+    shikiConfig: {
+      theme: "github-dark-dimmed",
+      wrap: false,
+      // ```ts open / ```ts fold: copy the mark onto the <pre> so rehype-prose can fold the block or not.
+      transformers: [
+        {
+          name: "fold-mark",
+          pre(node) {
+            const mark = /(?:^|\s)(open|fold)(?:\s|$)/.exec(this.options.meta?.__raw ?? "")?.[1];
+            if (mark) node.properties["data-fold"] = mark;
+          },
+        },
+      ],
+    },
     processor: unified({
       remarkPlugins: [remarkAlerts, remarkFigure, remarkDemo, remarkChart],
       rehypePlugins: [

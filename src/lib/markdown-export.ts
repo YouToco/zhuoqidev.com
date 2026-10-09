@@ -28,6 +28,8 @@ export async function postMarkdown(post: Post) {
     return img ? `${pre}${await imageUrl(img, 1600, base)}` : whole!;
   });
   body = body.replace(/\]\(\/(?!\/)/g, `](${SITE_URL}/`);
+  // The fold marks on code fences only matter to the page.
+  body = body.replace(/^(```\w+) (?:open|fold)$/gm, "$1");
   // Charts are JSON in the source; an agent reads them better as tables.
   body = body.replace(/^```chart\n([\s\S]*?)\n```$/gm, (_, json: string) => chartMarkdown(JSON.parse(json) as ChartSpec, lang));
 

@@ -55,6 +55,11 @@
   paragraph, name scales in plain words ("1 billion requests a month") rather than
   coined labels like T1/T2/T3, and fold commands and full reference tables into a
   `<details>` appendix. A JSON error fails the build.
+- Code blocks over three lines start folded behind their bar (language, title, line count;
+  the copy button works while folded). Mark a fence `open` (```` ```ts open ````) when the
+  reader must see it without a click, or `fold` to fold a short one; `index.md` drops the
+  mark. When the first line is a comment it becomes the bar's title, so begin a long block
+  with a one-line comment that says what it shows.
 - Readers pick the article width (narrow / default / wide / full) in the rail; it is
   stored as `zq-width` and applied by the head script in `Base.astro`. Charts, tables
   and diagrams must work from a 640 px column up to a full-width one.

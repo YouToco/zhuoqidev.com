@@ -52,7 +52,8 @@ export function rehypeHandDiagrams() {
         properties: { src, width: size("width"), height: size("height"), loading: "lazy", decoding: "async", alt: describe(id) },
         children: [],
       };
-      // rehype-prose frames the <pre> like any other code block (language label, copy button).
+      // rehype-prose frames the <pre> like any other code block (language label, copy button); it is
+      // already folded behind this toggle, so the block itself opens unfolded.
       const folded: Element = {
         type: "element",
         tagName: "details",
@@ -62,7 +63,7 @@ export function rehypeHandDiagrams() {
           {
             type: "element",
             tagName: "pre",
-            properties: { className: ["astro-code"], dataLanguage: "mermaid", tabIndex: 0, style: "color:#adbac7" },
+            properties: { className: ["astro-code"], dataLanguage: "mermaid", dataFold: "open", tabIndex: 0, style: "color:#adbac7" },
             children: [{ type: "element", tagName: "code", properties: {}, children: [{ type: "text", value: source.replace(/\n$/, "") }] }],
           },
         ],

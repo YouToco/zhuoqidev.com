@@ -381,11 +381,11 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 .prose p.ednote em { font-style: normal; font-weight: 400; color: inherit; text-emphasis: none; }
 .prose img { border-radius: 10px; }
 /* folded material (an appendix's commands and full tables): one line until opened */
-.prose details { margin: 1em 0; padding: 12px 18px; border: 1px dashed var(--ink-3); border-radius: 12px; background: var(--card); }
-.prose details[open] { padding-bottom: 6px; }
-.prose summary { cursor: pointer; font: 600 14.5px/1.6 var(--f-sans); color: var(--ink-2); }
-.prose summary:hover { color: var(--ink); }
-.prose details[open] > summary { margin-bottom: 12px; }
+.prose > details { margin: 1em 0; padding: 12px 18px; border: 1px dashed var(--ink-3); border-radius: 12px; background: var(--card); }
+.prose > details[open] { padding-bottom: 6px; }
+.prose > details > summary { cursor: pointer; font: 600 14.5px/1.6 var(--f-sans); color: var(--ink-2); }
+.prose > details > summary:hover { color: var(--ink); }
+.prose > details[open] > summary { margin-bottom: 12px; }
 .prose sup a { text-decoration: none; font: 500 11px/1 var(--f-mono); }
 
 /* call-outs: GitHub alerts in the source, a stamped box on the page */
@@ -406,13 +406,22 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 .prose tr:first-child > * { border-top: none; }
 
 /* code: a terminal window */
-.code { margin: 1.4em 0 1.8em; border-radius: 12px; overflow: hidden; background: var(--term); box-shadow: var(--shadow); }
-.code figcaption { display: flex; gap: 7px; align-items: center; padding: 10px 14px; background: #1f2430; }
-.code figcaption i { width: 10px; height: 10px; border-radius: 50%; background: #ff5f57; }
-.code figcaption i:nth-child(2) { background: #febc2e; }
-.code figcaption i:nth-child(3) { background: #28c840; }
-.code figcaption span { margin-left: 8px; font: 400 11px/1 var(--f-mono); color: #8b93a4; }
-.code .copy { margin-left: auto; font: 500 11px/1 var(--f-mono); color: #aab2c2; background: transparent; border: 1px solid #3a4152; border-radius: 6px; padding: 5px 9px; cursor: pointer; }
+.code { position: relative; margin: 1.4em 0 1.8em; border-radius: 12px; overflow: hidden; background: var(--term); box-shadow: var(--shadow); }
+/* The bar is the <summary>: it folds the code (blocks over three lines start folded). The copy
+   button sits over the bar's right end, outside the summary, so it works while folded. */
+.code-bar { display: flex; gap: 7px; align-items: center; padding: 10px 84px 10px 14px; background: #1f2430; cursor: pointer; list-style: none; }
+.code-bar::-webkit-details-marker { display: none; }
+.code-bar:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
+.code-bar i { flex: none; width: 10px; height: 10px; border-radius: 50%; background: #ff5f57; }
+.code-bar i:nth-child(2) { background: #febc2e; }
+.code-bar i:nth-child(3) { background: #28c840; }
+.code-lang { flex: none; margin-left: 8px; font: 400 11px/1 var(--f-mono); color: #8b93a4; }
+.code-title { min-width: 0; margin-left: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 12px/1.4 var(--f-mono); color: #c3cad6; }
+.code-fold { flex: none; margin-left: auto; font: 500 11px/1 var(--f-mono); color: #aab2c2; }
+.code-fold::before { content: "▸ " attr(data-show); }
+.code details[open] .code-fold::before { content: "▾ " attr(data-hide); }
+.code-bar:hover .code-fold { color: #fff; }
+.code .copy { position: absolute; top: 7px; right: 12px; font: 500 11px/1 var(--f-mono); color: #aab2c2; background: transparent; border: 1px solid #3a4152; border-radius: 6px; padding: 5px 9px; cursor: pointer; }
 .code .copy:hover { color: #fff; border-color: #5d6680; }
 .code pre.astro-code { margin: 0; padding: 16px 18px; overflow-x: auto; font: 400 13px/1.75 var(--f-mono); background-color: var(--term) !important; tab-size: 2; }
 .prose li .code { margin: .8em 0; }

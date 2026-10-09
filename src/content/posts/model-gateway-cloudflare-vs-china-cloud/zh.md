@@ -507,7 +507,7 @@ flowchart LR
 <details>
 <summary>几条代表性的询价命令（完整命令和原始输出都存了下来）</summary>
 
-```bash
+```bash open
 # 阿里云：ECS 包月价（含 40 GB ESSD PL0 系统盘，不含带宽）
 aliyun ecs DescribePrice --RegionId cn-shenzhen --ResourceType instance \
   --InstanceType ecs.c9i.xlarge --PriceUnit Month --Period 1 \
@@ -535,7 +535,7 @@ TENCENTCLOUD_REGION=ap-guangzhou tccli cvm InquiryPriceRunInstances --cli-unfold
   --InternetAccessible.InternetMaxBandwidthOut 0 --InstanceCount 1
 ```
 
-```bash
+```bash open
 # AWS：us-east-1 到互联网的出流量阶梯（Price List 公开文件，AWSDataTransfer 服务）
 curl -s https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSDataTransfer/current/us-east-1/index.json
 

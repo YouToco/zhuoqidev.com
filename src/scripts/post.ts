@@ -22,7 +22,8 @@ if (navigator.clipboard) {
   for (const btn of document.querySelectorAll<HTMLButtonElement>(".code .copy")) {
     btn.hidden = false;
     btn.addEventListener("click", () =>
-      copyText(btn, () => btn.closest(".code")?.querySelector("code")?.innerText ?? ""),
+      // textContent, not innerText: the block may be folded, and folded text has no rendered layout.
+      copyText(btn, () => btn.closest(".code")?.querySelector("code")?.textContent ?? ""),
     );
   }
   for (const btn of document.querySelectorAll<HTMLButtonElement>("[data-copy-md]")) {

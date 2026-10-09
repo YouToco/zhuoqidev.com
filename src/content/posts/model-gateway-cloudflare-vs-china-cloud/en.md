@@ -506,7 +506,7 @@ Every number in the main text comes from here. "10M / 100M / 1B" in the table he
 <details>
 <summary>A few representative pricing queries (the full command list and raw output were kept)</summary>
 
-```bash
+```bash open
 # Alibaba Cloud: ECS monthly price (40 GB ESSD PL0 system disk, no bandwidth)
 aliyun ecs DescribePrice --RegionId cn-shenzhen --ResourceType instance \
   --InstanceType ecs.c9i.xlarge --PriceUnit Month --Period 1 \
@@ -534,7 +534,7 @@ TENCENTCLOUD_REGION=ap-guangzhou tccli cvm InquiryPriceRunInstances --cli-unfold
   --InternetAccessible.InternetMaxBandwidthOut 0 --InstanceCount 1
 ```
 
-```bash
+```bash open
 # AWS: egress tiers from us-east-1 to the internet (public Price List file, AWSDataTransfer service)
 curl -s https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSDataTransfer/current/us-east-1/index.json
 
