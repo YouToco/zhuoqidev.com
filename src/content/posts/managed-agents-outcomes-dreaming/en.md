@@ -1,11 +1,12 @@
 ---
-title: 'Agents That Check Their Own Work and Tidy Their Own Memory: Inside Claude Managed Agents Outcomes and Dreaming'
-description: Outcomes has an independent grader, blind to the writer's reasoning, check the work criterion by criterion and send it back until it passes; Dreaming reads an old memory store and past sessions between runs and writes a separate, reorganized store while leaving the original untouched. This article derives why both mechanisms are needed, shows the complete requests and events, walks through a real three-round revision, and translates both into contracts you can rebuild on any Agent stack.
+title: 'Agents That Check Their Own Work and Tidy Their Own Memory: Outcomes and Dreaming from the Docs, Plus a Hands-On Test of Claude Code /goal'
+description: Outcomes has an independent grader, blind to the writer's reasoning, check the work criterion by criterion and send it back until it passes; Dreaming reads an old memory store and past sessions between runs and writes a separate, reorganized store while leaving the original untouched. Both are Claude Managed Agents APIs on the Claude Developer Platform, and Claude Code does not have them. Following the official docs, this article explains why both are needed and how they work, then identifies their closest relatives in Claude Code (/goal and the unreleased auto-dream), runs /goal 12 times on the same task, and translates the design into two contracts you can rebuild on any Agent stack.
 date: 2026-10-06
-updated: 2026-10-06
-lead: 'Agents are good at handing in work that looks finished, and good at letting their memory drift into a mess. Anthropic gave Claude Managed Agents one mechanism for each problem: Outcomes brings in an independent grader to check the work inside a session, and Dreaming reorganizes memory between sessions. This article explains how they work, why they are designed this way, and how to rebuild them in your own Agent.'
+updated: 2026-10-09
+lead: 'Agents are good at handing in work that looks finished, and good at letting their memory drift into a mess. Anthropic gave Claude Managed Agents one mechanism for each problem: Outcomes brings in an independent grader to check the work inside a session, and Dreaming reorganizes memory between sessions. Yet in the Claude Code you use every day, neither name appears. This article first takes both mechanisms apart from the docs, then shows what Claude Code actually offers, how it performed in a hands-on test, and how to rebuild both in your own Agent.'
 tags:
 - Claude
+- Claude Code
 - Managed Agents
 - AI Agent
 - Agent Architecture
@@ -20,7 +21,10 @@ series: Agent Architecture Deep Dives
 seriesOrder: 4
 ---
 
-**Version scope**: this article follows the official documentation as checked on 2026-10-06. Outcomes and memory stores are in public beta; Dreaming is a research preview that requires requesting access. Both were announced at Code with Claude on 2026-05-06. Fields and limits can change during beta, so check the current docs before integrating.
+**Version scope**: this article follows the official documentation as checked on 2026-10-06, with checks and a hands-on test on Claude Code 2.1.294 added on 2026-10-09. Outcomes and memory stores are in public beta; Dreaming is a research preview that requires requesting access. Both were announced at Code with Claude on 2026-05-06. Fields and limits can change during beta, so check the current docs before integrating.
+
+> [!WARNING]
+> **First, what was tested and what was only read.** Outcomes and Dreaming are Managed Agents APIs on the Claude Developer Platform, paid from an API balance, and **Claude Code does not have either feature**. I did not run either one: Outcomes needs prepaid API credits, which I chose not to buy for this article, and the Dreaming research preview is not enabled on my account. So the requests, events, and three-round revision in the first half all come from the official docs and cookbook. What I did test is their closest relatives in Claude Code: I ran `/goal` 12 times on the same task and scored every result with a hidden test that neither the writer nor the evaluator could see, and I checked why auto-dream has never run on my account. See "[What you can see in Claude Code](#what-you-can-see-in-claude-code)" and "[Hands-on: how much does the /goal evaluator actually do?](#hands-on-how-much-does-the-goal-evaluator-actually-do)".
 
 > [!NOTE]
 > **The single most important caveat: how well Outcomes works depends almost entirely on how you write the rubric.** A vague rubric makes the grader approve everything, the loop ends after one round, and you pay for a check that never happened.
@@ -233,9 +237,9 @@ The `result` on the end event decides what happens next:
 
 Only one outcome runs at a time, but you can chain them by sending another define-outcome event after the previous one ends. The session stays conversational afterward and keeps its history. Deliverables are written to `/mnt/session/outputs/` in the sandbox; list and download them through the Files API by session ID.
 
-### A real three-round revision
+### The three-round revision from Anthropic's cookbook
 
-Anthropic's cookbook includes a full run: the writer drafts a one-page brief on the unit economics of US public DC fast charging, citing at most 6 sources, each with a verbatim quote. The rubric has two parts:
+The following run was performed and published by Anthropic in its cookbook; I did not run it. The writer drafts a one-page brief on the unit economics of US public DC fast charging, citing at most 6 sources, each with a verbatim quote. The rubric has two parts:
 
 - **A 7-item coverage checklist**, each item more specific than the task description. For example, the "named operator" item requires the GAAP net income or net loss from a public charging operator's most recent 10-K or 10-Q, **and the citation must be the SEC filing itself on sec.gov, not a press release, earnings-call recap, or news article**.
 - **A 3-step citation check**: every URL must open directly with the web-fetch tool (no mirrors, reposts, or search snippets as substitutes); the quoted string must be found on the page; and the quote must actually support the claim it is attached to.
@@ -380,6 +384,111 @@ On customer results, the official blog says Harvey saw task completion rise abou
 
 ---
 
+## What you can see in Claude Code
+
+First, where these features live: Outcomes and Dreaming are Managed Agents features on the **Claude Developer Platform**. You call them from your own code and pay per token. **Claude Code**, the tool you use in a terminal or the desktop app, **has neither name**. It has a close relative of each, similar in name and purpose but different in the design choice that matters. The findings in this section come from checks on Claude Code 2.1.294 on 2026-10-09: the official docs, the program and configuration on my machine, and the runs in the next section.
+
+### The relative of Outcomes: `/goal`
+
+`/goal <condition>` sets a completion condition for the current session. After every turn, Claude Code sends **the condition and the whole conversation so far** to a small model (Haiku by default), which answers "not yet met", "met", or "impossible" with a one-line reason; if the condition is not met, the reason goes back to Claude and it keeps working. The official docs describe it as a thin wrapper around "a session-scoped, prompt-based Stop hook."
+
+| | Outcomes (Managed Agents) | `/goal` (Claude Code) |
+|---|---|---|
+| Who grades | A fresh grader started by the platform each round, the same model as the writer by default | The configured small model, Haiku by default |
+| What the grader sees | Only the rubric and the deliverable, **not the writer's reasoning** | The condition plus **the whole conversation**: what the writer said and what it ran |
+| Can the grader check for itself | Yes, it has all of the writer's tools and can open files and run code | **No**, it calls no tools and can only judge what already appears in the conversation |
+| Writer and criteria | The task description goes to the writer and the rubric to the grader, written separately | The condition itself is the writer's instruction; the writer sees all of it |
+| Round limit | `max_iterations`, default 3, maximum 20, enforced by the platform | No hard limit; "at most N turns" can only be written into the condition for the evaluator to judge. The hard stops are `/goal clear` or `--max-budget-usd` on `claude -p` |
+| Possible results | Satisfied / needs revision / limit reached / rubric does not apply / interrupted | Met / not yet met / impossible, plus automatic clearing on errors and a stop after several turns without tool use |
+| Grader cost | Billed at the grading model's standard price, plus session runtime | Runs on the small model; the docs call it usually negligible |
+
+In one sentence: **the Outcomes grader is a second person who can go and check; the `/goal` evaluator is someone who only reads the meeting notes.** Earlier I argued that the key to Outcomes is isolating the grader's context from the writer's. `/goal` has exactly no such isolation: whatever the writer ran and said in the conversation is what the evaluator judges. So with `/goal`, write the condition as something the conversation can prove, such as "`npm test` exits 0 and its summary line shows 0 failed," and require the writer to actually run that evidence.
+
+### The relative of Dreaming: auto-dream
+
+Claude Code's auto memory (Claude writing notes for itself in a memory directory) also has a background consolidation feature, called auto-dream in the program: once enough hours have passed since the last pass and enough new sessions have piled up, it sends a sub-agent in the background to read recent session transcripts and merge or correct the files in the memory directory.
+
+| | Dreaming (Managed Agents) | auto-dream (Claude Code) |
+|---|---|---|
+| Trigger | You create a job through the API | Automatic. The program's default threshold is at least 24 hours and at least 5 new sessions since the last pass; the remote configuration my account receives says 24 hours and 3 sessions |
+| Input | One memory store plus 1 to 100 sessions | This project's memory directory plus session transcripts since the last pass |
+| Output | **A separate** new memory store; the original is untouched and reviewed before use | **Edits** the files in the memory directory directly |
+| Official docs | Yes, as a research preview that requires access | None. The `autoDreamEnabled` setting is not in the official settings reference; it appears only in the setting descriptions built into the program |
+| Who can use it | Accounts granted access | Decided by a server-side rollout flag |
+
+*The auto-dream thresholds and behavior come from my reading of the 2.1.294 program and configuration. They are not an official commitment and can change at any time.*
+
+On my machine, neither path works:
+
+- **API**: calling `GET /v1/dreams` with my personal key returns 404, the same as a path that does not exist at all, while the same key gets 200 from the session and memory store list endpoints. Managed Agents works; the Dreaming research preview is not enabled on this account.
+- **Claude Code**: the rollout flag cached in `~/.claude.json`, `tengu_onyx_plover`, is `{"enabled": false, "minHours": 24, "minSessions": 3, "remoteEnabled": false}`, and nowhere in `~/.claude` or the memory directory is there a `.consolidate-lock` file or any consolidation state that auto-dream leaves behind when it runs, so it has never run. Setting `"autoDreamEnabled": true` does not help: the program checks the rollout flag first and, while the flag is off, never reads that setting. [Issue #86209](https://github.com/anthropics/claude-code/issues/86209) in the official repository reports exactly this behavior; it was later closed automatically for inactivity and not fixed.
+
+So **not seeing Dreaming in Claude Code is not a missed option; the account simply is not in the rollout.** The only review loop you can see is `/goal`, and it differs from Outcomes in exactly the most important respect.
+
+---
+
+## Hands-on: how much does the /goal evaluator actually do?
+
+I did not run Outcomes this time (see the top of the article for why), so this section tests its relative in Claude Code, `/goal`. The question: **does adding an evaluator after every turn make the output better, and if so, is it the evaluator or simply writing the criteria down?**
+
+### Setup
+
+- **Task**: write a Python function `parse_duration` that converts durations such as "1h30m" and "45s" into seconds, with pytest tests. The writer's instructions are one sentence:
+
+  ```text
+  Write a Python module `duration.py` that exposes `parse_duration(text: str) -> int`, converting compact duration strings such as "1h30m" or "45s" into a whole number of seconds. Invalid input must raise an exception. Also write a pytest file `test_duration.py` for it. Put both files in the current directory.
+  ```
+
+- **Strict criteria**: 23 examples in four groups, plus "the tests cover every rule and pass." 7 values (including "one space between components is allowed" and "leading and trailing whitespace is ignored"); 13 strings that must raise `ValueError` (empty, number only, unit only, unknown unit, uppercase "1H", decimals, signs, out-of-order units "30m1h", repeated units "1h1h", a space between number and unit, two spaces); 3 types that must raise `TypeError` (`None`, `90`, `b"1h"`).
+- **Loose criteria**: only "common formats convert, invalid input raises an exception, the tests pass."
+- **Hidden test**: a scoring script built from the 23 strict examples, seen by neither the writer nor the evaluator, applied to every run's output after all runs finished. I checked the script first: a reference implementation scores 23/23 and a deliberately sloppy one 13/23.
+- **Groups**: four groups, three runs each, all with Claude Sonnet 5.5 as the writer. Each run used `claude -p` in an empty directory without loading my user-level settings or memory.
+
+| Group | What the writer gets | Evaluator |
+|---|---|---|
+| A one sentence | The sentence above | None |
+| B rules in the prompt | The sentence plus the full strict criteria | None |
+| C `/goal` + strict condition | Exactly the same text as B, prefixed with `/goal` | Haiku, reading the conversation after every turn |
+| D `/goal` + loose condition | The sentence plus the loose criteria, prefixed with `/goal` | Same |
+
+The exact conditions for C and D:
+
+```text
+C: /goal Write a Python module `duration.py` that exposes `parse_duration(text: str) -> int`, converting compact duration strings such as "1h30m" or "45s" into a whole number of seconds, plus a pytest file `test_duration.py`, both in the current directory. The goal is met only when all of the following hold, each shown in this conversation by actually running the examples and pytest: (1) "1h30m" -> 5400, "45s" -> 45, "2d" -> 172800, "0s" -> 0, "1d2h3m4s" -> 93784, units d=86400 h=3600 m=60 s=1, return type int; (2) one space between components is allowed ("1h 30m" -> 5400) and leading/trailing whitespace is ignored (" 45s " -> 45); (3) each of these raises ValueError: "", "   ", "90", "h", "5w", "1H", "1.5h", "-5m", "+5m", "30m1h", "1h1h", "1 h", "1h  30m"; (4) None, 90 and b"1h" raise TypeError; (5) test_duration.py covers every rule above and `python -m pytest` passes.
+
+D: /goal Write a Python module `duration.py` that exposes `parse_duration(text: str) -> int`, converting compact duration strings such as "1h30m" or "45s" into a whole number of seconds, plus a pytest file `test_duration.py`, both in the current directory. The goal is met when parse_duration converts common duration strings such as "1h30m" and "45s" to seconds, invalid input raises an exception, and the tests in test_duration.py pass.
+```
+
+### Results
+
+The 12 runs on 2026-10-09:
+
+| Group | Hidden test score (3 runs, out of 23) | Evaluator verdict | Time per run | Cost per run (subscription usage, priced) |
+|---|---|---|---|---|
+| A one sentence | 22, 20, 19 | No evaluator | 14–15 s | about $0.05 |
+| B rules in the prompt | 23, 23, 23 | No evaluator | 15–26 s | $0.05–0.08 |
+| C `/goal` + strict condition | 23, 23, 23 | "Met" after the first turn, all 3 times | 24–27 s | about $0.07 |
+| D `/goal` + loose condition | 18, 18, 18 | "Met" after the first turn, all 3 times | 13–20 s | $0.04–0.07 |
+
+Each evaluator check took 1.6 to 8.2 seconds. Its verdict is not in the `claude -p` output stream; it is a `goal_status` record in the session transcript, `~/.claude/projects/<directory>/<session ID>.jsonl`. Here is run 2 of group D verbatim:
+
+```json
+{"type": "goal_status", "met": true, "iterations": 1,
+ "reason": "The transcript shows duration.py and test_duration.py were written with the Write tool to the current directory. The test file asserts ('45s', 45) and ('1h30m', 5400), and test_invalid covers inputs such as '' , 'abc' and '30m1h' with pytest.raises(ValueError). The Bash run returned '19 passed in 0.01s', so the tests pass."}
+```
+
+*The `durationMs` and `tokens` fields are omitted for readability.*
+
+Three observations:
+
+1. **What worked here was writing the criteria down, not the evaluator.** Group B had no evaluator at all and scored full marks three times; group C's evaluator said "met" after the first turn every time and never sent Claude back for another round. Every point group A lost was a rule the sentence did not state: none of its three runs guessed that "one space between components is allowed"; twice it added a "weeks" unit of its own and accepted "5w" as five weeks; once each it accepted uppercase "1H", accepted the out-of-order "30m1h", and rejected " 45s " with surrounding whitespace. The writer was not incapable; it did not know what you wanted.
+2. **With a loose condition, the evaluator approves anyway.** Group D got "met" all three times, yet scored only 18/23 on the hidden test, failing identically every time: uppercase "1H" accepted as one hour, `None`, `90`, and `b"1h"` raising `ValueError` instead of `TypeError`, and a space between components rejected. The evaluator's reason was always that pytest passed (for example "19 passed"), and those tests were written by the writer to its own understanding. This is the caveat from the top of the article, as it shows up in `/goal`: a vague standard gets approved. Group D even scored below group A, which had no review at all; my guess is that "invalid input raises an exception" nudged the writer toward raising `ValueError` for everything, but three samples are not enough to conclude anything.
+3. **The evaluator only reads the conversation.** All six reasons cite things that appeared in the conversation: "a Bash run printed...", "the Write tool reported File created successfully", "pytest showed 22 passed." It did not, and cannot, open `duration.py` and run it itself.
+
+**Limits**: the task is small and Sonnet 5.5 finishes it in one turn, so the evaluator never got to do what `/goal` is really for, which is pushing a Claude that wants to stop early back to work on long jobs such as migrations or clearing a backlog. Each group ran only three times. So this data supports one claim only: **on a task finished in one turn, the `/goal` evaluator will not add requirements you left out of the condition.** The Outcomes grader can check with tools, but whether it would catch group D's mistakes still depends on whether the rubric names them; I did not test that, and it is an inference from the design.
+
+---
+
 ## Risk: memory is a long-lived injection channel
 
 As quoted above, the docs warn that one injection into a read-write store can plant malicious content that every later session trusts. Dreaming adds another layer to that risk.
@@ -467,7 +576,7 @@ The differences are just as clear:
 
 ---
 
-## Six takeaways
+## Seven takeaways
 
 1. **Outcomes fixes self-grading bias.** The point is not "one more Agent"; it is a grader whose context is isolated from the writer and who holds only the criteria and the output.
 2. **The rubric decides everything.** Make it more specific than the task, and make every item force the grader to produce evidence, or it will approve anything.
@@ -475,6 +584,7 @@ The differences are just as clear:
 4. **Dreaming fixes memory entropy.** It reads many sessions offline and writes a separate, reorganized store, leaving the original untouched for review before use.
 5. **Memory is a long-lived injection channel.** Default read-write stores, plus a job that reads raw transcripts, both call for splitting by trust level and keeping a review gate.
 6. **Both can be rebuilt without Anthropic.** One is a capped, independent review loop; the other is consolidation that never edits the original. Both hold for any model and any language.
+7. **Claude Code only has `/goal`, and its evaluator only reads the conversation.** In the test, what worked was writing the criteria down; with a loose condition it still said "met." auto-dream is still in a rollout, and accounts outside it cannot turn it on with a setting.
 
 **The rule: never let the worker grade its own work, and never let memory only grow.**
 
@@ -490,5 +600,10 @@ The differences are just as clear:
 - [Memory for Claude Managed Agents (Anthropic blog, 2026-04-23)](https://claude.com/blog/claude-managed-agents-memory): memory stores in public beta, Rakuten figures
 - [ZDNET: Your Claude agents can 'dream' now (2026-05-06)](https://www.zdnet.com/article/your-claude-agents-can-dream-now-how-anthropics-new-feature-works/), [SiliconANGLE (2026-05-06)](https://siliconangle.com/2026/05/06/anthropic-letting-claude-agents-dream-dont-sleep-job/), [Simon Willison's Code w/ Claude 2026 live blog](https://simonwillison.net/2026/May/6/code-w-claude-2026/): release date and third-party coverage
 - [Meta: Agents Rule of Two: A Practical Approach to AI Agent Security (2025-10-31)](https://ai.meta.com/blog/practical-ai-agent-security/)
+- [Keep Claude working toward a goal (Claude Code docs)](https://code.claude.com/docs/en/goal): how `/goal` evaluates, reading only the conversation and calling no tools, evaluator tokens usually negligible
+- [All settings (Claude Code docs)](https://code.claude.com/docs/en/settings-reference): checked on 2026-10-09, no `autoDreamEnabled` entry
+- [anthropics/claude-code#86209](https://github.com/anthropics/claude-code/issues/86209): `autoDreamEnabled` silently ignored while the rollout flag is off
+- [Pricing (official docs)](https://platform.claude.com/docs/en/about-claude/pricing): Managed Agents billed by tokens plus session runtime ($0.08 per hour)
+- [Why do I have to pay separately to use the Claude API? (Claude Help Center)](https://support.claude.com/en/articles/9876003-i-have-a-paid-claude-subscription-pro-max-team-or-enterprise-plans-why-do-i-have-to-pay-separately-to-use-the-claude-api-and-console): a Claude subscription does not include API usage
 
-> Checked on 2026-10-06. Outcomes and memory stores are in public beta and Dreaming is a research preview, so fields, limits, and supported models may change. All request examples come from the official documentation above; the pseudocode expresses design contracts only and does not represent Anthropic's internal implementation.
+> Checked on 2026-10-06; checks on Claude Code 2.1.294 and the `/goal` test added on 2026-10-09. Outcomes and memory stores are in public beta and Dreaming is a research preview, so fields, limits, and supported models may change. All Outcomes, Dreaming, and memory store request examples come from the official documentation above, and I did not run them; the pseudocode expresses design contracts only and does not represent Anthropic's internal implementation.
