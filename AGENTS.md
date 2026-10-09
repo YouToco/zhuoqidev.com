@@ -60,6 +60,14 @@
   reader must see it without a click, or `fold` to fold a short one; `index.md` drops the
   mark. When the first line is a comment it becomes the bar's title, so begin a long block
   with a one-line comment that says what it shows.
+- Comics: a ```` ```comic ```` fence holds a script (optional `# title` first, `---` between
+  panels, one `> narration` per panel, `[Name] line` bubbles, `[Name!]` highlighted, `cols=N` panels
+  per row at most). It is drawn at build time as HTML panels (`src/lib/markdown/comic.ts` parses,
+  `comic-html.ts` draws), so the dialogue is real text. The cast is fixed and plain-spoken, never a
+  metaphor readers must decode: `用户` / `User`, `你的服务` / `Your service`, `大模型` / `LLM`,
+  `云厂商` / `Cloud` (carries flying money: it sends the bill) and `你` / `You`. Their pictures are
+  Microsoft Fluent Emoji 3D (MIT, `public/comics/LICENSE.txt`), self-hosted as 128px webp; the
+  dialogue face is LXGW WenKai Screen, subset per page as "ZQ Comic" like the other CJK faces.
 - Readers pick the article width (narrow / default / wide / full) in the rail; it is
   stored as `zq-width` and applied by the head script in `Base.astro`. Charts, tables
   and diagrams must work from a 640 px column up to a full-width one.

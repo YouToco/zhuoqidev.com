@@ -33,6 +33,7 @@
   --f-hand-cjk: "ZQ Hand", "Kaiti SC", STKaiti, KaiTi, cursive;
   --f-hand: var(--font-caveat), var(--f-hand-cjk);
   --f-hand-zh: var(--f-hand-cjk);
+  --f-comic: "ZQ Comic", "LXGW WenKai Screen", "Kaiti SC", STKaiti, KaiTi, "PingFang SC", sans-serif;
   --f-serif: "ZQ Serif", "Songti SC", STSong, "Noto Serif CJK SC", "Source Han Serif SC", SimSun, serif;
   --f-sans: var(--font-inter);
   --f-mono: var(--font-mono);
@@ -530,6 +531,25 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
   .cl-plot { aspect-ratio: 5 / 4; }
   .cb-label { font-size: 12.5px; }
 }
+
+/* comics (```comic fences, src/lib/markdown/comic-html.ts): printed on light paper in both themes,
+   one regular weight (the subset face has no bold), at most --cols panels a row and none under 250px */
+.comic { margin: 1.6em 0 1.9em; padding: 18px; background: #fffdf6; border: 1px solid #e6dfd0; border-radius: 16px; font: 400 17px/1.55 var(--f-comic); color: #1f2430; }
+.cm-title { margin: 0 0 12px; text-align: center; font-size: 24px; }
+.cm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(max(min(100%, 250px), (100% - (var(--cols, 3) - 1) * 16px) / var(--cols, 3)), 1fr)); gap: 16px; }
+.cm-panel { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 14px 14px 8px; background: #fff; border: 2.5px solid #1f2430; border-radius: 18px; box-shadow: 4px 4px 0 #1f2430; }
+.prose .cm-nar { margin: 0; align-self: flex-start; padding: 3px 12px; background: #ffe066; border: 2px solid #1f2430; border-radius: 999px; font-size: 15px; line-height: 1.5; color: #1f2430; }
+.cm-line { display: flex; align-items: flex-end; gap: 8px; }
+.cm-line.r { flex-direction: row-reverse; }
+.cm-who { flex: none; width: 76px; margin: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 13.5px; line-height: 1.25; color: #4a5163; text-align: center; }
+.cm-face { position: relative; width: 60px; height: 60px; }
+.cm-face img { display: block; width: 60px; height: 60px; border-radius: 0; }
+.cm-face .cm-badge { position: absolute; right: -8px; bottom: -4px; width: 30px; height: 30px; }
+.prose .cm-bub { position: relative; min-width: 0; margin: 0 0 26px; padding: 9px 14px; background: #fff; border: 2.5px solid #1f2430; border-radius: 16px; color: #1f2430; }
+.prose .cm-bub.hl { background: #fff1a6; }
+.cm-bub::after { content: ""; position: absolute; bottom: 12px; width: 11px; height: 11px; background: inherit; border: solid #1f2430; border-width: 0 0 2.5px 2.5px; }
+.cm-line.l .cm-bub::after { left: -7.5px; transform: rotate(45deg); }
+.cm-line.r .cm-bub::after { right: -7.5px; transform: rotate(-135deg); }
 
 .figure { margin: 1.8em 0; }
 .figure img { display: block; margin: 0 auto; border: 1px solid var(--line); background: #fff; }
