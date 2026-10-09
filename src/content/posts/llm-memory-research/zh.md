@@ -420,12 +420,11 @@ LangMem 的价值在于把常见记忆动作做成可组合原语：
 
 Cognee 宣称把原始数据转成 AI memory，代码里真正成熟的部分是一条 ECL 风格知识管线：
 
-```text
-add
-  → classify / chunk
-  → cognify（LLM 抽实体与关系）
-  → graph + vector + relational storage
-  → search / memify
+```mermaid
+flowchart TD
+    A["add"] --> B["classify / chunk"] --> C["cognify<br>LLM 抽实体与关系"] --> D["graph + vector + relational storage"] --> E["search / memify"]
+    classDef out fill:#d3f9d8,stroke:#2f9e44
+    class E out
 ```
 
 [`cognify.py`](https://github.com/topoteretes/cognee/blob/88aa09b4e3289e3dbf12c0c090080920816e2fb7/cognee/api/v1/cognify/cognify.py) 组织 pipeline；数据库层有 graph/vector interface；上层还有 dataset、user、role 与 ACL。
@@ -529,12 +528,11 @@ Markdown / JSON
 
 优先 Mem0 或 LangMem 风格：
 
-```text
-对话
-  → 写入门控
-  → 事实 / profile 抽取
-  → user-scoped store
-  → semantic retrieval
+```mermaid
+flowchart TD
+    A["对话"] --> B["写入门控"] --> C["事实 / profile 抽取"] --> D["user-scoped store"] --> E["semantic retrieval"]
+    classDef out fill:#d3f9d8,stroke:#2f9e44
+    class E out
 ```
 
 关键不是选哪个向量库，而是先设计：
@@ -691,15 +689,17 @@ flowchart TD
 2. **Memory service 层**：管理事件、事实、关系、技能、时间与删除；
 3. **Model 层**：更长 context、更好的 test-time learning，以及可能的架构内 memory module。
 
-真正稳定的接口不会是 `vector_db.search(text)`，而会逐渐接近：
+今天大多数 Agent 的记忆只会一个动作：把一句话丢进向量库，找几条意思相近的（`vector_db.search(text)`）。这像一个只会翻旧笔记本找相似句子的助理。真正稳定下来的记忆接口，会更像一位靠谱的秘书，至少要会五件事：
 
-```text
-remember(event, policy)
-recall(query, scope, time, budget)
-revise(memory, evidence)
-forget(subject, reason)
-explain(memory_id)
-```
+| 秘书要会的事 | 接口大概长这样 | 白话解释 |
+|---|---|---|
+| **记下** | `remember(event, policy)` | 发生了一件事，先按规矩判断值不值得记、能记多久，而不是什么都往本子上抄 |
+| **想起** | `recall(query, scope, time, budget)` | 找回时限定是谁的、哪个项目的、什么时候的、最多拿几条——别把别人的、过期的、太多的东西一股脑塞给模型 |
+| **改正** | `revise(memory, evidence)` | 有了新证据就改旧记忆：「不喝咖啡了」要替换掉「喜欢咖啡」，而不是两条并排留着 |
+| **忘掉** | `forget(subject, reason)` | 用户说「把我的地址忘了」，就连同由它派生出的摘要、索引一起删干净，并记下为什么删 |
+| **说出处** | `explain(memory_id)` | 能回答「你凭什么这么记得」：这条记忆来自哪次对话、什么时候、现在还可不可信 |
+
+**今天的记忆只会「找相似」，将来的记忆要会「记下、想起、改正、忘掉、说出处」。**
 
 人类记忆科学用了一百多年，才从「记忆存在哪里」走到「多个系统怎样在提取中重构过去」。Agent 记忆工程也正在经历同样的概念升级：
 
