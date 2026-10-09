@@ -423,6 +423,27 @@ Claude Code 的 auto memory（Claude 自己往记忆目录里记笔记）还有�
 - **API**：个人 key 调 `GET /v1/dreams` 返回 404，和请求一个根本不存在的路径一样；同一把 key 调会话、记忆库的列表接口都是 200。也就是 Managed Agents 能用，Dreaming 研究预览没开给这个账号。
 - **Claude Code**：`~/.claude.json` 里缓存的灰度开关 `tengu_onyx_plover` 是 `{"enabled": false, "minHours": 24, "minSessions": 3, "remoteEnabled": false}`；整个 `~/.claude` 和记忆目录里都找不到 auto-dream 运行时会留下的锁文件 `.consolidate-lock` 或任何整理状态，说明它从没跑过。在设置里写 `"autoDreamEnabled": true` 也没用：程序先看灰度开关，开关关着就根本不读这个设置。官方仓库的 [issue #86209](https://github.com/anthropics/claude-code/issues/86209) 报过一模一样的现象，后来因为长期没人跟进被自动关闭，没有修。
 
+### 名字都叫 Dreaming 的三样东西
+
+搜「Claude Dreaming」会搜到三样东西，名字一样，来源和用法都不同：
+
+| | Claude Code 的 auto-dream | Managed Agents 的 Dreaming | OpenClaw 的 Dreaming |
+|---|---|---|---|
+| 谁做的 | Anthropic | Anthropic | 开源项目 OpenClaw，和 Anthropic 无关 |
+| 给谁用 | Claude Code 用户，靠灰度开关逐步放出 | 在 Claude 开发者平台上自己搭 Agent 的团队 | 自己部署 OpenClaw 的人 |
+| 怎么触发 | 自动，攒够时间和会话数后在后台跑 | 调 `/v1/dreams` 建任务 | 定时任务，当前文档写的是默认开启 |
+| 改不改原件 | 直接改记忆目录里的文件 | 另出一份新记忆库，原库不动 | 改写 `MEMORY.md`，改之前把旧版存进插件状态，增删合并的摘要写进 `DREAMS.md` 供人看 |
+| 怎么防注入 | 没找到公开说明 | 文档没讨论整理任务本身（见下文「风险」） | 拼整理提示词之前，先剔除来源标记为不可信或由系统产生的候选 |
+| 官方文档 | 没有 | 有 | 有 |
+
+时间线：
+
+- **2026-03-24**：已经有用户在 Claude Code v2.1.81 的 `/memory` 里看到「Auto-dream: on · last ran 1d ago」（[issue #38461](https://github.com/anthropics/claude-code/issues/38461)），说明当时已在小范围放出。
+- **2026-03-31**：npm 上的 Claude Code v2.1.88 误带了 source map，完整源码外泄。按 Layer5、Soma 等分析文章的转述，里面的 `autoDream` 就是上表第一列：后台派一个子 Agent，满 24 小时、攒够 5 次会话、拿到锁才运行，分「定位、收集、整合、修剪」四步，只给只读的 shell。
+- **2026-04-05**：OpenClaw 仓库里 Dreaming 文档的第一次提交。时间上前后脚，我没有证据说明两者有关系。
+- **2026-05-06**：Anthropic 发布 Managed Agents 的 Dreaming 研究预览。
+- **2026-10-09**：Claude Code 官方更新日志全文没有一处提到 dream。
+
 所以，**在 Claude Code 里看不到 Dreaming，不是漏开了某个选项，而是账号没被放进灰度。** 能看到的「验收循环」只有 `/goal`，而它和 Outcomes 恰好差在最关键的那一点上。
 
 ---
@@ -500,6 +521,7 @@ D: /goal Write a Python module `duration.py` that exposes `parse_duration(text: 
 - **按信任度拆记忆库。** 处理不可信输入的 Agent，只给它挂只读的参考记忆库；需要写的记忆库，只挂给不碰外部输入的 Agent。这和 Meta 提出的 [Rule of Two](https://ai.meta.com/blog/practical-ai-agent-security/) 是同一个思路：「处理不可信输入」「接触敏感数据或系统」「改变状态或对外通信」三者，一个会话最多同时占两样；三样都占，就不能让它自主运行，至少要有人审批或别的可靠验证手段。
 - **整理结果先审后用。** Dreaming 默认不覆盖原库，审核这一步就是防线。处理不可信输入的场景，别配成自动采用。
 - **挑选喂给整理任务的会话。** 读过大量外部内容的会话，要么不喂，要么在 `instructions` 里明确只提炼某类信息。
+- **按来源过滤候选，而不只靠提示词。** OpenClaw 的 Dreaming 把这条做成了结构性规则：每条候选记忆都带来源标记，拼整理提示词之前，先把标记为不可信或由系统产生的候选剔除，模型根本看不到它们。自己实现时，给每条记忆记下来自哪次会话、什么类型的输入，比事后审核更早拦住注入。
 
 ---
 
@@ -603,6 +625,10 @@ def consolidate(store, transcripts, focus=None):
 - [Keep Claude working toward a goal（Claude Code 文档）](https://code.claude.com/docs/en/goal)：`/goal` 的评审方式、只读对话不调工具、评审 token 通常可忽略
 - [All settings（Claude Code 文档）](https://code.claude.com/docs/en/settings-reference)：2026-10-09 核对，没有 `autoDreamEnabled` 这一项
 - [anthropics/claude-code#86209](https://github.com/anthropics/claude-code/issues/86209)：灰度开关关着时 `autoDreamEnabled` 被静默忽略
+- [anthropics/claude-code#38461](https://github.com/anthropics/claude-code/issues/38461)：2026-03-24 已有用户看到「Auto-dream: on」
+- [Claude Code CHANGELOG](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md)：2026-10-09 核对，全文没有 dream
+- [Layer5：The Claude Code Source Leak](https://layer5.io/blog/engineering/the-claude-code-source-leak-512000-lines-a-missing-npmignore-and-the-fastest-growing-repo-in-github-history/)、[Soma：The Architecture of Forgetting（2026-04-03）](https://soma.gravicity.ai/blog/the-architecture-of-forgetting)：2026-03-31 源码外泄经过与 `autoDream` 的第三方分析
+- [Dreaming（OpenClaw 文档）](https://docs.openclaw.ai/concepts/dreaming)：OpenClaw 的三阶段整理、默认开启、按来源剔除不可信候选
 - [Pricing（官方文档）](https://platform.claude.com/docs/en/about-claude/pricing)：Managed Agents 按 token 加会话运行时长（$0.08 / 小时）计费
 - [为什么 Claude 订阅之外还要单独为 API 付费（Claude 帮助中心）](https://support.claude.com/en/articles/9876003-i-have-a-paid-claude-subscription-pro-max-team-or-enterprise-plans-why-do-i-have-to-pay-separately-to-use-the-claude-api-and-console)：订阅额度不含 API 用量
 

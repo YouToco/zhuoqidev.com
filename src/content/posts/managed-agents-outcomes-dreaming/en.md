@@ -423,6 +423,27 @@ On my machine, neither path works:
 - **API**: calling `GET /v1/dreams` with my personal key returns 404, the same as a path that does not exist at all, while the same key gets 200 from the session and memory store list endpoints. Managed Agents works; the Dreaming research preview is not enabled on this account.
 - **Claude Code**: the rollout flag cached in `~/.claude.json`, `tengu_onyx_plover`, is `{"enabled": false, "minHours": 24, "minSessions": 3, "remoteEnabled": false}`, and nowhere in `~/.claude` or the memory directory is there a `.consolidate-lock` file or any consolidation state that auto-dream leaves behind when it runs, so it has never run. Setting `"autoDreamEnabled": true` does not help: the program checks the rollout flag first and, while the flag is off, never reads that setting. [Issue #86209](https://github.com/anthropics/claude-code/issues/86209) in the official repository reports exactly this behavior; it was later closed automatically for inactivity and not fixed.
 
+### Three things named Dreaming
+
+Search for "Claude Dreaming" and you will find three things with the same name and different origins and uses:
+
+| | Claude Code auto-dream | Managed Agents Dreaming | OpenClaw Dreaming |
+|---|---|---|---|
+| Built by | Anthropic | Anthropic | The open-source OpenClaw project, unrelated to Anthropic |
+| For whom | Claude Code users, released gradually behind a rollout flag | Teams building their own Agents on the Claude Developer Platform | People who run OpenClaw themselves |
+| Trigger | Automatic, in the background once enough time and sessions have passed | Create a job through `/v1/dreams` | A scheduled job; the current docs say it is on by default |
+| Edits the original? | Edits the files in the memory directory directly | Writes a separate new store; the original is untouched | Rewrites `MEMORY.md`, saving the previous version in plugin state first and writing a summary of additions, merges, and supersessions to `DREAMS.md` for people to read |
+| Injection defense | No public description found | The docs do not discuss the dream job itself (see "Risk" below) | Removes candidates labeled untrusted or system-generated before building the consolidation prompt |
+| Official docs | None | Yes | Yes |
+
+Timeline:
+
+- **2026-03-24**: users already saw "Auto-dream: on · last ran 1d ago" in `/memory` on Claude Code v2.1.81 ([issue #38461](https://github.com/anthropics/claude-code/issues/38461)), so it was already out to a small group.
+- **2026-03-31**: Claude Code v2.1.88 on npm shipped with a source map, exposing the full source. As retold by analyses such as Layer5's and Soma's, its `autoDream` is the first column above: a sub-agent sent off in the background that runs only after 24 hours, 5 sessions, and acquiring a lock, works in four steps (orient, gather, consolidate, prune), and gets a read-only shell.
+- **2026-04-05**: the first commit of the Dreaming doc in the OpenClaw repository. The timing is close, but I have no evidence the two are related.
+- **2026-05-06**: Anthropic announces the Managed Agents Dreaming research preview.
+- **2026-10-09**: the official Claude Code changelog does not mention dream anywhere.
+
 So **not seeing Dreaming in Claude Code is not a missed option; the account simply is not in the rollout.** The only review loop you can see is `/goal`, and it differs from Outcomes in exactly the most important respect.
 
 ---
@@ -500,6 +521,7 @@ Defenses:
 - **Split stores by trust level.** Give Agents that handle untrusted input only read-only reference stores; attach writable stores only to Agents that never touch external input. This follows the same idea as Meta's [Rule of Two](https://ai.meta.com/blog/practical-ai-agent-security/): of "processing untrusted input," "accessing sensitive data or systems," and "changing state or communicating externally," a session should hold at most two; when it needs all three, it should not run autonomously and needs at least human approval or another reliable means of validation.
 - **Review dream output before adopting it.** Dreaming does not overwrite the original by default, and the review step is your line of defense. Where untrusted input is involved, do not configure automatic adoption.
 - **Choose which sessions feed a dream.** Sessions that read a lot of external content should either be left out or be paired with `instructions` that limit extraction to a specific kind of information.
+- **Filter candidates by provenance, not just by prompt.** OpenClaw's Dreaming makes this a structural rule: every candidate memory carries a provenance label, and candidates labeled untrusted or system-generated are removed before the consolidation prompt is built, so the model never sees them. When you build your own, recording which session and what kind of input each memory came from stops injection earlier than review after the fact.
 
 ---
 
@@ -603,6 +625,10 @@ The differences are just as clear:
 - [Keep Claude working toward a goal (Claude Code docs)](https://code.claude.com/docs/en/goal): how `/goal` evaluates, reading only the conversation and calling no tools, evaluator tokens usually negligible
 - [All settings (Claude Code docs)](https://code.claude.com/docs/en/settings-reference): checked on 2026-10-09, no `autoDreamEnabled` entry
 - [anthropics/claude-code#86209](https://github.com/anthropics/claude-code/issues/86209): `autoDreamEnabled` silently ignored while the rollout flag is off
+- [anthropics/claude-code#38461](https://github.com/anthropics/claude-code/issues/38461): users already saw "Auto-dream: on" on 2026-03-24
+- [Claude Code CHANGELOG](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md): checked on 2026-10-09, no mention of dream
+- [Layer5: The Claude Code Source Leak](https://layer5.io/blog/engineering/the-claude-code-source-leak-512000-lines-a-missing-npmignore-and-the-fastest-growing-repo-in-github-history/), [Soma: The Architecture of Forgetting (2026-04-03)](https://soma.gravicity.ai/blog/the-architecture-of-forgetting): third-party analyses of the 2026-03-31 source exposure and `autoDream`
+- [Dreaming (OpenClaw docs)](https://docs.openclaw.ai/concepts/dreaming): OpenClaw's three-phase consolidation, on by default, provenance filter for untrusted candidates
 - [Pricing (official docs)](https://platform.claude.com/docs/en/about-claude/pricing): Managed Agents billed by tokens plus session runtime ($0.08 per hour)
 - [Why do I have to pay separately to use the Claude API? (Claude Help Center)](https://support.claude.com/en/articles/9876003-i-have-a-paid-claude-subscription-pro-max-team-or-enterprise-plans-why-do-i-have-to-pay-separately-to-use-the-claude-api-and-console): a Claude subscription does not include API usage
 
