@@ -98,3 +98,13 @@ if (bye && "IntersectionObserver" in window && !matchMedia("(prefers-reduced-mot
   );
   io.observe(bye);
 }
+
+// Looping decorations (the home terminal's cursor, the footer's floating arrow) pause while off
+// screen; see .idle in global.css.
+const loops = document.querySelectorAll<HTMLElement>(".cursor, .back-top span");
+if (loops.length && "IntersectionObserver" in window) {
+  const seen = new IntersectionObserver((entries) => {
+    for (const e of entries) e.target.classList.toggle("idle", !e.isIntersecting);
+  });
+  loops.forEach((el) => seen.observe(el));
+}
