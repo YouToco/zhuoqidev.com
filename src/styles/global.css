@@ -428,6 +428,16 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 .diagram.hand img { display: block; max-width: 100%; height: auto; margin-inline: auto; border-radius: 0; }
 /* wide drawings shrink to fit the column; on a padded paper let them use most of its gutters */
 @media (min-width: 641px) { .paper .prose .diagram.hand { margin-inline: -48px; padding: 14px 12px; } }
+/* each hand-drawn diagram keeps its Mermaid source folded underneath (for agents, and to copy);
+   the sheet is light paper in both themes, so the toggle's colours are fixed */
+.prose .diagram-src { margin: 10px 0 0; padding: 0; border: 0; border-radius: 0; background: none; text-align: right; }
+.prose .diagram-src > summary { display: inline-block; list-style: none; padding: 3px 9px; border: 1px dashed #8a8f9c; border-radius: 8px; font: 500 12px/1.6 var(--f-mono); color: #4a5163; }
+.prose .diagram-src > summary::-webkit-details-marker { display: none; }
+.prose .diagram-src > summary::before { content: "▸ "; }
+.prose .diagram-src[open] > summary::before { content: "▾ "; }
+.prose .diagram-src > summary:hover { border-style: solid; color: #1c2230; }
+.prose .diagram-src[open] > summary { margin-bottom: 10px; }
+.prose .diagram-src .code { margin: 0; text-align: left; }
 
 /* data charts drawn at build time (```chart fences, src/lib/markdown/chart.ts): real text, no script */
 .chart {
