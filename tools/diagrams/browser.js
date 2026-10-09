@@ -20,8 +20,10 @@ Element.prototype.querySelector = function (sel) {
 // this document first, or every width comes from the fallback font and labels overflow. An
 // exported SVG carries @font-face rules for exactly the characters it uses; attaching one that
 // uses all of the diagram's characters registers them.
+// Keep one space among them: without it the space is measured in the browser's default font, about
+// 3px narrower than Excalifont's at 18px, so lines with spaces came out wider than measured.
 async function warmFonts(text) {
-  const chars = [...new Set(text.replace(/\s/g, ""))].join("");
+  const chars = [...new Set(text.replace(/\s+/g, " ").trim())].join("");
   const els = convertToExcalidrawElements([{ type: "text", x: 0, y: 0, text: chars, fontSize: 20, fontFamily: 5 }]);
   const svg = await exportToSvg({ elements: els, appState: { exportBackground: false }, files: null });
   svg.style.cssText = "position:absolute;left:-99999px;top:0";

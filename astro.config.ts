@@ -5,6 +5,8 @@ import rehypeMermaid from "rehype-mermaid";
 import { rehypeHandDiagrams } from "./src/lib/markdown/rehype-hand-diagrams";
 import { rehypeProse } from "./src/lib/markdown/rehype-prose";
 import { remarkAlerts } from "./src/lib/markdown/remark-alerts";
+import { remarkChart } from "./src/lib/markdown/remark-chart";
+import { remarkComic } from "./src/lib/markdown/remark-comic";
 import { remarkDemo } from "./src/lib/markdown/remark-demo";
 import { remarkFigure } from "./src/lib/markdown/remark-figure";
 import { legacyRedirects } from "./src/lib/redirects";
@@ -77,10 +79,23 @@ export default defineConfig({
     // Noto Serif SC and Long Cang are subset per page after the build (scripts/subset-fonts.mjs).
   ],
   markdown: {
-    syntaxHighlight: { type: "shiki", excludeLangs: ["mermaid", "math"] },
-    shikiConfig: { theme: "github-dark-dimmed", wrap: false },
+    syntaxHighlight: { type: "shiki", excludeLangs: ["mermaid", "math", "chart", "comic"] },
+    shikiConfig: {
+      theme: "github-dark-dimmed",
+      wrap: false,
+      // ```ts open / ```ts fold: copy the mark onto the <pre> so rehype-prose can fold the block or not.
+      transformers: [
+        {
+          name: "fold-mark",
+          pre(node) {
+            const mark = /(?:^|\s)(open|fold)(?:\s|$)/.exec(this.options.meta?.__raw ?? "")?.[1];
+            if (mark) node.properties["data-fold"] = mark;
+          },
+        },
+      ],
+    },
     processor: unified({
-      remarkPlugins: [remarkAlerts, remarkFigure, remarkDemo],
+      remarkPlugins: [remarkAlerts, remarkFigure, remarkDemo, remarkChart, remarkComic],
       rehypePlugins: [
         // Hand-drawn versions first (`npm run diagrams`); rehype-mermaid draws whatever is left.
         rehypeHandDiagrams,

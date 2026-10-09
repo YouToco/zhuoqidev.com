@@ -47,6 +47,30 @@
   (`> [!NOTE]`), `![alt](./image.png "caption")` for figures, ```` ```mermaid ````
   fences (shown as hand-drawn Excalidraw sketches, see below) and ```` ```html demo height=320 ````
   fences for live CSS demos. The same source is served to agents as `index.md`.
+- Numbers that compare things go in a chart, not in prose or a wall of table cells:
+  a ```` ```chart ```` fence holds JSON for `bars` (with `panels` behind tabs),
+  `stack` or `line`; the types and fields are in `src/lib/markdown/chart.ts`. It is
+  drawn at build time as plain HTML (an SVG only for lines) with no script, and
+  `index.md` shows it as a Markdown table. Keep prose to one or two numbers per
+  paragraph, name scales in plain words ("1 billion requests a month") rather than
+  coined labels like T1/T2/T3, and fold commands and full reference tables into a
+  `<details>` appendix. A JSON error fails the build.
+- Code blocks over three lines start folded behind their bar (language, title, line count;
+  the copy button works while folded). Mark a fence `open` (```` ```ts open ````) when the
+  reader must see it without a click, or `fold` to fold a short one; `index.md` drops the
+  mark. When the first line is a comment it becomes the bar's title, so begin a long block
+  with a one-line comment that says what it shows.
+- Comics: a ```` ```comic ```` fence holds a script (optional `# title` first, `---` between
+  panels, one `> narration` per panel, `[Name] line` bubbles, `[Name!]` highlighted, `cols=N` panels
+  per row at most). It is drawn at build time as HTML panels (`src/lib/markdown/comic.ts` parses,
+  `comic-html.ts` draws), so the dialogue is real text. The cast is fixed and plain-spoken, never a
+  metaphor readers must decode: `用户` / `User`, `你的服务` / `Your service`, `大模型` / `LLM`,
+  `云厂商` / `Cloud` (carries flying money: it sends the bill) and `你` / `You`. Their pictures are
+  Microsoft Fluent Emoji 3D (MIT, `public/comics/LICENSE.txt`), self-hosted as 128px webp; the
+  dialogue face is LXGW WenKai Screen, subset per page as "ZQ Comic" like the other CJK faces.
+- Readers pick the article width (narrow / default / wide / full) in the rail; it is
+  stored as `zq-width` and applied by the head script in `Base.astro`. Charts, tables
+  and diagrams must work from a 640 px column up to a full-width one.
 - `npm run build` runs `astro build`, subsets the CJK display fonts per page
   (`scripts/subset-fonts.mjs`), screenshots the social cards
   (`scripts/og-images.mjs`) and builds the Pagefind search index.
@@ -75,7 +99,10 @@
   Each fence gets `diagrams/<id>.excalidraw` (the editable scene) and
   `public/diagrams/<id>.svg` (what the page shows), where the id is a hash of the
   fence text (`src/lib/markdown/diagram-id.ts`); the Markdown keeps the Mermaid
-  text for `index.md`. `npm run verify` fails while any fence lacks a drawing.
+  text for `index.md`, and the page keeps it too, folded under each drawing
+  (`details.diagram-src`, with a copy button), so an agent reading the HTML gets the
+  structure, not just the labels in the alt text. `npm run verify` fails while any
+  fence lacks a drawing.
   To touch up a drawing by hand, open its `.excalidraw` file on excalidraw.com,
   save it back over the file and run `npm run diagrams` again (it re-exports the
   SVG); `-- --force` redraws everything from Mermaid and discards such edits. The

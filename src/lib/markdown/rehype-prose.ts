@@ -14,15 +14,26 @@ const el = (tagName: string, properties: Element["properties"], children: Elemen
 const text = (value: string): ElementContent => ({ type: "text", value });
 
 const COPY = { zh: "复制", en: "Copy" } as const;
+const FOLD = {
+  zh: { show: (n: number) => `展开 · ${n} 行`, hide: "收起", count: (n: number) => `${n} 行代码` },
+  en: { show: (n: number) => `Show ${n} lines`, hide: "Hide", count: (n: number) => `${n} lines of code` },
+} as const;
+// A block this short is about as tall as its folded bar, so folding it would only hide it.
+const SHORT = 3;
+// The first line as the block's title when it is a comment (`// …`, `# …` but not `#!`, `-- …`, `/* … */`, `<!-- … -->`).
+const COMMENT_LINE = /^\s*(?:\/\/+|#(?!!)|--|;+|\/\*+|<!--)\s*(.*?)\s*(?:\*+\/|-->)?\s*$/;
 // github-dark-dimmed's comment colour is 4.49:1 on --term (#161a22); this shade is 4.88:1.
 const COMMENT = { from: /#768390/gi, to: "#7c8996" };
 const COLUMN = 652;
 
 /**
  * Presentation wrappers that the stylesheet hangs off:
- * - highlighted code blocks get a terminal-style frame with a language label and a copy button
- *   (the button ships `hidden` and is revealed by the page script, so no dead control without JS),
- *   and the theme's comment grey is lifted to pass WCAG AA on the frame's darker background;
+ * - highlighted code blocks get a terminal-style frame that folds: the bar shows the language, the
+ *   first line as a title when it is a comment, and the line count, and opens the code. Blocks of up
+ *   to three lines stay open; a fence marked `open` or `fold` (```ts open) overrides that (the Shiki
+ *   transformer in astro.config.ts copies the mark onto the <pre>). The copy button sits outside the
+ *   bar, ships `hidden` and is revealed by the page script, so there is no dead control without JS.
+ *   The theme's comment grey is lifted to pass WCAG AA on the frame's darker background;
  * - tables get a horizontally scrollable wrapper, and a table with an empty corner cell labels its
  *   rows with the first column (row headers, so screen readers announce what each cell is about);
  * - build-time Mermaid SVGs get a figure frame;
@@ -46,17 +57,28 @@ export function rehypeProse() {
 
       if (node.tagName === "pre" && classes.includes("astro-code")) {
         const language = String(props.dataLanguage ?? props["data-language"] ?? "text");
-        const bar = el("figcaption", {}, [
+        const source = toText(node, { whitespace: "pre" }).replace(/\n$/, "");
+        const lines = source.split("\n").length;
+        const mark = String(props.dataFold ?? props["data-fold"] ?? "");
+        const open = mark === "open" || (mark !== "fold" && lines <= SHORT);
+        const title = COMMENT_LINE.exec(source.split("\n")[0] ?? "")?.[1];
+        const bar = el("summary", { className: ["code-bar"] }, [
           el("i", { ariaHidden: "true" }),
           el("i", { ariaHidden: "true" }),
           el("i", { ariaHidden: "true" }),
-          el("span", {}, [text(language === "plaintext" ? "text" : language)]),
-          el("button", { className: ["copy"], type: "button", hidden: true }, [text(COPY[lang])]),
+          el("span", { className: ["code-lang"] }, [text(language === "plaintext" ? "text" : language)]),
+          ...(title ? [el("span", { className: ["code-title"] }, [text(title)])] : []),
+          el("span", { className: ["code-fold"], dataShow: FOLD[lang].show(lines), dataHide: FOLD[lang].hide }, [
+            // The words on the bar are drawn by CSS from these attributes; screen readers get the count
+            // here and the open / closed state from <summary> itself.
+            el("span", { className: ["sr-only"] }, [text(FOLD[lang].count(lines))]),
+          ]),
         ]);
         visit(node, "element", (span) => {
           if (typeof span.properties?.style === "string") span.properties.style = span.properties.style.replace(COMMENT.from, COMMENT.to);
         });
-        parent.children[index] = el("figure", { className: ["code"] }, [bar, node]);
+        const copy = el("button", { className: ["copy"], type: "button", hidden: true }, [text(COPY[lang])]);
+        parent.children[index] = el("figure", { className: ["code"] }, [el("details", open ? { open: true } : {}, [bar, node]), copy]);
         return "skip";
       }
       // Article images render at most at the text column width (652 CSS px). Declaring it

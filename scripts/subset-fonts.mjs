@@ -1,4 +1,4 @@
-// Gives every page its own tiny copy of the two CJK display faces. Google's unicode-range slices
+// Gives every page its own tiny copy of the CJK display faces. Google's unicode-range slices
 // made a typical page download 0.4–1.3 MB of Noto Serif SC / Long Cang (about 70 KB per slice,
 // and a title touches many slices); here each page gets one file per face with exactly the
 // characters it renders in that face, usually a few dozen KB.
@@ -40,6 +40,17 @@ const FACES = {
       file: "LongCang-Regular.ttf",
       url: `${GOOGLE_FONTS}/35e5529ffaf259a96693b048d9d97cdaa76b6837/ofl/longcang/LongCang-Regular.ttf`,
       sha256: "e5bf2c3f24ef2327c6f136d8f73e2f9dfdf44896fdbeb35a9515f44777bb91bc",
+    },
+    weight: () => 400,
+    variable: false,
+  },
+  // comic dialogue (src/lib/markdown/comic-html.ts): LXGW WenKai Screen, GB glyph forms, OFL
+  "ZQ Comic": {
+    slug: "comic",
+    source: {
+      file: "LXGWWenKaiGBScreen.ttf",
+      url: "https://github.com/lxgw/LxgwWenKai-Screen/releases/download/v1.522/LXGWWenKaiGBScreen.ttf",
+      sha256: "23ec023913e1851925eb94462c4b0ccd1d78bb89533745aaa8cc682ccd339dc0",
     },
     weight: () => 400,
     variable: false,

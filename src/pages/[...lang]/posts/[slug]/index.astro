@@ -236,6 +236,18 @@ const jsonLd = {
       <a class="chip-btn" href="#main">{L.backTop}</a>
       {alt && <a class="chip-btn" href={postUrl(other(lang), slug)} hreflang={other(lang)}>{L.readOther}</a>}
       <a class="chip-btn" href="index.md" type="text/markdown">index.md</a>
+      <div class="width-pick" role="group" aria-labelledby="width-pick-label" hidden>
+        <span class="kicker" id="width-pick-label">{L.readWidth}</span>
+        <div class="seg">
+          {
+            (["narrow", "default", "wide", "full"] as const).map((w) => (
+              <button type="button" data-width-set={w} aria-pressed={w === "default" ? "true" : "false"}>
+                {L.widths[w]}
+              </button>
+            ))
+          }
+        </div>
+      </div>
     </aside>
   </main>
 </Base>

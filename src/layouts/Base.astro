@@ -57,6 +57,11 @@ const ogImage = Astro.props.ogImage ?? new URL("/og-default.png", Astro.site).hr
         const theme = JSON.parse(localStorage.getItem("zq-theme"));
         if (theme === "dark" || theme === "light") document.documentElement.dataset.theme = theme;
       } catch {}
+      // The reader's article width (the picker beside each post), also before first paint.
+      try {
+        const width = JSON.parse(localStorage.getItem("zq-width"));
+        if (width === "narrow" || width === "wide" || width === "full") document.documentElement.dataset.width = width;
+      } catch {}
       // Opened in a window on this site's own desk: show just the page, without the site's frame.
       try {
         if (window.self !== window.top && window.top.location.origin === location.origin) document.documentElement.classList.add("embedded");
