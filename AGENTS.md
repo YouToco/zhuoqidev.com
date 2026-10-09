@@ -86,7 +86,10 @@
   Each fence gets `diagrams/<id>.excalidraw` (the editable scene) and
   `public/diagrams/<id>.svg` (what the page shows), where the id is a hash of the
   fence text (`src/lib/markdown/diagram-id.ts`); the Markdown keeps the Mermaid
-  text for `index.md`. `npm run verify` fails while any fence lacks a drawing.
+  text for `index.md`, and the page keeps it too, folded under each drawing
+  (`details.diagram-src`, with a copy button), so an agent reading the HTML gets the
+  structure, not just the labels in the alt text. `npm run verify` fails while any
+  fence lacks a drawing.
   To touch up a drawing by hand, open its `.excalidraw` file on excalidraw.com,
   save it back over the file and run `npm run diagrams` again (it re-exports the
   SVG); `-- --force` redraws everything from Mermaid and discards such edits. The
