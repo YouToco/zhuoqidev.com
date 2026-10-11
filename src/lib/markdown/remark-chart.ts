@@ -18,7 +18,7 @@ export function remarkChart() {
       try {
         spec = JSON.parse(node.value) as ChartSpec;
       } catch (e) {
-        throw new Error(`${file.path}: chart fence ${n + 1} is not valid JSON: ${(e as Error).message}`);
+        throw new Error(`${file.path}: chart fence ${n + 1} is not valid JSON: ${(e as Error).message}`, { cause: e });
       }
       parent.children[index] = { type: "html", value: renderChart(spec, `chart-${++n}`, lang) };
     });

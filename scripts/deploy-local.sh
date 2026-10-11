@@ -91,6 +91,7 @@ bash -n \
   scripts/deploy-local.sh
 python3 -m unittest discover -s tests -p "test_*.py" -v
 pnpm run check
+pnpm run lint
 pnpm run build
 pnpm run verify
 

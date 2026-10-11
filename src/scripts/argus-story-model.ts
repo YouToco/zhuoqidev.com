@@ -125,7 +125,7 @@ function box(name: string, size: V3, loc: V3 | Vector3, mat: string, parent: Obj
   // RoundedBoxGeometry also subdivides the flat middle of every face, so it needs about three times
   // the triangles of Blender's bevel for the same segments; small rounds get by with two.
   const s = b < 0.04 ? 2 : seg;
-  const geo = shared(`box ${size} ${b > 0.002 ? b : 0} ${s}`, () =>
+  const geo = shared(`box ${size.join(",")} ${b > 0.002 ? b : 0} ${s}`, () =>
     b > 0.002 ? new RoundedBoxGeometry(sx, sy, sz, s, b) : smooth(new BoxGeometry(sx, sy, sz)),
   );
   return mesh(name, geo, loc, rot, mat, parent);
@@ -151,7 +151,7 @@ function cyl(name: string, r: number, h: number, loc: V3 | Vector3, mat: string,
 }
 
 function sphere(name: string, r: number, loc: V3 | Vector3, mat: string, parent: Object3D, u = 24, vs = 14, scale: V3 = [1, 1, 1], cutBelow?: number) {
-  const geo = shared(`sphere ${r} ${u} ${vs} ${scale} ${cutBelow}`, () => {
+  const geo = shared(`sphere ${r} ${u} ${vs} ${scale.join(",")} ${cutBelow}`, () => {
     let g: BufferGeometry;
     if (cutBelow === undefined) {
       g = new SphereGeometry(r, u, vs);
@@ -173,7 +173,7 @@ function torus(name: string, R: number, r: number, loc: V3, mat: string, parent:
 }
 
 function prism(name: string, pts: [number, number][], h: number, loc: V3 | Vector3, mat: string, parent: Object3D, rot: V3 = [0, 0, 0]) {
-  const geo = shared(`prism ${pts} ${h}`, () =>
+  const geo = shared(`prism ${pts.join(",")} ${h}`, () =>
     new ExtrudeGeometry(new Shape(pts.map(([x, y]) => new Vector2(x, y))), { depth: h, bevelEnabled: false }),
   );
   return mesh(name, geo, loc, rot, mat, parent);
@@ -188,7 +188,7 @@ function tube(name: string, points: Vector3[], r: number, mat: string, parent: O
   const path = new CurvePath<Vector3>();
   const samples = [points[0]!.clone()];
   for (let i = 0; i < n - 1; i++) {
-    const c = new CubicBezierCurve3(points[i]!, points[i]!.clone().add(tan[i]!), points[i + 1]!.clone().sub(tan[i + 1]!), points[i + 1]!);
+    const c = new CubicBezierCurve3(points[i], points[i]!.clone().add(tan[i]!), points[i + 1]!.clone().sub(tan[i + 1]!), points[i + 1]);
     path.add(c);
     for (let k = 1; k <= res; k++) samples.push(c.getPoint(k / res));
   }
@@ -196,7 +196,7 @@ function tube(name: string, points: Vector3[], r: number, mat: string, parent: O
   const start = points[0]!;
   const end = points[n - 1]!;
   const ends = [start, end].map((p) => new SphereGeometry(r, 12, 6).translate(p.x, p.y, p.z));
-  const geo = mergeGeometries([new TubeGeometry(path, res * (n - 1), r, 12, false), ...ends])!.translate(-start.x, -start.y, -start.z);
+  const geo = mergeGeometries([new TubeGeometry(path, res * (n - 1), r, 12, false), ...ends]).translate(-start.x, -start.y, -start.z);
   // origin at the start, so the page can grow it from there
   return mesh(name, geo, start, [0, 0, 0], mat, parent);
 }

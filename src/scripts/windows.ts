@@ -169,7 +169,7 @@ if (icons.length && window.self === window.top) {
       if (!wide.matches || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
       e.preventDefault();
       // Keyboard (Enter) and touch open straight away; a mouse selects first, like a desktop.
-      const touch = (e as PointerEvent).pointerType === "touch" || (e as PointerEvent).pointerType === "pen";
+      const touch = (e).pointerType === "touch" || (e).pointerType === "pen";
       if (e.detail === 0 || touch || e.detail >= 2) open(icon);
       else select(icon);
     });

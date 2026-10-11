@@ -12,9 +12,12 @@ export type Checked = { ok: true; note: Note } | { ok: false; error: "bad-reques
 
 // Control characters (other than newline) and invisible formatting characters that could
 // hide or reorder text; plain line breaks stay.
-const INVISIBLE = /[\u0000-\u0009\u000b-\u001f\u007f-\u009f​-‏‪-‮⁠-⁩﻿]/g;
+// eslint-disable-next-line no-control-regex -- stripping control characters is the point
+const INVISIBLE = /[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]/g;
 
 const clean = (s: string) => s.normalize("NFC").replace(/\r\n?/g, "\n").replace(INVISIBLE, "");
+// The limit counts code points (an emoji is one character, as readers count it).
+// eslint-disable-next-line @typescript-eslint/no-misused-spread -- code points are what is counted
 const length = (s: string) => [...s].length;
 
 export function checkNote(input: unknown): Checked {

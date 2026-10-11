@@ -99,7 +99,7 @@ if (board) {
       s.style.left = `${x}%`;
       s.style.top = `${y}%`;
       s.style.fontSize = `${9 + ((i * 7) % 9)}px`;
-      s.style.animationDelay = `${-((i * 1.37) % 4).toFixed(2)}s`;
+      s.style.animationDelay = `${-Number(((i * 1.37) % 4).toFixed(2))}s`;
       s.style.animationDuration = `${3 + (i % 4) * 0.7}s`;
       sky.append(s);
       return s;

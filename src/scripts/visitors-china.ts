@@ -90,14 +90,14 @@ function outline(polys: Poly[], y: number, inset: boolean) {
 
 const css = (name: string) => new Color(getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "#888");
 
-export async function mountChina(opts: {
+export function mountChina(opts: {
   stage: HTMLElement;
   reduced: boolean;
   southSea: string;
   /** Province names in the page's language, by adcode. */
   names: Map<number, string>;
   onTip: (t: Tip | null, x?: number, y?: number) => void;
-}): Promise<ChinaScene> {
+}): ChinaScene {
   const { stage, reduced, southSea, names, onTip } = opts;
   const canvas = document.createElement("canvas");
   canvas.setAttribute("aria-hidden", "true");
@@ -152,7 +152,7 @@ export async function mountChina(opts: {
     new Float32BufferAttribute([fx1, 0, -fn1, fx2, 0, -fn1, fx2, 0, -fn1, fx2, 0, -fn2, fx2, 0, -fn2, fx1, 0, -fn2, fx1, 0, -fn2, fx1, 0, -fn1], 3),
   );
   const frameMat = new LineBasicMaterial();
-  const dashLine = new LineSegments(outline(china.dash as Poly[], 0.006, true), frameMat);
+  const dashLine = new LineSegments(outline(china.dash, 0.006, true), frameMat);
   map.add(island, dash, dashLine, new LineSegments(frameGeo, frameMat));
   const insetCorner = new Vector3(fx1, 0, -fn2); // the label goes under the frame's lower left corner
 

@@ -56,7 +56,7 @@ window.fromMermaid = async (source) => {
     let src = source;
     let n = 0;
     for (const m of source.matchAll(/^\s*subgraph\s+([^\s[]+)/gm)) {
-      if (!/[^\x00-\x7f]/.test(m[1])) continue;
+      if (!/[\x80-￿]/.test(m[1])) continue;
       src = src.replace(new RegExp(`(^|[\\s>|&])${m[1]}(?=$|[\\s[-])`, "gm"), `$1sg_${n++}`);
     }
     // Mermaid sizes the boxes, so let it measure in the hand fonts (loaded by warmFonts above) and

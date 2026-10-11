@@ -46,8 +46,12 @@ function init(root: HTMLElement) {
   const lang = root.dataset.lang === "en" ? "en" : "zh";
   const locale = lang === "zh" ? "zh-CN" : "en";
   const M = JSON.parse(root.dataset.msg!) as Msg;
-  const s = (k: string) => String(M[k] ?? "");
+  const s = (k: string) => {
+    const t = M[k];
+    return typeof t === "string" ? t : "";
+  };
   const num = new Intl.NumberFormat(locale);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- a typed querySelector, like the DOM's own
   const $ = <T extends Element>(sel: string) => root.querySelector<T>(sel)!;
   const status = $<HTMLElement>("[data-status]");
   const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string) => {

@@ -69,7 +69,9 @@ async function downloadDay(day: string): Promise<Buffer[]> {
       "--EndTime", end.toISOString().replace(/\.\d+Z$/, "Z"),
       "--PageSize", "1000",
     ], { encoding: "utf8" });
-    const details = JSON.parse(out).DomainLogDetails?.DomainLogDetail ?? [];
+    // The fields of DescribeCdnDomainLogs this script reads.
+    type Logs = { DomainLogDetails?: { DomainLogDetail?: { LogInfos?: { LogInfoDetail?: { LogPath: string; LogName: string }[] } }[] } };
+    const details = (JSON.parse(out) as Logs).DomainLogDetails?.DomainLogDetail ?? [];
     for (const d of details) {
       for (const log of d.LogInfos?.LogInfoDetail ?? []) {
         const res = await fetch(`https://${log.LogPath}`);

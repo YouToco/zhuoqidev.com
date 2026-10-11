@@ -76,7 +76,17 @@
   (`scripts/og-images.mjs`) and builds the Pagefind search index.
   `pnpm run verify` then checks every legacy Hugo URL, internal link and anchor,
   hreflang pair, JSON-LD block, image size, font subset and Markdown twin.
-  `pnpm run check` is the strict TypeScript gate. Run all three before pushing.
+  `pnpm run check` is the strict TypeScript gate and `pnpm run lint` the ESLint one
+  (`eslint.config.js`: typescript-eslint strict type-checked plus the Astro rules; each
+  exception there says why). Run all four before pushing.
+- Dependencies: pnpm, at the version in `package.json` `"packageManager"` (Corepack or
+  `pnpm/action-setup` picks it up); install with `pnpm install --frozen-lockfile`, add
+  with `pnpm add --save-exact`. `pnpm-workspace.yaml` sets the supply-chain policy: only
+  versions public for a day, no release whose publishing evidence is weaker than its
+  predecessors', and no dependency install scripts unless listed in `allowBuilds`. When
+  an install stops on one of these, check the package before adding an exception, and
+  write the reason next to it as the existing entries do. The strict `node_modules` only
+  exposes declared packages: import nothing that is not in `package.json`.
 - Fonts: Inter, JetBrains Mono and Caveat (Latin) come from Astro's font API and
   are inlined by `src/components/Fonts.astro`. The CJK display faces are not:
   `"ZQ Serif"` (Noto Serif SC, weights 700/900) and `"ZQ Hand"` (Long Cang) are

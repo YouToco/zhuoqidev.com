@@ -32,7 +32,7 @@ function assertPaired(entries: Entry[], kind: string) {
     s.add(langOf(e));
     seen.set(slugOf(e), s);
   }
-  const missing = [...seen].filter(([, s]) => s.size !== LANGS.length).map(([slug, s]) => `${kind}/${slug} (${[...s]})`);
+  const missing = [...seen].filter(([, s]) => s.size !== LANGS.length).map(([slug, s]) => `${kind}/${slug} (${[...s].join(",")})`);
   if (missing.length) throw new Error(`Missing translation for: ${missing.join(", ")}`);
 }
 
@@ -60,7 +60,7 @@ export function splitTitle(title: string): { main: string; sub?: string | undefi
   if (!m) return { main: title };
   const keep = m[2] === "？" ? "？" : "";
   // "问句？——副标题": the split lands on the question mark, so drop the dash it leaves behind.
-  return { main: m[1] + keep, sub: m[3]?.replace(/^——/, "") };
+  return { main: m[1]! + keep, sub: m[3]?.replace(/^——/, "") };
 }
 
 /** Readable length: CJK characters + Latin words for zh, words for en. Code blocks excluded. */

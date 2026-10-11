@@ -5,7 +5,7 @@ export function cue(tty: HTMLElement, start = 0.15): number {
   for (const ln of tty.querySelectorAll<HTMLElement>(".ln")) {
     ln.style.setProperty("--d", `${t.toFixed(2)}s`);
     if (ln.classList.contains("cmd")) {
-      const n = ln.textContent!.length;
+      const n = ln.textContent.length;
       ln.style.setProperty("--n", String(n));
       t += n * 0.03 + 0.12;
     } else {

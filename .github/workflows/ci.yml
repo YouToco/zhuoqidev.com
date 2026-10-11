@@ -47,6 +47,14 @@ jobs:
       - name: Type-check
         run: pnpm run check
 
+      - name: Lint
+        run: pnpm run lint
+
+      # Known advisories at moderate severity or above fail the PR. Deploy does not run this:
+      # an advisory published later must not hold back an already reviewed change on main.
+      - name: Audit dependencies
+        run: pnpm audit --audit-level moderate
+
       - name: Unit-test Pages Functions and scripts
         run: pnpm test
 

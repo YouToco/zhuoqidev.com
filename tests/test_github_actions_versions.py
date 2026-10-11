@@ -64,10 +64,16 @@ class GitHubActionsVersionTests(unittest.TestCase):
                 self.assertIn("pnpm install --frozen-lockfile", text)
                 self.assertNotRegex(text, r"\bnpm (ci|install|run|test)\b")
                 self.assertIn("pnpm run check", text)
+                self.assertIn("pnpm run lint", text)
                 self.assertIn("pnpm test", text)
                 self.assertIn("pnpm run build", text)
                 self.assertIn("pnpm run verify", text)
                 self.assertNotIn("hugo", text.lower())
+
+    def test_pull_requests_audit_dependencies(self) -> None:
+        # Only CI audits: an advisory published after review must not block a deploy from main.
+        self.assertIn("pnpm audit --audit-level moderate", (WORKFLOWS / "ci.yml").read_text(encoding="utf-8"))
+        self.assertNotIn("pnpm audit", (WORKFLOWS / "deploy.yml").read_text(encoding="utf-8"))
 
     def test_cjk_fonts_come_from_a_pinned_commit_with_checksums(self) -> None:
         # apt on the runner sometimes waited minutes on the Ubuntu mirror; the script fetches

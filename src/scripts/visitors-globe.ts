@@ -79,11 +79,11 @@ function landDots(): Float32Array {
 
 const css = (name: string) => new Color(getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "#888");
 
-export async function mountGlobe(opts: {
+export function mountGlobe(opts: {
   stage: HTMLElement;
   reduced: boolean;
   onTip: (t: Tip | null, x?: number, y?: number) => void;
-}): Promise<GlobeScene> {
+}): GlobeScene {
   const { stage, reduced, onTip } = opts;
   const canvas = document.createElement("canvas");
   canvas.setAttribute("aria-hidden", "true");
@@ -345,7 +345,7 @@ export async function mountGlobe(opts: {
     }
     if (!reduced) {
       if (!dragging && now - idleSince > 2500) spin.rotation.y += dt * 0.08;
-      arcMat.uniforms.uTime!.value += dt;
+      (arcMat.uniforms.uTime!.value as number) += dt;
       const p = (now / 1600) % 1;
       ring.scale.setScalar(1 + p * 2.4);
       ringMat.opacity = 1 - p;

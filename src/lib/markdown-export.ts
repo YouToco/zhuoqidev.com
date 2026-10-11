@@ -24,8 +24,8 @@ export async function postMarkdown(post: Post) {
   const base = new URL(SITE_URL);
   let body = (post.body ?? "").trim();
   body = await replaceAsync(body, /(!\[[^\]]*\]\()(\.\/[^\s)]+)/g, async (whole, pre, path) => {
-    const img = postImage(slug, path!);
-    return img ? `${pre}${await imageUrl(img, 1600, base)}` : whole!;
+    const img = postImage(slug, path);
+    return img ? `${pre}${await imageUrl(img, 1600, base)}` : whole;
   });
   body = body.replace(/\]\(\/(?!\/)/g, `](${SITE_URL}/`);
   // The fold marks on code fences only matter to the page.

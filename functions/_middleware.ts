@@ -14,7 +14,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     if ((request.method === "GET" || request.method === "HEAD") && isPageLike(pathname) && !backend) {
       const crawler = classify(request.headers.get("User-Agent"));
       if (crawler) {
-        context.waitUntil(recordCrawler(env.DB, beijingDay(), "cf", crawler).catch((e) => console.error("crawler count failed", e)));
+        context.waitUntil(recordCrawler(env.DB, beijingDay(), "cf", crawler).catch((e: unknown) => { console.error("crawler count failed", e); }));
       }
     }
   } catch (e) {

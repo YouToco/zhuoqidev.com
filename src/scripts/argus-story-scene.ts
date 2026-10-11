@@ -87,7 +87,7 @@ export async function mount(opts: {
 
   const model = buildArgusStory();
   model.traverse((o) => {
-    if ((o as Mesh).isMesh) o.castShadow = o.receiveShadow = true;
+    if ((o as Partial<Mesh>).isMesh === true) o.castShadow = o.receiveShadow = true;
   });
   scene.add(model);
   model.updateMatrixWorld(true);
