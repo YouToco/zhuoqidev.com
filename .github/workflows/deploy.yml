@@ -58,6 +58,9 @@ jobs:
       - name: Lint
         run: pnpm run lint
 
+      - name: Check formatting
+        run: pnpm run format:check
+
       - name: Unit-test Pages Functions and scripts
         run: pnpm test
 

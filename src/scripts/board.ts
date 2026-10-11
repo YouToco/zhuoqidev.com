@@ -90,8 +90,22 @@ if (board) {
     sky.setAttribute("aria-hidden", "true");
     // Fixed spots (percent of the desk) so the sky looks the same on every visit.
     const spots = [
-      [31, 3], [56, 2], [92, 9], [35, 15], [66, 13], [97, 30], [33, 41], [64, 44],
-      [96, 47], [34, 63], [68, 66], [6, 85], [27, 83], [55, 86], [70, 97], [93, 99],
+      [31, 3],
+      [56, 2],
+      [92, 9],
+      [35, 15],
+      [66, 13],
+      [97, 30],
+      [33, 41],
+      [64, 44],
+      [96, 47],
+      [34, 63],
+      [68, 66],
+      [6, 85],
+      [27, 83],
+      [55, 86],
+      [70, 97],
+      [93, 99],
     ];
     const stars = spots.map(([x, y], i) => {
       const s = document.createElement("span");

@@ -105,7 +105,8 @@ function init(root: HTMLElement) {
   }
 
   function render(d: Stats) {
-    for (const k of ["views", "visitors", "countries", "crawlers"] as const) $(`[data-kpi="${k}"]`).textContent = num.format(d.totals[k]);
+    for (const k of ["views", "visitors", "countries", "crawlers"] as const)
+      $(`[data-kpi="${k}"]`).textContent = num.format(d.totals[k]);
 
     const countries = d.countries.map((c) => ({ ...c, name: countryName(c.code) }));
     list($("[data-list=countries]"), countries.slice(0, 15));
@@ -129,7 +130,12 @@ function init(root: HTMLElement) {
     const cell = (n: number) => el("td", "v", n ? num.format(n) : "–");
     const rows = d.crawlers.bots.map((b) => {
       const tr = el("tr");
-      tr.append(el("td", "", M.botNames[b.bot] ?? b.bot), el("td", "co", M.botNames[b.company] ?? b.company), cell(b.cf), cell(b.cn));
+      tr.append(
+        el("td", "", M.botNames[b.bot] ?? b.bot),
+        el("td", "co", M.botNames[b.company] ?? b.company),
+        cell(b.cf),
+        cell(b.cn),
+      );
       return tr;
     });
     if (d.crawlers.rest) {
@@ -146,7 +152,10 @@ function init(root: HTMLElement) {
     const notes = [
       d.since && s("since").replace("{d}", d.since),
       d.cnLatestDay && s("cnLatest").replace("{d}", d.cnLatestDay),
-      s("updated").replace("{t}", new Date(d.updated).toLocaleString(locale, { dateStyle: "short", timeStyle: "short" })),
+      s("updated").replace(
+        "{t}",
+        new Date(d.updated).toLocaleString(locale, { dateStyle: "short", timeStyle: "short" }),
+      ),
     ].filter(Boolean);
     $("[data-since]").textContent = notes.join(" · ");
 
@@ -183,7 +192,11 @@ function init(root: HTMLElement) {
       svg.append(r);
     });
     const axis = el("div", "vis-axis");
-    axis.append(el("span", "", d.days[0]!.day), el("span", "", `max ${num.format(max)}`), el("span", "", d.days[n - 1]!.day));
+    axis.append(
+      el("span", "", d.days[0]!.day),
+      el("span", "", `max ${num.format(max)}`),
+      el("span", "", d.days[n - 1]!.day),
+    );
     target.replaceChildren(svg, axis);
   }
 
@@ -228,7 +241,10 @@ function init(root: HTMLElement) {
     return (t: Tip | null, x = 0, y = 0) => {
       tip.hidden = !t;
       if (!t) return;
-      tip.replaceChildren(el("b", "", t.title), el("span", "", `${num.format(t.visitors)} ${s("visitorsUnit")} · ${num.format(t.views)} ${s("viewsUnit")}`));
+      tip.replaceChildren(
+        el("b", "", t.title),
+        el("span", "", `${num.format(t.visitors)} ${s("visitorsUnit")} · ${num.format(t.views)} ${s("viewsUnit")}`),
+      );
       tip.style.left = `${x}px`;
       tip.style.top = `${y}px`;
     };
@@ -244,12 +260,16 @@ function init(root: HTMLElement) {
       const opts = { stage, reduced, lang, onTip: tipFor(stage) };
       const started =
         kind === "globe"
-          ? import("./visitors-globe").then((m) => m.mountGlobe(opts)).then((g) => {
-              globe = g;
-            })
-          : import("./visitors-china").then((m) => m.mountChina({ ...opts, southSea: s("southSea"), names: provinceName })).then((c) => {
-              china = c;
-            });
+          ? import("./visitors-globe")
+              .then((m) => m.mountGlobe(opts))
+              .then((g) => {
+                globe = g;
+              })
+          : import("./visitors-china")
+              .then((m) => m.mountChina({ ...opts, southSea: s("southSea"), names: provinceName }))
+              .then((c) => {
+                china = c;
+              });
       started
         .then(() => {
           stage.classList.add("live");

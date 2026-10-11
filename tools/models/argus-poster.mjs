@@ -32,7 +32,9 @@ const bundle = await build({
       name: "one-three",
       setup(b) {
         b.onResolve({ filter: /^three(\/|$)/ }, (args) =>
-          args.pluginData === "again" ? undefined : b.resolve(args.path, { resolveDir: ROOT, kind: args.kind, pluginData: "again" }),
+          args.pluginData === "again"
+            ? undefined
+            : b.resolve(args.path, { resolveDir: ROOT, kind: args.kind, pluginData: "again" }),
         );
       },
     },
@@ -54,8 +56,12 @@ const pass = async (i) => {
     const r = await page.evaluate((o) => window.renderPoster(o), { samples: SAMPLES, seed: i * 1000003 });
     if (errors.length) throw new Error(errors.join("\n"));
     if (/swiftshader|llvmpipe/i.test(r.gpu)) throw new Error(`software rendering (${r.gpu}): run it on a GPU`);
-    const { data, info } = await sharp(Buffer.from(r.png.split(",")[1], "base64")).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-    if (!data.some((x, k) => k % 4 === 3 && x > 0)) throw new Error(`pass ${i + 1} came back blank (WebGL context lost?)`);
+    const { data, info } = await sharp(Buffer.from(r.png.split(",")[1], "base64"))
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    if (!data.some((x, k) => k % 4 === 3 && x > 0))
+      throw new Error(`pass ${i + 1} came back blank (WebGL context lost?)`);
     console.log(`pass ${i + 1}/${PASSES}: ${SAMPLES} samples in ${(r.ms / 1000).toFixed(1)} s on ${r.gpu}`);
     return { ...r, data, info };
   } finally {
@@ -64,7 +70,9 @@ const pass = async (i) => {
 };
 
 // sRGB <-> linear, to average the passes as light rather than as pixel values
-const LIN = Float64Array.from({ length: 256 }, (_, c) => (c / 255 <= 0.04045 ? c / 255 / 12.92 : ((c / 255 + 0.055) / 1.055) ** 2.4));
+const LIN = Float64Array.from({ length: 256 }, (_, c) =>
+  c / 255 <= 0.04045 ? c / 255 / 12.92 : ((c / 255 + 0.055) / 1.055) ** 2.4,
+);
 const srgb8 = (x) => {
   const y = Math.min(Math.max(x, 0), 1);
   return Math.round((y <= 0.0031308 ? y * 12.92 : 1.055 * y ** (1 / 2.4) - 0.055) * 255);

@@ -12,18 +12,14 @@ import "../styles/global.css";
 
 export interface Props {
   lang: Lang;
-  /** Page title without the site name. Omit on the home page. */
   title?: string | undefined;
   description?: string | undefined;
-  /** Path of this page without the language prefix, e.g. "/posts/foo/". */
   path: string;
-  /** Path of the translated page; null when this page has no translation. */
   altPath?: string | null | undefined;
   section?: "home" | "posts" | "about" | "projects" | undefined;
   ogType?: "website" | "article" | undefined;
   ogImage?: string | undefined;
   jsonLd?: Record<string, unknown> | undefined;
-  /** Markdown twin of this page, linked as rel=alternate type=text/markdown. */
   markdown?: string | undefined;
   bodyClass?: string | undefined;
   noindex?: boolean | undefined;
@@ -38,7 +34,6 @@ const canonical = new URL(url(lang, path), Astro.site).href;
 const alt = altPath === null ? null : new URL(url(other(lang), altPath), Astro.site).href;
 const zhHref = lang === "zh" ? canonical : alt;
 const enHref = lang === "en" ? canonical : alt;
-// Preload only the Latin body face; everything else loads on demand by unicode-range.
 const bodyFont = (fontData["--font-inter"] ?? [])
   .filter((f) => f.weight === "400" && f.style === "normal")
   .flatMap((f) => f.src.filter((s) => s.format === "woff2").map((s) => s.url))
@@ -158,14 +153,20 @@ const ogImage = Astro.props.ogImage ?? new URL("/og-default.png", Astro.site).hr
     <meta name="twitter:site" content={social.xHandle} />
 
     <Fonts />
-    {bodyFont.map((f) => <link rel="preload" href={f} as="font" type="font/woff2" crossorigin />)}
+    {bodyFont.map((f) => (
+      <link rel="preload" href={f} as="font" type="font/woff2" crossorigin />
+    ))}
     {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
     <slot name="head" />
   </head>
   <body class={bodyClass}>
-    <a class="skip" href="#main">{lang === "zh" ? "跳到正文" : "Skip to content"}</a>
+    <a class="skip" href="#main">
+      {lang === "zh" ? "跳到正文" : "Skip to content"}
+    </a>
     <slot name="before" />
-    <Topbar lang={lang} path={path} altPath={altPath}><slot name="topbar" /></Topbar>
+    <Topbar lang={lang} path={path} altPath={altPath}>
+      <slot name="topbar" />
+    </Topbar>
     <slot />
     <Footer lang={lang} path={path} />
     <Dock lang={lang} section={section} />

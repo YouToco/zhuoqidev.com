@@ -78,7 +78,9 @@
   hreflang pair, JSON-LD block, image size, font subset and Markdown twin.
   `pnpm run check` is the strict TypeScript gate and `pnpm run lint` the ESLint one
   (`eslint.config.js`: typescript-eslint strict type-checked plus the Astro rules; each
-  exception there says why). Run all four before pushing.
+  exception there says why). `pnpm run format` applies Prettier to code and config
+  (`.prettierignore` says what it leaves alone and why); CI fails on unformatted code.
+  Run build, verify, check, lint and `pnpm run format:check` before pushing.
 - Dependencies: pnpm, at the version in `package.json` `"packageManager"` (Corepack or
   `pnpm/action-setup` picks it up); install with `pnpm install --frozen-lockfile`, add
   with `pnpm add --save-exact`. `pnpm-workspace.yaml` sets the supply-chain policy: only

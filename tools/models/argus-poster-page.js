@@ -44,7 +44,9 @@ function frame(model) {
     o.geometry.computeBoundingBox();
     const { min, max } = o.geometry.boundingBox;
     for (let k = 0; k < 8; k++) {
-      corners.push(new Vector3(k & 1 ? max.x : min.x, k & 2 ? max.y : min.y, k & 4 ? max.z : min.z).applyMatrix4(o.matrixWorld));
+      corners.push(
+        new Vector3(k & 1 ? max.x : min.x, k & 2 ? max.y : min.y, k & 4 ? max.z : min.z).applyMatrix4(o.matrixWorld),
+      );
     }
   });
   const v = new Vector3();
@@ -122,7 +124,12 @@ window.renderPoster = async ({ samples, seed }) => {
   scene.environment = world;
   scene.environmentIntensity = 0.35 * EXPOSURE;
   const area = (at, watts, size, rgb) => {
-    const light = new RectAreaLight(new Color().setRGB(...rgb), (watts / (Math.PI * size * size)) * EXPOSURE, size, size);
+    const light = new RectAreaLight(
+      new Color().setRGB(...rgb),
+      (watts / (Math.PI * size * size)) * EXPOSURE,
+      size,
+      size,
+    );
     light.position.copy(toGl(at));
     light.lookAt(AIM);
     scene.add(light);

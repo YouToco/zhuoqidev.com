@@ -8,7 +8,8 @@ export const MAX_BODY = 200;
 export const MIN_MS_ON_PAGE = 3000;
 
 export type Note = { name: string; body: string; color: Color; lang: "zh" | "en" };
-export type Checked = { ok: true; note: Note } | { ok: false; error: "bad-request" | "empty" | "too-long" | "too-fast" | "spam" };
+export type Checked =
+  { ok: true; note: Note } | { ok: false; error: "bad-request" | "empty" | "too-long" | "too-fast" | "spam" };
 
 // Control characters (other than newline) and invisible formatting characters that could
 // hide or reorder text; plain line breaks stay.
@@ -26,9 +27,14 @@ export function checkNote(input: unknown): Checked {
   // The form has a field people never see; anything typed into it came from a bot.
   if (typeof o.website === "string" && o.website !== "") return { ok: false, error: "spam" };
   if (typeof o.ms !== "number" || o.ms < MIN_MS_ON_PAGE) return { ok: false, error: "too-fast" };
-  if (typeof o.body !== "string" || (o.name !== undefined && typeof o.name !== "string")) return { ok: false, error: "bad-request" };
-  const body = clean(o.body).replace(/\n{3,}/g, "\n\n").trim();
-  const name = clean(typeof o.name === "string" ? o.name : "").replace(/\s+/g, " ").trim();
+  if (typeof o.body !== "string" || (o.name !== undefined && typeof o.name !== "string"))
+    return { ok: false, error: "bad-request" };
+  const body = clean(o.body)
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  const name = clean(typeof o.name === "string" ? o.name : "")
+    .replace(/\s+/g, " ")
+    .trim();
   if (!body) return { ok: false, error: "empty" };
   if (length(body) > MAX_BODY || length(name) > MAX_NAME) return { ok: false, error: "too-long" };
   const color = COLORS.includes(o.color as Color) ? (o.color as Color) : "yellow";

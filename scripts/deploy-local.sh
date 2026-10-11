@@ -92,6 +92,7 @@ bash -n \
 python3 -m unittest discover -s tests -p "test_*.py" -v
 pnpm run check
 pnpm run lint
+pnpm run format:check
 pnpm run build
 pnpm run verify
 

@@ -9,12 +9,17 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   const { hostname, pathname, search } = new URL(request.url);
   const backend = /^\/(api|admin)(\/|$)/.test(pathname);
   // api.zhuoqidev.com is only there for the API and /admin/; send its pages back to the site.
-  if (hostname === "api.zhuoqidev.com" && !backend) return Response.redirect(`https://zhuoqidev.com${pathname}${search}`, 301);
+  if (hostname === "api.zhuoqidev.com" && !backend)
+    return Response.redirect(`https://zhuoqidev.com${pathname}${search}`, 301);
   try {
     if ((request.method === "GET" || request.method === "HEAD") && isPageLike(pathname) && !backend) {
       const crawler = classify(request.headers.get("User-Agent"));
       if (crawler) {
-        context.waitUntil(recordCrawler(env.DB, beijingDay(), "cf", crawler).catch((e: unknown) => { console.error("crawler count failed", e); }));
+        context.waitUntil(
+          recordCrawler(env.DB, beijingDay(), "cf", crawler).catch((e: unknown) => {
+            console.error("crawler count failed", e);
+          }),
+        );
       }
     }
   } catch (e) {

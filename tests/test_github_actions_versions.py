@@ -65,6 +65,7 @@ class GitHubActionsVersionTests(unittest.TestCase):
                 self.assertNotRegex(text, r"\bnpm (ci|install|run|test)\b")
                 self.assertIn("pnpm run check", text)
                 self.assertIn("pnpm run lint", text)
+                self.assertIn("pnpm run format:check", text)
                 self.assertIn("pnpm test", text)
                 self.assertIn("pnpm run build", text)
                 self.assertIn("pnpm run verify", text)

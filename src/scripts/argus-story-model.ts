@@ -119,7 +119,16 @@ function place<T extends Object3D>(o: T, name: string, loc: V3 | Vector3, rot: V
 const mesh = (name: string, geo: BufferGeometry, loc: V3 | Vector3, rot: V3, mat: string, parent: Object3D) =>
   place(new Mesh(geo, material(mat)), name, loc, rot, parent);
 
-function box(name: string, size: V3, loc: V3 | Vector3, mat: string, parent: Object3D, bevel = 0.05, seg = 4, rot: V3 = [0, 0, 0]) {
+function box(
+  name: string,
+  size: V3,
+  loc: V3 | Vector3,
+  mat: string,
+  parent: Object3D,
+  bevel = 0.05,
+  seg = 4,
+  rot: V3 = [0, 0, 0],
+) {
   const [sx, sy, sz] = size;
   const b = Math.min(bevel, 0.45 * Math.min(...size));
   // RoundedBoxGeometry also subdivides the flat middle of every face, so it needs about three times
@@ -131,7 +140,17 @@ function box(name: string, size: V3, loc: V3 | Vector3, mat: string, parent: Obj
   return mesh(name, geo, loc, rot, mat, parent);
 }
 
-function cyl(name: string, r: number, h: number, loc: V3 | Vector3, mat: string, parent: Object3D, seg = 32, rot: V3 = [0, 0, 0], bevel = 0) {
+function cyl(
+  name: string,
+  r: number,
+  h: number,
+  loc: V3 | Vector3,
+  mat: string,
+  parent: Object3D,
+  seg = 32,
+  rot: V3 = [0, 0, 0],
+  bevel = 0,
+) {
   const geo = shared(`cyl ${r} ${h} ${seg} ${bevel}`, () => {
     if (bevel <= 0) return smooth(new CylinderGeometry(r, r, h, seg).rotateX(PI / 2));
     // the profile of a disc with rounded rims, spun about its axis
@@ -150,7 +169,17 @@ function cyl(name: string, r: number, h: number, loc: V3 | Vector3, mat: string,
   return mesh(name, geo, loc, rot, mat, parent);
 }
 
-function sphere(name: string, r: number, loc: V3 | Vector3, mat: string, parent: Object3D, u = 24, vs = 14, scale: V3 = [1, 1, 1], cutBelow?: number) {
+function sphere(
+  name: string,
+  r: number,
+  loc: V3 | Vector3,
+  mat: string,
+  parent: Object3D,
+  u = 24,
+  vs = 14,
+  scale: V3 = [1, 1, 1],
+  cutBelow?: number,
+) {
   const geo = shared(`sphere ${r} ${u} ${vs} ${scale.join(",")} ${cutBelow}`, () => {
     let g: BufferGeometry;
     if (cutBelow === undefined) {
@@ -167,14 +196,34 @@ function sphere(name: string, r: number, loc: V3 | Vector3, mat: string, parent:
   return mesh(name, geo, loc, [0, 0, 0], mat, parent);
 }
 
-function torus(name: string, R: number, r: number, loc: V3, mat: string, parent: Object3D, maj = 48, mnr = 12, arc = 2 * PI, rot: V3 = [0, 0, 0]) {
+function torus(
+  name: string,
+  R: number,
+  r: number,
+  loc: V3,
+  mat: string,
+  parent: Object3D,
+  maj = 48,
+  mnr = 12,
+  arc = 2 * PI,
+  rot: V3 = [0, 0, 0],
+) {
   const geo = shared(`torus ${R} ${r} ${maj} ${mnr} ${arc}`, () => new TorusGeometry(R, r, mnr, maj, arc));
   return mesh(name, geo, loc, rot, mat, parent);
 }
 
-function prism(name: string, pts: [number, number][], h: number, loc: V3 | Vector3, mat: string, parent: Object3D, rot: V3 = [0, 0, 0]) {
-  const geo = shared(`prism ${pts.join(",")} ${h}`, () =>
-    new ExtrudeGeometry(new Shape(pts.map(([x, y]) => new Vector2(x, y))), { depth: h, bevelEnabled: false }),
+function prism(
+  name: string,
+  pts: [number, number][],
+  h: number,
+  loc: V3 | Vector3,
+  mat: string,
+  parent: Object3D,
+  rot: V3 = [0, 0, 0],
+) {
+  const geo = shared(
+    `prism ${pts.join(",")} ${h}`,
+    () => new ExtrudeGeometry(new Shape(pts.map(([x, y]) => new Vector2(x, y))), { depth: h, bevelEnabled: false }),
   );
   return mesh(name, geo, loc, rot, mat, parent);
 }
@@ -184,11 +233,20 @@ function prism(name: string, pts: [number, number][], h: number, loc: V3 | Vecto
 const PATHS: Record<string, Vector3[]> = {};
 function tube(name: string, points: Vector3[], r: number, mat: string, parent: Object3D, res = 16, record = false) {
   const n = points.length;
-  const tan = points.map((_, i) => points[Math.min(i + 1, n - 1)]!.clone().sub(points[Math.max(i - 1, 0)]!).divideScalar(6));
+  const tan = points.map((_, i) =>
+    points[Math.min(i + 1, n - 1)]!.clone()
+      .sub(points[Math.max(i - 1, 0)]!)
+      .divideScalar(6),
+  );
   const path = new CurvePath<Vector3>();
   const samples = [points[0]!.clone()];
   for (let i = 0; i < n - 1; i++) {
-    const c = new CubicBezierCurve3(points[i], points[i]!.clone().add(tan[i]!), points[i + 1]!.clone().sub(tan[i + 1]!), points[i + 1]);
+    const c = new CubicBezierCurve3(
+      points[i],
+      points[i]!.clone().add(tan[i]!),
+      points[i + 1]!.clone().sub(tan[i + 1]!),
+      points[i + 1],
+    );
     path.add(c);
     for (let k = 1; k <= res; k++) samples.push(c.getPoint(k / res));
   }
@@ -196,13 +254,26 @@ function tube(name: string, points: Vector3[], r: number, mat: string, parent: O
   const start = points[0]!;
   const end = points[n - 1]!;
   const ends = [start, end].map((p) => new SphereGeometry(r, 12, 6).translate(p.x, p.y, p.z));
-  const geo = mergeGeometries([new TubeGeometry(path, res * (n - 1), r, 12, false), ...ends]).translate(-start.x, -start.y, -start.z);
+  const geo = mergeGeometries([new TubeGeometry(path, res * (n - 1), r, 12, false), ...ends]).translate(
+    -start.x,
+    -start.y,
+    -start.z,
+  );
   // origin at the start, so the page can grow it from there
   return mesh(name, geo, start, [0, 0, 0], mat, parent);
 }
 
 const font = new Font(glyphs as unknown as FontData);
-function text(name: string, body: string, size: number, loc: V3, mat: string, parent: Object3D, rot: V3 = [0, 0, 0], depth = 0.03) {
+function text(
+  name: string,
+  body: string,
+  size: number,
+  loc: V3,
+  mat: string,
+  parent: Object3D,
+  rot: V3 = [0, 0, 0],
+  depth = 0.03,
+) {
   const geo = shared(`text ${body} ${size} ${depth}`, () => {
     // Blender extrudes a text curve by depth to both sides; centred like its align CENTER
     const g = new TextGeometry(body, { font, size, depth: 2 * depth, curveSegments: 3, bevelEnabled: false });
@@ -217,7 +288,8 @@ function dots(name: string, a: V3 | Vector3, c: V3 | Vector3, n: number, mat: st
   for (let k = 0; k < n; k++) sphere(`${name}${k}`, r, v(a).lerp(v(c), (k + 0.5) / n), mat, parent, 10, 6);
 }
 
-const empty = (name: string, loc: V3 | Vector3, parent: Object3D) => place(new Object3D(), name, loc, [0, 0, 0], parent);
+const empty = (name: string, loc: V3 | Vector3, parent: Object3D) =>
+  place(new Object3D(), name, loc, [0, 0, 0], parent);
 
 // ---------------------------------------------------------------------------
 // Characters and props
@@ -229,14 +301,27 @@ function argus(name: string, loc: V3, parent: Object3D, scale = 1, eyes = 13, co
   const r = 0.6 * scale;
   sphere(`${name}_body`, r, [x, y, z + r * 1.2], color, parent, 32, 18, [1, 1, 1.25], -0.82);
   const face = Math.atan2(CAM_DIR.y, CAM_DIR.x);
-  const rows: [number, number][] = eyes >= 13 ? [[-0.05, 5], [0.32, 4], [0.62, 3], [0.9, 1]] : [[0.15, 2], [0.55, 1]];
+  const rows: [number, number][] =
+    eyes >= 13
+      ? [
+          [-0.05, 5],
+          [0.32, 4],
+          [0.62, 3],
+          [0.9, 1],
+        ]
+      : [
+          [0.15, 2],
+          [0.55, 1],
+        ];
   let k = 0;
   for (const [el, count] of rows) {
     const span = count > 1 ? (rad(110) * (count - 1)) / 4 : 0;
     for (let i = 0; i < count; i++) {
       const az = face - span / 2 + (count > 1 ? (span * i) / (count - 1) : 0);
       const n = new Vector3(Math.cos(el) * Math.cos(az), Math.cos(el) * Math.sin(az), Math.sin(el));
-      const pos = new Vector3(x, y, z + r * 1.2).add(new Vector3(n.x * r, n.y * r, n.z * r * 1.25).multiplyScalar(0.96));
+      const pos = new Vector3(x, y, z + r * 1.2).add(
+        new Vector3(n.x * r, n.y * r, n.z * r * 1.25).multiplyScalar(0.96),
+      );
       const er = r * (el < 0.7 ? 0.16 : 0.13);
       sphere(`${name}_eye${k}`, er, pos, "white", parent, 14, 8);
       sphere(`${name}_pupil${k}`, er * 0.55, pos.clone().addScaledVector(n, er * 0.62), "ink", parent, 12, 8);
@@ -246,12 +331,30 @@ function argus(name: string, loc: V3, parent: Object3D, scale = 1, eyes = 13, co
   for (const s of [-1, 1]) {
     const fx = x + s * r * 0.45 * Math.cos(face + PI / 2);
     const fy = y + s * r * 0.45 * Math.sin(face + PI / 2);
-    sphere(`${name}_foot${s > 0 ? "b" : "a"}`, r * 0.28, [fx, fy, z + 0.03], "blue_dark", parent, 16, 8, [1.3, 1.3, 0.55]);
+    sphere(
+      `${name}_foot${s > 0 ? "b" : "a"}`,
+      r * 0.28,
+      [fx, fy, z + 0.03],
+      "blue_dark",
+      parent,
+      16,
+      8,
+      [1.3, 1.3, 0.55],
+    );
   }
 }
 
 /** A standing frame: white border, dark screen, and the sample video's shape at that time. */
-function frameCard(name: string, w: number, h: number, kind: string, loc: V3 | Vector3, parent: Object3D, rot?: V3, thick = 0.04) {
+function frameCard(
+  name: string,
+  w: number,
+  h: number,
+  kind: string,
+  loc: V3 | Vector3,
+  parent: Object3D,
+  rot?: V3,
+  thick = 0.04,
+) {
   const card = box(name, [w, thick, h], loc, "white", parent, 0.018, 4, rot ?? faceCam());
   box(`${name}_scr`, [w - 0.08, 0.01, h - 0.08], [0, -thick / 2 - 0.004, 0], "screen", card, 0);
   const fy = -thick / 2 - 0.012;
@@ -259,7 +362,19 @@ function frameCard(name: string, w: number, h: number, kind: string, loc: V3 | V
   if (kind === "red") cyl(`${name}_red`, 0.2 * s, 0.012, [0.08 * w, fy, 0], "seal", card, 24, [PI / 2, 0, 0]);
   else if (kind === "blue") box(`${name}_blue`, [0.3 * s, 0.012, 0.3 * s], [0.2 * w, fy, 0], "blue", card, 0);
   else if (kind === "green")
-    prism(`${name}_green`, [[-0.16 * s, -0.13 * s], [0.16 * s, -0.13 * s], [0, 0.17 * s]], 0.012, [0, fy + 0.006, 0], "green", card, [PI / 2, 0, 0]);
+    prism(
+      `${name}_green`,
+      [
+        [-0.16 * s, -0.13 * s],
+        [0.16 * s, -0.13 * s],
+        [0, 0.17 * s],
+      ],
+      0.012,
+      [0, fy + 0.006, 0],
+      "green",
+      card,
+      [PI / 2, 0, 0],
+    );
   else if (kind === "hello") box(`${name}_hello`, [0.5 * w, 0.012, 0.1 * h], [0, fy, 0], "white", card, 0);
   // the small white timecode bar in the corner (every frame of the sample video has one)
   box(`${name}_tc`, [0.22 * w, 0.012, 0.07 * h], [-0.3 * w, fy, 0.33 * h], "grey", card, 0);
@@ -288,19 +403,55 @@ function step0Video(g: Object3D) {
     box(`s0_f${i}`, [0.6, 0.6, 0.012], [x, STRIP_Y, 0.056], "screen", g, 0);
     for (const s of [-1, 1])
       for (const d of [-1, 1])
-        box(`s0_f${i}_h${s > 0 ? "b" : "a"}${d > 0 ? "b" : "a"}`, [0.1, 0.07, 0.012], [x + d * 0.17, STRIP_Y + s * 0.4, 0.056], "cream", g, 0);
+        box(
+          `s0_f${i}_h${s > 0 ? "b" : "a"}${d > 0 ? "b" : "a"}`,
+          [0.1, 0.07, 0.012],
+          [x + d * 0.17, STRIP_Y + s * 0.4, 0.056],
+          "cream",
+          g,
+          0,
+        );
     const kind = FRAME_KINDS[i];
     const z = 0.068;
     if (kind === "red") cyl(`s0_f${i}_red`, 0.11, 0.016, [x + 0.06, STRIP_Y, z], "seal", g, 24);
     else if (kind === "hello") box(`s0_f${i}_hello`, [0.32, 0.07, 0.016], [x, STRIP_Y, z], "white", g, 0);
     else if (kind === "blue") box(`s0_f${i}_blue`, [0.17, 0.17, 0.016], [x + 0.12, STRIP_Y, z], "blue", g, 0);
-    else if (kind === "green") prism(`s0_f${i}_green`, [[-0.1, -0.08], [0.1, -0.08], [0, 0.11]], 0.016, [x, STRIP_Y, 0.06], "green", g);
+    else if (kind === "green")
+      prism(
+        `s0_f${i}_green`,
+        [
+          [-0.1, -0.08],
+          [0.1, -0.08],
+          [0, 0.11],
+        ],
+        0.016,
+        [x, STRIP_Y, 0.06],
+        "green",
+        g,
+      );
   }
   const [bx, by, bz] = [-4.75, -1.0, 1.55];
   const bub = box("s0_bubble", [1.25, 0.12, 0.78], [bx, by, bz], "white", g, 0.1, 5, faceCam());
-  prism("s0_bubble_tail", [[-0.08, 0], [0.14, 0], [-0.14, -0.3]], 0.1, [-0.2, 0.05, -0.36], "white", bub, [PI / 2, 0, 0]);
+  prism(
+    "s0_bubble_tail",
+    [
+      [-0.08, 0],
+      [0.14, 0],
+      [-0.14, -0.3],
+    ],
+    0.1,
+    [-0.2, 0.05, -0.36],
+    "white",
+    bub,
+    [PI / 2, 0, 0],
+  );
   text("s0_bubble_q", "?", 0.62, [0, -0.07, -0.02], "seal", bub, [PI / 2, 0, 0], 0.03);
-  for (const [t, key] of [[0, "t0"], [60, "t60"], [120, "t120"], [180, "t180"]] as const)
+  for (const [t, key] of [
+    [0, "t0"],
+    [60, "t60"],
+    [120, "t120"],
+    [180, "t180"],
+  ] as const)
     empty(`pin_s0_${key}`, [tx(t), STRIP_Y - 0.62, 0.05], g);
   empty("pin_s0_question", [bx, by, bz + 0.5], g);
   empty("pin_s0_video", [rx, ry, 0.35], g);
@@ -328,7 +479,9 @@ function packetFrame(name: string, loc: Vector3, parent: Object3D) {
 
 function packetCall(name: string, loc: Vector3, parent: Object3D) {
   const tag = box(name, [0.48, 0.05, 0.24], loc, "yellow", parent, 0.05, 4, faceCam());
-  [0.28, 0.17].forEach((w, j) => box(`${name}_l${j}`, [w, 0.01, 0.034], [-0.13 + w / 2, -0.028, 0.04 - j * 0.08], "ink", tag, 0));
+  [0.28, 0.17].forEach((w, j) =>
+    box(`${name}_l${j}`, [w, 0.01, 0.034], [-0.13 + w / 2, -0.028, 0.04 - j * 0.08], "ink", tag, 0),
+  );
 }
 
 function step1Scan(g: Object3D) {
@@ -340,12 +493,31 @@ function step1Scan(g: Object3D) {
     dots(`s1_thread${i}_`, [x, STRIP_Y, 0.12], top.clone().sub(new Vector3(0, 0, 0.3)), 6, "ink", g, 0.022);
   }
   const puffs: [number, number, number, number][] = [
-    [0, 0, 0, 0.62], [-0.6, 0.05, -0.15, 0.46], [0.6, 0.02, -0.12, 0.5],
-    [-0.2, 0.1, 0.42, 0.46], [0.3, -0.05, 0.36, 0.42], [0.0, -0.25, -0.22, 0.44],
+    [0, 0, 0, 0.62],
+    [-0.6, 0.05, -0.15, 0.46],
+    [0.6, 0.02, -0.12, 0.5],
+    [-0.2, 0.1, 0.42, 0.46],
+    [0.3, -0.05, 0.36, 0.42],
+    [0.0, -0.25, -0.22, 0.44],
   ];
-  puffs.forEach(([dx, dy, dz, r], k) => sphere(`s1_cloud${k}`, r, CLOUD.clone().add(new Vector3(dx, dy, dz)), "cloud", g, 24, 14));
+  puffs.forEach(([dx, dy, dz, r], k) =>
+    sphere(`s1_cloud${k}`, r, CLOUD.clone().add(new Vector3(dx, dy, dz)), "cloud", g, 24, 14),
+  );
   const head = new Vector3(ARGUS_POS[0], ARGUS_POS[1], 1.62);
-  tube("s1_cable", [head, head.clone().add(new Vector3(0.3, 0.6, 0.9)), new Vector3(0, SD / 2 + 0.2, 2.6), CLOUD.clone().sub(new Vector3(0.7, 0.2, 0.25))], 0.04, "ink", g, 16, true);
+  tube(
+    "s1_cable",
+    [
+      head,
+      head.clone().add(new Vector3(0.3, 0.6, 0.9)),
+      new Vector3(0, SD / 2 + 0.2, 2.6),
+      CLOUD.clone().sub(new Vector3(0.7, 0.2, 0.25)),
+    ],
+    0.04,
+    "ink",
+    g,
+    16,
+    true,
+  );
   const wire = PATHS.s1_cable!;
   packetFrame("s1_pktA", along(wire, 0.2), g);
   packetFrame("s1_pktB", along(wire, 0.66), g);
@@ -355,8 +527,15 @@ function step1Scan(g: Object3D) {
   empty("pin_s1_model", CLOUD.clone().add(new Vector3(0, 0, 1)), g);
 }
 
-const EDGES: [number, string, number][] = [[10.0, "in", -0.07], [24.9, "out", 0.07]];
-const ROWS: [number, number, number][] = [[0.25, 0.27, 1.12], [0.19, 0.205, 0.86], [0.145, 0.16, 0.63]];
+const EDGES: [number, string, number][] = [
+  [10.0, "in", -0.07],
+  [24.9, "out", 0.07],
+];
+const ROWS: [number, number, number][] = [
+  [0.25, 0.27, 1.12],
+  [0.19, 0.205, 0.86],
+  [0.145, 0.16, 0.63],
+];
 const FUNNEL_Y = STRIP_Y - 0.66;
 
 function step2Refine(g: Object3D) {
@@ -365,7 +544,16 @@ function step2Refine(g: Object3D) {
     ROWS.forEach(([w, dx, z], r) => {
       for (const k of [-1, 0, 1]) {
         const red = side === "in" ? k >= 0 : k <= 0;
-        frameCard(`s2_row${r}${side}_c${k + 1}`, w, w * 0.78, red ? "red" : "empty", [x + k * dx, FUNNEL_Y, z], g, undefined, 0.025);
+        frameCard(
+          `s2_row${r}${side}_c${k + 1}`,
+          w,
+          w * 0.78,
+          red ? "red" : "empty",
+          [x + k * dx, FUNNEL_Y, z],
+          g,
+          undefined,
+          0.025,
+        );
       }
     });
     dots(`s2_thread${side}_`, [tx(t), STRIP_Y - 0.3, 0.1], [x, FUNNEL_Y, ROWS[2]![2] - 0.1], 5, "ink", g, 0.018);
@@ -379,7 +567,16 @@ const TRAY = new Vector3(-1.4, 1.6, 0.0);
 function trayStack(name: string, loc: Vector3, n: number, parent: Object3D) {
   const angles = [-6, 5, -2, 7, -4];
   for (let k = 0; k < n; k++) {
-    const tile = box(`${name}${k}`, [0.32, 0.24, 0.018], loc.clone().add(new Vector3(0.012 * (k % 2), 0, 0.022 * k)), "white", parent, 0.006, 4, [0, 0, rad(angles[k % 5]!)]);
+    const tile = box(
+      `${name}${k}`,
+      [0.32, 0.24, 0.018],
+      loc.clone().add(new Vector3(0.012 * (k % 2), 0, 0.022 * k)),
+      "white",
+      parent,
+      0.006,
+      4,
+      [0, 0, rad(angles[k % 5]!)],
+    );
     box(`${name}${k}_scr`, [0.27, 0.19, 0.004], [0, 0, 0.01], "screen", tile, 0);
   }
 }
@@ -389,17 +586,35 @@ function step3Helpers(g: Object3D) {
   argus("s3_sub", [sx, sy, 0], g, 0.62, 3, "lavender");
   [63, 109, 156].forEach((t, j) => {
     const x = tx(t);
-    frameCard(`s3_card${j}`, 0.36, 0.3, FRAME_KINDS[Math.floor(t / 15)] ?? "empty", [x, STRIP_Y + 0.1, 1.0 + (j % 2) * 0.08], g, undefined, 0.03);
+    frameCard(
+      `s3_card${j}`,
+      0.36,
+      0.3,
+      FRAME_KINDS[Math.floor(t / 15)] ?? "empty",
+      [x, STRIP_Y + 0.1, 1.0 + (j % 2) * 0.08],
+      g,
+      undefined,
+      0.03,
+    );
     dots(`s3_thread${j}_`, [x, STRIP_Y, 0.12], [x, STRIP_Y + 0.1, 0.8], 4, "lavender", g, 0.02);
   });
   const slip = box("s3_report", [0.46, 0.03, 0.3], [sx - 0.95, sy + 0.2, 0.85], "white", g, 0.025, 4, faceCam());
-  [0.32, 0.22].forEach((w, j) => box(`s3_report_l${j}`, [w, 0.01, 0.035], [-0.12 + w / 2, -0.018, 0.055 - j * 0.09], "grey", slip, 0));
+  [0.32, 0.22].forEach((w, j) =>
+    box(`s3_report_l${j}`, [w, 0.01, 0.035], [-0.12 + w / 2, -0.018, 0.055 - j * 0.09], "grey", slip, 0),
+  );
   const base = box("s3_tray", [1.7, 0.8, 0.06], [TRAY.x, TRAY.y, 0.03], "cream", g, 0.03);
-  const rims: [number, number, number, number][] = [[1.7, 0.06, 0, 0.37], [1.7, 0.06, 0, -0.37], [0.06, 0.8, 0.82, 0], [0.06, 0.8, -0.82, 0]];
+  const rims: [number, number, number, number][] = [
+    [1.7, 0.06, 0, 0.37],
+    [1.7, 0.06, 0, -0.37],
+    [0.06, 0.8, 0.82, 0],
+    [0.06, 0.8, -0.82, 0],
+  ];
   rims.forEach(([w, d, x, y], k) => box(`s3_tray_rim${k}`, [w, d, 0.1], [x, y, 0.06], "cream", base, 0.02));
   const slots = [-0.58, -0.2, 0.2, 0.58].map((x) => TRAY.clone().add(new Vector3(x, 0, 0.075)));
   const note = box("s3_tray_slip", [0.3, 0.36, 0.012], slots[0]!, "white", g, 0.004, 4, [0, 0, rad(-8)]);
-  [0.2, 0.15, 0.18].forEach((w, j) => box(`s3_tray_slip_l${j}`, [w, 0.03, 0.004], [-0.02, 0.1 - j * 0.085, 0.008], "grey", note, 0));
+  [0.2, 0.15, 0.18].forEach((w, j) =>
+    box(`s3_tray_slip_l${j}`, [w, 0.03, 0.004], [-0.02, 0.1 - j * 0.085, 0.008], "grey", note, 0),
+  );
   trayStack("s3_tray_old", slots[0]!, 3, g);
   [5, 2, 3].forEach((n, k) => trayStack(`s3_tray_b${k}_`, slots[k + 1]!, n, g));
   empty("pin_s3_sub", [sx, sy, 1.3], g);
@@ -411,24 +626,37 @@ const ANSWER = new Vector3(-0.2, 1.75, 2.85);
 function step4Answer(g: Object3D) {
   const card = box("s4_answer", [2.5, 0.08, 1.15], ANSWER, "white", g, 0.08, 5, faceCam());
   cyl("s4_answer_red", 0.17, 0.03, [-0.9, -0.05, 0.12], "seal", card, 28, [PI / 2, 0, 0]);
-  const chips: [number, string][] = [[-0.22, "10.0s"], [0.78, "25.0s"]];
+  const chips: [number, string][] = [
+    [-0.22, "10.0s"],
+    [0.78, "25.0s"],
+  ];
   chips.forEach(([x, body], k) => {
     box(`s4_chip${k}`, [0.8, 0.03, 0.3], [x, -0.05, 0.12], "yellow", card, 0.06);
     text(`s4_t${k}`, body, 0.2, [x, -0.075, 0.12], "ink", card, [PI / 2, 0, 0], 0.015);
   });
   text("s4_dash", "-", 0.2, [0.28, -0.075, 0.12], "ink", card, [PI / 2, 0, 0], 0.015);
-  [1.9, 1.4].forEach((w, j) => box(`s4_line${j}`, [w, 0.02, 0.07], [-1.0 + w / 2, -0.05, -0.2 - j * 0.17], "grey", card, 0.02));
+  [1.9, 1.4].forEach((w, j) =>
+    box(`s4_line${j}`, [w, 0.02, 0.07], [-1.0 + w / 2, -0.05, -0.2 - j * 0.17], "grey", card, 0.02),
+  );
   card.updateWorldMatrix(true, false);
-  [[10.0, chips[0]![0]], [24.9, chips[1]![0]]].forEach(([t, chipX], k) => {
+  [
+    [10.0, chips[0]![0]],
+    [24.9, chips[1]![0]],
+  ].forEach(([t, chipX], k) => {
     const head = new Vector3(tx(t!), STRIP_Y - 0.05, 0.42);
     cyl(`s4_pin${k}_needle`, 0.018, 0.34, head.clone().sub(new Vector3(0, 0, 0.2)), "grey", g, 10);
     sphere(`s4_pin${k}_head`, 0.11, head, "seal", g, 18, 12);
     const start = card.localToWorld(new Vector3(chipX, 0.04, -0.15));
-    const mid = start.clone().lerp(head, 0.5).add(new Vector3(0, 0, -0.25));
+    const mid = start
+      .clone()
+      .lerp(head, 0.5)
+      .add(new Vector3(0, 0, -0.25));
     tube(`s4_thread${k}`, [start, mid, head], 0.016, "seal", g);
   });
   const note = box("s4_note", [0.66, 0.6, 0.02], [TRAY.x - 0.05, -0.12, 0.012], "note", g, 0.01, 4, [0, 0, rad(5)]);
-  [0.44, 0.32, 0.38].forEach((w, j) => box(`s4_note_l${j}`, [w, 0.04, 0.008], [-0.08 + w / 2 - 0.12, 0.15 - j * 0.14, 0.014], "ink", note, 0));
+  [0.44, 0.32, 0.38].forEach((w, j) =>
+    box(`s4_note_l${j}`, [w, 0.04, 0.008], [-0.08 + w / 2 - 0.12, 0.15 - j * 0.14, 0.014], "ink", note, 0),
+  );
   empty("pin_s4_answer", ANSWER.clone().add(new Vector3(0, 0, 0.72)), g);
   empty("pin_s4_pins", [tx(17.4), STRIP_Y - 0.05, 0.6], g);
   empty("pin_s4_note", [TRAY.x - 0.05, -0.12, 0.15], g);
@@ -437,7 +665,9 @@ function step4Answer(g: Object3D) {
 function step5Browser(g: Object3D) {
   const by = SD / 2 - 0.42;
   box("s5_titlebar", [SW - 0.3, 0.55, 0.08], [0, by, 0.04], "ink", g, 0.03);
-  (["seal", "yellow", "green"] as const).forEach((key, k) => sphere(`s5_dot${k}`, 0.085, [-4.8 + k * 0.28, by, 0.1], key, g, 16, 10));
+  (["seal", "yellow", "green"] as const).forEach((key, k) =>
+    sphere(`s5_dot${k}`, 0.085, [-4.8 + k * 0.28, by, 0.1], key, g, 16, 10),
+  );
   box("s5_address", [4.6, 0.3, 0.03], [0.3, by, 0.095], "cream", g, 0.015);
   const lx = -1.75;
   box("s5_lock", [0.16, 0.05, 0.13], [lx, by, 0.2], "green", g, 0.02);
@@ -469,7 +699,13 @@ export function buildArgusStory(): Object3D {
     fns[i]!(g);
     return g;
   });
-  const focus: V3[] = [[tx(45) - 0.6, STRIP_Y + 0.3, 0.75], [-0.6, 1.2, 1.7], [tx(17.5), FUNNEL_Y + 0.25, 0.8], [-0.65, -0.3, 0.6], [-1.5, 0.35, 1.45]];
+  const focus: V3[] = [
+    [tx(45) - 0.6, STRIP_Y + 0.3, 0.75],
+    [-0.6, 1.2, 1.7],
+    [tx(17.5), FUNNEL_Y + 0.25, 0.8],
+    [-0.65, -0.3, 0.6],
+    [-1.5, 0.35, 1.45],
+  ];
   const empties = focus.map((loc, i) => empty(`focus_step${i}`, loc, root));
   // z up -> y up, one level down from the step groups, so the groups themselves keep three's axes
   // (the page squashes eyes along their group's y to blink).

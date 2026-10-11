@@ -32,7 +32,9 @@ function assertPaired(entries: Entry[], kind: string) {
     s.add(langOf(e));
     seen.set(slugOf(e), s);
   }
-  const missing = [...seen].filter(([, s]) => s.size !== LANGS.length).map(([slug, s]) => `${kind}/${slug} (${[...s].join(",")})`);
+  const missing = [...seen]
+    .filter(([, s]) => s.size !== LANGS.length)
+    .map(([slug, s]) => `${kind}/${slug} (${[...s].join(",")})`);
   if (missing.length) throw new Error(`Missing translation for: ${missing.join(", ")}`);
 }
 
@@ -97,7 +99,8 @@ export function terms(posts: Post[], key: "tags" | "categories" | "series"): Ter
     }
   }
   const list = [...map.values()];
-  if (key === "series") for (const t of list) t.posts.sort((a, b) => (a.data.seriesOrder ?? 0) - (b.data.seriesOrder ?? 0));
+  if (key === "series")
+    for (const t of list) t.posts.sort((a, b) => (a.data.seriesOrder ?? 0) - (b.data.seriesOrder ?? 0));
   return list.sort((a, b) => b.posts.length - a.posts.length || a.name.localeCompare(b.name));
 }
 
@@ -156,7 +159,8 @@ export async function zoomSources(post: Post, site: URL): Promise<Record<string,
     // Zoomed in (or on a high-DPI screen) the viewer needs more pixels: the originals are 4K, so
     // offer a 3200w copy too and let the browser pick by the size the image is shown at.
     const large = Math.min(3200, (img as ImageMetadata & { clone: ImageMetadata }).clone.width);
-    out[m[1]!.replace(/\.[^.]+$/, "")] = large > 1600 ? { src, srcset: `${src} 1600w, ${await path(img, large)} ${large}w` } : { src };
+    out[m[1]!.replace(/\.[^.]+$/, "")] =
+      large > 1600 ? { src, srcset: `${src} 1600w, ${await path(img, large)} ${large}w` } : { src };
   }
   // hand-drawn diagrams are vector, so the viewer shows the same file larger
   for (const m of (post.body ?? "").matchAll(/^```mermaid[^\n]*\n([\s\S]*?)^```/gm)) {

@@ -15,12 +15,10 @@ const items = [
 ---
 
 <nav class="dock" aria-label={t[lang].mainNav}>
-  {
-    items.map((it, i) => (
-      <a href={it.href} aria-current={section === it.key ? "page" : undefined}>
-        <span class="k">{String(i + 1).padStart(2, "0")}</span>
-        {it.label}
-      </a>
-    ))
-  }
+  {items.map((it, i) => (
+    <a href={it.href} aria-current={section === it.key ? "page" : undefined}>
+      <span class="k">{String(i + 1).padStart(2, "0")}</span>
+      {it.label}
+    </a>
+  ))}
 </nav>

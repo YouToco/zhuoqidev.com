@@ -223,7 +223,8 @@ export function classify(userAgent: string | null | undefined): Crawler | null {
   if (FAKE.some((p) => p.test(ua))) return { bot: "伪造浏览器标识", company: "未知", category: "fake" };
   const generic = NOT_A_BOT.test(ua) ? null : GENERIC.exec(ua);
   if (generic) return { bot: generic[1]!.slice(0, 40), company: "未知", category: "other" };
-  if (!/^Mozilla\//.test(ua) && !/^Opera\//.test(ua)) return { bot: ua.split(/[\s/;(]/)[0]!.slice(0, 40) || "（未知）", company: "未知", category: "tool" };
+  if (!/^Mozilla\//.test(ua) && !/^Opera\//.test(ua))
+    return { bot: ua.split(/[\s/;(]/)[0]!.slice(0, 40) || "（未知）", company: "未知", category: "tool" };
   return null;
 }
 

@@ -32,7 +32,12 @@ function postAliases(): Record<string, string> {
       if (!block) continue;
       const target = `${lang === "en" ? "/en" : ""}/posts/${slug}/`;
       for (const line of block[1]!.trim().split("\n")) {
-        out[line.slice(2).trim().replace(/^['"]|['"]$/g, "")] = target;
+        out[
+          line
+            .slice(2)
+            .trim()
+            .replace(/^['"]|['"]$/g, "")
+        ] = target;
       }
     }
   }

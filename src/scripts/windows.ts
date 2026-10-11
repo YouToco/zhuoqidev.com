@@ -169,7 +169,7 @@ if (icons.length && window.self === window.top) {
       if (!wide.matches || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
       e.preventDefault();
       // Keyboard (Enter) and touch open straight away; a mouse selects first, like a desktop.
-      const touch = (e).pointerType === "touch" || (e).pointerType === "pen";
+      const touch = e.pointerType === "touch" || e.pointerType === "pen";
       if (e.detail === 0 || touch || e.detail >= 2) open(icon);
       else select(icon);
     });
@@ -200,8 +200,11 @@ if (clock) {
   };
   tick();
   clock.hidden = false;
-  setTimeout(() => {
-    tick();
-    setInterval(tick, 60_000);
-  }, (60 - new Date().getSeconds()) * 1000);
+  setTimeout(
+    () => {
+      tick();
+      setInterval(tick, 60_000);
+    },
+    (60 - new Date().getSeconds()) * 1000,
+  );
 }

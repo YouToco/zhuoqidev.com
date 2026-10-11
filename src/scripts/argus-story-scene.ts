@@ -150,7 +150,8 @@ export async function mount(opts: {
   let ready = false;
   let wanted = last;
 
-  const goalDist = (k: number) => cam.distance * ZOOM[k]! * Math.max(1, cam.aspect / camera.aspect) ** (k === last ? 1 : 0.75);
+  const goalDist = (k: number) =>
+    cam.distance * ZOOM[k]! * Math.max(1, cam.aspect / camera.aspect) ** (k === last ? 1 : 0.75);
 
   // Moving parts get a wrapper group at their own centre, so they can turn, squash and slide
   // about that centre whatever transform the piece itself carries.
@@ -202,7 +203,8 @@ export async function mount(opts: {
   const onWire = (u: number, out: Vector3) => {
     let left = u * wireLen;
     for (let i = 0; i < seg.length; i++) {
-      if (left <= seg[i]! || i === seg.length - 1) return out.lerpVectors(wire[i]!, wire[i + 1]!, Math.min(1, left / seg[i]!));
+      if (left <= seg[i]! || i === seg.length - 1)
+        return out.lerpVectors(wire[i]!, wire[i + 1]!, Math.min(1, left / seg[i]!));
       left -= seg[i]!;
     }
     return out;

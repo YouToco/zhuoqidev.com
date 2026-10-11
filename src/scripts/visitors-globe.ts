@@ -77,7 +77,8 @@ function landDots(): Float32Array {
   return new Float32Array(out);
 }
 
-const css = (name: string) => new Color(getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "#888");
+const css = (name: string) =>
+  new Color(getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "#888");
 
 export function mountGlobe(opts: {
   stage: HTMLElement;
@@ -220,7 +221,13 @@ export function mountGlobe(opts: {
     shown = placed.map((row) => {
       const [lon, lat] = POINTS[row.code]!;
       const n = vec(lat, lon);
-      return { row, n, q: new Quaternion().setFromUnitVectors(UP, n), h: old.get(row.code) ?? 0, to: 0.04 + 0.42 * Math.sqrt(row.visitors / max) };
+      return {
+        row,
+        n,
+        q: new Quaternion().setFromUnitVectors(UP, n),
+        h: old.get(row.code) ?? 0,
+        to: 0.04 + 0.42 * Math.sqrt(row.visitors / max),
+      };
     });
     // Arcs from the countries with the most readers, skipping ones too close to Shenzhen to show.
     // Each rises from the country, peaks over the middle of the great circle and comes down at home.

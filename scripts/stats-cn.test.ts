@@ -5,8 +5,10 @@ import { aggregate, crawlerHit } from "./stats-cn.ts";
 // Aliyun CDN log lines (addresses replaced with documentation ranges).
 const log = (time: string, url: string, ua: string, type = "text/html") =>
   `[${time} +0800] 203.0.113.7 - 12 "-" "GET ${url}" 200 512 20480 HIT "${ua}" "${type}" 198.51.100.9`;
-const claude = "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ClaudeBot/1.0; +claudebot@anthropic.com)";
-const person = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36";
+const claude =
+  "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ClaudeBot/1.0; +claudebot@anthropic.com)";
+const person =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36";
 
 test("counts crawler page requests of the given Beijing day", () => {
   const lines = [

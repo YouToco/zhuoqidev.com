@@ -31,7 +31,9 @@ if (navigator.clipboard) {
   for (const btn of document.querySelectorAll<HTMLButtonElement>("[data-copy-md]")) {
     btn.hidden = false;
     btn.addEventListener("click", () => {
-      void copyText(btn, () => fetch(btn.dataset.copyMd!).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`)))));
+      void copyText(btn, () =>
+        fetch(btn.dataset.copyMd!).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`)))),
+      );
     });
   }
 }
@@ -64,7 +66,8 @@ if (toc) {
 // CSS bar (.read-progress) runs, this one is hidden and never listens to scroll.
 const bar = document.querySelector<HTMLElement>(".progress");
 const article = document.querySelector<HTMLElement>(".paper");
-const cssBar = CSS.supports("animation-timeline: view()") && matchMedia("(prefers-reduced-motion: no-preference)").matches;
+const cssBar =
+  CSS.supports("animation-timeline: view()") && matchMedia("(prefers-reduced-motion: no-preference)").matches;
 if (bar && article && !cssBar) {
   const update = () => {
     const r = article.getBoundingClientRect();
@@ -162,7 +165,8 @@ if (zoomMap && dialog && typeof dialog.showModal === "function") {
     img.replaceWith(opener);
     opener.append(img);
     opener.addEventListener("click", () => {
-      const ratio = img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : img.width / img.height;
+      const ratio =
+        img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : img.width / img.height;
       if (ratio > 0) view.style.setProperty("--r", String(ratio));
       else view.style.removeProperty("--r");
       scale = 1;

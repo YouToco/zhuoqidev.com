@@ -59,8 +59,7 @@ export interface LineSpec {
 }
 export type ChartSpec = BarsSpec | StackSpec | LineSpec;
 
-const esc = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const num = (v: number, digits = 0) =>
   v.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
 export const fmtValue = (v: number, f: Fmt = {}) => `${f.pre ?? ""}${num(v, f.digits ?? 0)}${f.suf ?? ""}`;
@@ -117,10 +116,7 @@ function renderBars(spec: BarsSpec, id: string) {
   }
   // Panels behind tabs made of radio buttons: works without script, and without CSS every panel shows.
   const inputs = spec.panels
-    .map(
-      (_, i) =>
-        `<input class="ct-in" type="radio" name="${id}" id="${id}-${i}"${i === 0 ? " checked" : ""} />`,
-    )
+    .map((_, i) => `<input class="ct-in" type="radio" name="${id}" id="${id}-${i}"${i === 0 ? " checked" : ""} />`)
     .join("");
   const tabs = spec.panels.map((p, i) => `<label for="${id}-${i}">${esc(p.title)}</label>`).join("");
   const panels = spec.panels
@@ -154,9 +150,7 @@ function renderStack(spec: StackSpec) {
           return `<span class="cs-seg c-${s.color}" style="--w:${share(v, total)}" title="${esc(s.label)} ${fmtValue(v, f)}（${pct}%）">${inner}</span>`;
         })
         .join("");
-      const spoken = spec.series
-        .map((s) => `${s.label} ${fmtValue(r.values[s.key] ?? 0, f)}`)
-        .join("; ");
+      const spoken = spec.series.map((s) => `${s.label} ${fmtValue(r.values[s.key] ?? 0, f)}`).join("; ");
       return (
         `<span class="cb-label">${esc(r.label)}${r.sub ? `<small>${esc(r.sub)}</small>` : ""}` +
         `<span class="sr-only">: ${esc(spoken)}</span></span>` +
@@ -188,9 +182,7 @@ function renderLine(spec: LineSpec, lang: Lang) {
           .join(" ")}" />`,
     )
     .join("");
-  const yTicks = y.ticks
-    .map((t) => `<span style="top:${pct(py(t), 600)}">${fmtTick(t, f, lang)}</span>`)
-    .join("");
+  const yTicks = y.ticks.map((t) => `<span style="top:${pct(py(t), 600)}">${fmtTick(t, f, lang)}</span>`).join("");
   const xTicks = x.ticks
     .map((t) => `<span style="left:${pct(px(t), 1000)}">${num(t)}${esc(x.suf ?? "")}</span>`)
     .join("");
@@ -259,10 +251,13 @@ export function chartMarkdown(spec: ChartSpec, lang: Lang): string {
       out = [
         head(["", ...spec.panels.map((p) => p.title)]),
         ...labels.map((l) =>
-          row([l, ...spec.panels!.map((p) => {
-            const r = p.rows.find((q) => label(q) === l);
-            return r ? fmtValue(r.value, f) : "";
-          })]),
+          row([
+            l,
+            ...spec.panels!.map((p) => {
+              const r = p.rows.find((q) => label(q) === l);
+              return r ? fmtValue(r.value, f) : "";
+            }),
+          ]),
         ),
       ].join("\n");
     } else {

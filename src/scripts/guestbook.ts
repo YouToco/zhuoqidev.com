@@ -126,8 +126,14 @@ function init(form: HTMLFormElement) {
     const text = field("body").trim();
     const name = field("name").replace(/\s+/g, " ").trim();
     const color = field("color", "yellow");
-    if (!length(text)) { say(msg.errors.empty!); return; }
-    if (length(text) > max) { say(msg.errors["too-long"]!); return; }
+    if (!length(text)) {
+      say(msg.errors.empty!);
+      return;
+    }
+    if (length(text) > max) {
+      say(msg.errors["too-long"]!);
+      return;
+    }
     send.disabled = true;
     say(msg.sending);
     try {
@@ -144,7 +150,10 @@ function init(form: HTMLFormElement) {
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { id?: number; error?: string };
-      if (!res.ok) { say(msg.errors[data.error ?? ""] ?? msg.errors.network!); return; }
+      if (!res.ok) {
+        say(msg.errors[data.error ?? ""] ?? msg.errors.network!);
+        return;
+      }
       if (data.id) keepMine([{ id: data.id, name, body: text, color, date: today() }, ...mine()]);
       form.reset();
       count_();

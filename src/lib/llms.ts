@@ -24,7 +24,10 @@ export async function llmsTxt(lang: Lang) {
     "",
     lang === "zh" ? "## 文章" : "## Posts",
     "",
-    ...posts.map((p) => `- [${p.data.title}](${abs(postUrl(lang, slugOf(p)))}index.md): ${ymd(p.data.date)} · ${p.data.description}`),
+    ...posts.map(
+      (p) =>
+        `- [${p.data.title}](${abs(postUrl(lang, slugOf(p)))}index.md): ${ymd(p.data.date)} · ${p.data.description}`,
+    ),
     "",
     lang === "zh" ? "## 作品" : "## Projects",
     "",

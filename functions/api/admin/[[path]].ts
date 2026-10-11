@@ -21,16 +21,28 @@ export const onRequest: PagesFunction<Env, "path"> = async ({ request, env, para
     const from = url.searchParams.get("from") ?? to;
     if (!DAY.test(from) || !DAY.test(to) || from > to) return json({ error: "bad-range" }, 400);
     const [crawlers, crawlerDays, places, viewDays, pending, cnLatest] = await db.batch([
-      db.prepare(
-        `SELECT line, bot, company, category, SUM(hits) AS hits FROM crawler_daily
+      db
+        .prepare(
+          `SELECT line, bot, company, category, SUM(hits) AS hits FROM crawler_daily
          WHERE day BETWEEN ?1 AND ?2 GROUP BY line, bot ORDER BY hits DESC`,
-      ).bind(from, to),
-      db.prepare("SELECT day, line, SUM(hits) AS hits FROM crawler_daily WHERE day BETWEEN ?1 AND ?2 GROUP BY day, line ORDER BY day").bind(from, to),
-      db.prepare(
-        `SELECT country, region, city, SUM(views) AS views, SUM(visitors) AS visitors FROM visit_daily
+        )
+        .bind(from, to),
+      db
+        .prepare(
+          "SELECT day, line, SUM(hits) AS hits FROM crawler_daily WHERE day BETWEEN ?1 AND ?2 GROUP BY day, line ORDER BY day",
+        )
+        .bind(from, to),
+      db
+        .prepare(
+          `SELECT country, region, city, SUM(views) AS views, SUM(visitors) AS visitors FROM visit_daily
          WHERE day BETWEEN ?1 AND ?2 GROUP BY country, region, city ORDER BY views DESC`,
-      ).bind(from, to),
-      db.prepare("SELECT day, SUM(views) AS views, SUM(visitors) AS visitors FROM visit_daily WHERE day BETWEEN ?1 AND ?2 GROUP BY day ORDER BY day").bind(from, to),
+        )
+        .bind(from, to),
+      db
+        .prepare(
+          "SELECT day, SUM(views) AS views, SUM(visitors) AS visitors FROM visit_daily WHERE day BETWEEN ?1 AND ?2 GROUP BY day ORDER BY day",
+        )
+        .bind(from, to),
       db.prepare("SELECT COUNT(*) AS n FROM notes WHERE status = 'pending'"),
       db.prepare("SELECT MAX(day) AS day FROM crawler_daily WHERE line = 'cn'"),
     ]);
@@ -60,7 +72,10 @@ export const onRequest: PagesFunction<Env, "path"> = async ({ request, env, para
 
   const note = /^notes\/(\d+)(\/approve)?$/.exec(path);
   if (note && m === "POST" && note[2]) {
-    const r = await db.prepare("UPDATE notes SET status = 'approved', reviewed_at = ?2 WHERE id = ?1").bind(Number(note[1]), new Date().toISOString()).run();
+    const r = await db
+      .prepare("UPDATE notes SET status = 'approved', reviewed_at = ?2 WHERE id = ?1")
+      .bind(Number(note[1]), new Date().toISOString())
+      .run();
     return json({ changed: r.meta.changes });
   }
   if (note && m === "DELETE" && !note[2]) {
@@ -71,15 +86,26 @@ export const onRequest: PagesFunction<Env, "path"> = async ({ request, env, para
   if (m === "POST" && path === "ingest") {
     const body = (await readJson(request, 1 << 20)) as { day?: unknown; line?: unknown; rows?: unknown } | null;
     const rows = Array.isArray(body?.rows) ? (body.rows as Record<string, unknown>[]) : null;
-    if (!body || typeof body.day !== "string" || !DAY.test(body.day) || body.line !== "cn" || !rows || rows.length > 2000) {
+    if (
+      !body ||
+      typeof body.day !== "string" ||
+      !DAY.test(body.day) ||
+      body.line !== "cn" ||
+      !rows ||
+      rows.length > 2000
+    ) {
       return json({ error: "bad-request" }, 400);
     }
     const valid = rows.every(
       (r) =>
-        typeof r.bot === "string" && r.bot.length <= 60 &&
-        typeof r.company === "string" && r.company.length <= 60 &&
-        typeof r.category === "string" && r.category in CATEGORIES &&
-        Number.isInteger(r.hits) && (r.hits as number) > 0,
+        typeof r.bot === "string" &&
+        r.bot.length <= 60 &&
+        typeof r.company === "string" &&
+        r.company.length <= 60 &&
+        typeof r.category === "string" &&
+        r.category in CATEGORIES &&
+        Number.isInteger(r.hits) &&
+        (r.hits as number) > 0,
     );
     if (!valid) return json({ error: "bad-rows" }, 400);
     const day = body.day;
@@ -87,7 +113,9 @@ export const onRequest: PagesFunction<Env, "path"> = async ({ request, env, para
       db.prepare("DELETE FROM crawler_daily WHERE day = ?1 AND line = 'cn'").bind(day),
       ...rows.map((r) =>
         db
-          .prepare("INSERT INTO crawler_daily (day, line, bot, company, category, hits) VALUES (?1, 'cn', ?2, ?3, ?4, ?5)")
+          .prepare(
+            "INSERT INTO crawler_daily (day, line, bot, company, category, hits) VALUES (?1, 'cn', ?2, ?3, ?4, ?5)",
+          )
           .bind(day, r.bot as string, r.company as string, r.category as Category, r.hits as number),
       ),
     ]);

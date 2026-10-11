@@ -75,10 +75,14 @@ export function rehypeProse() {
           ]),
         ]);
         visit(node, "element", (span) => {
-          if (typeof span.properties.style === "string") span.properties.style = span.properties.style.replace(COMMENT.from, COMMENT.to);
+          if (typeof span.properties.style === "string")
+            span.properties.style = span.properties.style.replace(COMMENT.from, COMMENT.to);
         });
         const copy = el("button", { className: ["copy"], type: "button", hidden: true }, [text(COPY[lang])]);
-        parent.children[index] = el("figure", { className: ["code"] }, [el("details", open ? { open: true } : {}, [bar, node]), copy]);
+        parent.children[index] = el("figure", { className: ["code"] }, [
+          el("details", open ? { open: true } : {}, [bar, node]),
+          copy,
+        ]);
         return "skip";
       }
       // Article images render at most at the text column width (652 CSS px). Declaring it
