@@ -1,0 +1,23 @@
+# pnpm reads project settings from this file (pnpm 12 ignores package.json and .npmrc for them).
+# The site is a single package. tools/diagrams, tools/geo and tools/models keep their own
+# dependencies and lockfiles: they install on first use and never in CI (see AGENTS.md).
+packages:
+  - .
+
+# Supply chain: install only versions that have been public for a day, and refuse a version
+# whose publishing evidence is weaker than its predecessors' (for example, provenance dropped).
+minimumReleaseAge: 1440
+trustPolicy: no-downgrade
+# Exact versions only, each a known release published without the provenance its
+# predecessor had. Re-check before adding one: an unexplained downgrade can be a takeover.
+trustPolicyExclude:
+  - chokidar@4.0.3 # via @astrojs/check; pnpm's own docs list this release as an example
+
+# Dependency install scripts never run unless set to true here; an unlisted one fails the
+# install (strictDepBuilds is on by default). Each `false` below was checked: the site builds
+# and passes `pnpm run verify` with that script skipped.
+allowBuilds:
+  esbuild: false # postinstall only verifies and swaps in the native binary; the package works without it
+
+# Fail when the running Node does not satisfy package.json "engines".
+engineStrict: true

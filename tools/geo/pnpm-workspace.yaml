@@ -1,0 +1,14 @@
+# A standalone project, not part of the site's install: it has its own lockfile and
+# installs on first use (see the script in the root package.json). Same policies as
+# the root pnpm-workspace.yaml.
+packages:
+  - .
+
+minimumReleaseAge: 1440
+trustPolicy: no-downgrade
+
+allowBuilds:
+  # Both come in through mapshaper and serve formats build.mjs never uses (GeoPackage via SQLite,
+  # native msgpack speed-up); mapshaper's GeoJSON commands run without them.
+  better-sqlite3: false
+  msgpackr-extract: false

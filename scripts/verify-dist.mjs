@@ -1,4 +1,4 @@
-// Post-build checks on dist/. Run after `astro build`: npm run verify
+// Post-build checks on dist/. Run after `astro build`: pnpm run verify
 //
 //  1. every URL the Hugo site published still answers (tests/fixtures/hugo-urls.txt)
 //  2. every internal link, image and #anchor resolves
@@ -101,7 +101,7 @@ for (const [url, html] of pages) {
     if (!/\swidth="/.test(tag) || !/\sheight="/.test(tag)) fail(`${url}: <img> without width/height: ${tag.slice(0, 80)}`);
   }
   // diagrams are hand-drawn ahead of time; rehype-mermaid only fills in blocks that were missed
-  if (/<svg[^>]*\sid="mermaid/.test(html)) fail(`${url}: a Mermaid diagram has no hand-drawn version: run npm run diagrams`);
+  if (/<svg[^>]*\sid="mermaid/.test(html)) fail(`${url}: a Mermaid diagram has no hand-drawn version: run pnpm run diagrams`);
   if (/class="language-comic"/.test(html)) fail(`${url}: a comic fence was not drawn (src/lib/markdown/remark-comic.ts)`);
   const og = /<meta property="og:image" content="([^"]+)"/.exec(html)?.[1];
   if (!og) fail(`${url}: no og:image`);

@@ -1,0 +1,16 @@
+# A standalone project, not part of the site's install: it has its own lockfile and
+# installs on first use (see the script in the root package.json). Same policies as
+# the root pnpm-workspace.yaml.
+packages:
+  - .
+
+minimumReleaseAge: 1440
+trustPolicy: no-downgrade
+# Exact versions only; re-check before adding one, an unexplained downgrade can be a takeover.
+trustPolicyExclude:
+  # via mermaid-to-excalidraw > @mermaid-js/parser. langium 1.2-3.0.0 were published with provenance by
+  # typefox-team's CI; every 3.1+ release (3.3.1 included) was published by maintainer msujew without it.
+  - langium@3.3.1
+
+allowBuilds:
+  esbuild: false # postinstall only verifies and swaps in the native binary; the package works without it

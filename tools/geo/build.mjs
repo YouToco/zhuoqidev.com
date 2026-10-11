@@ -1,5 +1,5 @@
 // Builds the map data of the visitor map (src/pages/[...lang]/visitors/):
-//   npm run geo
+//   pnpm run geo
 // -> src/data/geo/land.json       where the land is, as a 0.5° bitmap: the globe draws its dots from it.
 //                                 Land only, no borders, so the globe takes no side on any border.
 // -> src/data/geo/countries.json  one point per country (Natural Earth's label point), where that

@@ -1,6 +1,6 @@
 {
   // Pages Functions run on Cloudflare Workers, not Node: they get their own type environment.
-  // `npm run check` type-checks them after `astro check`.
+  // `pnpm run check` type-checks them after `astro check`.
   "compilerOptions": {
     "target": "ES2024",
     "module": "ESNext",

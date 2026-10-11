@@ -1,5 +1,5 @@
 // Renders the poster of the Argus scene and writes what the page needs from it:
-//   npm run poster    (about two minutes on a laptop GPU; tools/models/README.md)
+//   pnpm run poster    (about two minutes on a laptop GPU; tools/models/README.md)
 // -> src/assets/models/argus-story-poster.webp   1800 × 1150, transparent background: shown before
 //                                                 the 3D scene loads, and to readers without WebGL
 //    src/assets/models/argus-story-camera.json   the poster's camera; the 3D scene opens on it

@@ -48,11 +48,11 @@ class LocalDeployTests(unittest.TestCase):
     def test_build_runs_every_gate_before_publishing(self) -> None:
         script = self.script()
         gates = [
-            "npm ci",
+            "pnpm install --frozen-lockfile",
             'python3 -m unittest discover -s tests -p "test_*.py" -v',
-            "npm run check",
-            "npm run build",
-            "npm run verify",
+            "pnpm run check",
+            "pnpm run build",
+            "pnpm run verify",
             "aliyun oss sync dist/",
         ]
         positions = [script.index(gate) for gate in gates]

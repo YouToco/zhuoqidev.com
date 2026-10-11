@@ -97,7 +97,7 @@ export default defineConfig({
     processor: unified({
       remarkPlugins: [remarkAlerts, remarkFigure, remarkDemo, remarkChart, remarkComic],
       rehypePlugins: [
-        // Hand-drawn versions first (`npm run diagrams`); rehype-mermaid draws whatever is left.
+        // Hand-drawn versions first (`pnpm run diagrams`); rehype-mermaid draws whatever is left.
         rehypeHandDiagrams,
         [
           rehypeMermaid,

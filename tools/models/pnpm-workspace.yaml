@@ -1,0 +1,11 @@
+# A standalone project, not part of the site's install: it has its own lockfile and
+# installs on first use (see the script in the root package.json). Same policies as
+# the root pnpm-workspace.yaml.
+packages:
+  - .
+
+minimumReleaseAge: 1440
+trustPolicy: no-downgrade
+
+allowBuilds:
+  esbuild: false # postinstall only verifies and swaps in the native binary; the package works without it

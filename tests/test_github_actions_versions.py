@@ -8,8 +8,10 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 
 CHECKOUT_SHA = "3d3c42e5aac5ba805825da76410c181273ba90b1"
 CHECKOUT_TAG = "v7.0.1"
-SETUP_NODE_SHA = "820762786026740c76f36085b0efc47a31fe5020"
-SETUP_NODE_TAG = "v7.0.0"
+SETUP_NODE_SHA = "949feb2413d6458794dcd2491c4babbbce0c15c1"
+SETUP_NODE_TAG = "v7.1.0"
+PNPM_SETUP_SHA = "ea17c68df8912ef543352723c149a84f56e3d413"
+PNPM_SETUP_TAG = "v6.1.0"
 
 
 class GitHubActionsVersionTests(unittest.TestCase):
@@ -33,6 +35,13 @@ class GitHubActionsVersionTests(unittest.TestCase):
         self.assertTrue(refs)
         self.assertEqual({(SETUP_NODE_SHA, SETUP_NODE_TAG)}, set(refs))
 
+    def test_pnpm_setup_uses_verified_stable_immutable_release(self) -> None:
+        text = self.workflow_text()
+        refs = re.findall(r"pnpm/action-setup@([^\s#]+)(?:\s+#\s+([^\s]+))?", text)
+
+        self.assertTrue(refs)
+        self.assertEqual({(PNPM_SETUP_SHA, PNPM_SETUP_TAG)}, set(refs))
+
     def test_runners_are_pinned(self) -> None:
         # A floating image changes tools under us; the build also lays out CJK text in the
         # runner's Chrome.
@@ -50,11 +59,14 @@ class GitHubActionsVersionTests(unittest.TestCase):
                 self.assertIn("bash scripts/install-cjk-fonts.sh", text)
                 self.assertIn("bash -n scripts/install-aliyun.sh scripts/install-cjk-fonts.sh", text)
                 self.assertNotIn("apt-get", text)
-                self.assertIn("npm ci", text)
-                self.assertIn("npm run check", text)
-                self.assertIn("npm test", text)
-                self.assertIn("npm run build", text)
-                self.assertIn("npm run verify", text)
+                # pnpm comes from package.json "packageManager"; the lockfile is never rewritten in CI.
+                self.assertIn("pnpm/action-setup@", text)
+                self.assertIn("pnpm install --frozen-lockfile", text)
+                self.assertNotRegex(text, r"\bnpm (ci|install|run|test)\b")
+                self.assertIn("pnpm run check", text)
+                self.assertIn("pnpm test", text)
+                self.assertIn("pnpm run build", text)
+                self.assertIn("pnpm run verify", text)
                 self.assertNotIn("hugo", text.lower())
 
     def test_cjk_fonts_come_from_a_pinned_commit_with_checksums(self) -> None:
@@ -81,7 +93,7 @@ class GitHubActionsVersionTests(unittest.TestCase):
         self.assertIn("--connect-timeout 10 --max-time 20", text)
         self.assertIn("pages deploy dist/", text)
         self.assertNotIn("public/", text)
-        self.assertNotIn("cache: npm", text)
+        self.assertNotIn("cache:", text)
 
     def test_deprecated_floating_major_refs_do_not_return(self) -> None:
         text = self.workflow_text()
