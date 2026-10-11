@@ -19,7 +19,8 @@ import { beijingDay, type Crawler, classify, isPageLike } from "../server/bots.t
 const DOMAINS = ["zhuoqidev.com", "www.zhuoqidev.com"];
 
 // [7/Oct/2026:12:52:11 +0800] ip proxy ms "referer" "GET https://zhuoqidev.com/path" 200 req resp HIT "ua" "type"
-const LINE = /^\[(\d{1,2})\/(\w{3})\/(\d{4}):[^\]]*\+0800\] \S+ \S+ \S+ "[^"]*" "(\S+) (\S+)[^"]*" \d+ \d+ \d+ \S+ "((?:[^"\\]|\\.)*)"/;
+const LINE =
+  /^\[(\d{1,2})\/(\w{3})\/(\d{4}):[^\]]*\+0800\] \S+ \S+ \S+ "[^"]*" "(\S+) (\S+)[^"]*" \d+ \d+ \d+ \S+ "((?:[^"\\]|\\.)*)"/;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export type Row = Crawler & { hits: number };
@@ -62,14 +63,29 @@ async function downloadDay(day: string): Promise<Buffer[]> {
   const start = new Date(+end - 86400_000);
   const files: Buffer[] = [];
   for (const domain of DOMAINS) {
-    const out = execFileSync(process.env.ALIYUN_BIN || "aliyun", [
-      "cdn", "DescribeCdnDomainLogs",
-      "--DomainName", domain,
-      "--StartTime", start.toISOString().replace(/\.\d+Z$/, "Z"),
-      "--EndTime", end.toISOString().replace(/\.\d+Z$/, "Z"),
-      "--PageSize", "1000",
-    ], { encoding: "utf8" });
-    const details = JSON.parse(out).DomainLogDetails?.DomainLogDetail ?? [];
+    const out = execFileSync(
+      process.env.ALIYUN_BIN || "aliyun",
+      [
+        "cdn",
+        "DescribeCdnDomainLogs",
+        "--DomainName",
+        domain,
+        "--StartTime",
+        start.toISOString().replace(/\.\d+Z$/, "Z"),
+        "--EndTime",
+        end.toISOString().replace(/\.\d+Z$/, "Z"),
+        "--PageSize",
+        "1000",
+      ],
+      { encoding: "utf8" },
+    );
+    // The fields of DescribeCdnDomainLogs this script reads.
+    type Logs = {
+      DomainLogDetails?: {
+        DomainLogDetail?: { LogInfos?: { LogInfoDetail?: { LogPath: string; LogName: string }[] } }[];
+      };
+    };
+    const details = (JSON.parse(out) as Logs).DomainLogDetails?.DomainLogDetail ?? [];
     for (const d of details) {
       for (const log of d.LogInfos?.LogInfoDetail ?? []) {
         const res = await fetch(`https://${log.LogPath}`);
@@ -88,11 +104,16 @@ async function main() {
   const day = values.day ?? beijingDay(Date.now() - 86400_000);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) throw new Error(`--day must be YYYY-MM-DD, got ${day}`);
   const files = values.logs
-    ? readdirSync(values.logs).filter((f) => f.endsWith(".gz")).map((f) => readFileSync(join(values.logs!, f)))
+    ? readdirSync(values.logs)
+        .filter((f) => f.endsWith(".gz"))
+        .map((f) => readFileSync(join(values.logs!, f)))
     : await downloadDay(day);
-  const rows = aggregate((function* () {
-    for (const f of files) yield* linesOf(f);
-  })(), day);
+  const rows = aggregate(
+    (function* () {
+      for (const f of files) yield* linesOf(f);
+    })(),
+    day,
+  );
   console.log(`${day}: ${files.length} log files, ${rows.reduce((n, r) => n + r.hits, 0)} crawler page requests`);
   for (const r of rows) console.log(`  ${String(r.hits).padStart(5)}  ${r.category.padEnd(9)} ${r.company} / ${r.bot}`);
   if (values["dry-run"]) return;

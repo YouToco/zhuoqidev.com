@@ -89,7 +89,10 @@ if (bye && "IntersectionObserver" in window && !matchMedia("(prefers-reduced-mot
         return;
       }
       first = false;
-      if (seen) return io.disconnect();
+      if (seen) {
+        io.disconnect();
+        return;
+      }
       cue(bye);
       bye.classList.add("armed");
       bye.addEventListener("focusin", play, { once: true });

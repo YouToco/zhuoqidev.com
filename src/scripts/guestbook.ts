@@ -30,6 +30,8 @@ function init(form: HTMLFormElement) {
   const opened = performance.now();
   let approved: Note[] = [];
 
+  // Counts code points, like the server's limit (server/guestbook.ts).
+  // eslint-disable-next-line @typescript-eslint/no-misused-spread -- code points are what is counted
   const length = (s: string) => [...s.trim()].length;
   const say = (text: string) => {
     status.textContent = text;
@@ -38,8 +40,8 @@ function init(form: HTMLFormElement) {
 
   const mine = (): Note[] => {
     try {
-      const list = JSON.parse(localStorage.getItem(KEY) ?? "[]");
-      return Array.isArray(list) ? list : [];
+      const list = JSON.parse(localStorage.getItem(KEY) ?? "[]") as unknown;
+      return Array.isArray(list) ? (list as Note[]) : [];
     } catch {
       return [];
     }
@@ -111,14 +113,27 @@ function init(form: HTMLFormElement) {
     })
     .catch(() => render(true));
 
+  // The handler settles every await inside try/catch/finally, so its promise never rejects.
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises -- see above
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const fd = new FormData(form);
-    const text = String(fd.get("body") ?? "").trim();
-    const name = String(fd.get("name") ?? "").replace(/\s+/g, " ").trim();
-    const color = String(fd.get("color") ?? "yellow");
-    if (!length(text)) return say(msg.errors.empty!);
-    if (length(text) > max) return say(msg.errors["too-long"]!);
+    // Every field here is text; FormData would only hand back a File for a file input.
+    const field = (k: string, fallback = "") => {
+      const v = fd.get(k);
+      return typeof v === "string" ? v : fallback;
+    };
+    const text = field("body").trim();
+    const name = field("name").replace(/\s+/g, " ").trim();
+    const color = field("color", "yellow");
+    if (!length(text)) {
+      say(msg.errors.empty!);
+      return;
+    }
+    if (length(text) > max) {
+      say(msg.errors["too-long"]!);
+      return;
+    }
     send.disabled = true;
     say(msg.sending);
     try {
@@ -135,7 +150,10 @@ function init(form: HTMLFormElement) {
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { id?: number; error?: string };
-      if (!res.ok) return say(msg.errors[data.error ?? ""] ?? msg.errors.network!);
+      if (!res.ok) {
+        say(msg.errors[data.error ?? ""] ?? msg.errors.network!);
+        return;
+      }
       if (data.id) keepMine([{ id: data.id, name, body: text, color, date: today() }, ...mine()]);
       form.reset();
       count_();

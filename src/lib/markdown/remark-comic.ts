@@ -18,8 +18,10 @@ export function remarkComic() {
         const html = renderComicHtml(parseComic(node.value), comicCols(node.meta ?? ""), lang);
         parent.children[index] = { type: "html", value: html };
       } catch (e) {
-        const at = (node.position?.start.line ?? 0) + ((e as ComicError).line ?? 0);
-        throw new Error(`${file.path}:${at}: comic: ${(e as Error).message}`);
+        // parseComic's errors carry the line within the fence; anything else points at the fence.
+        const line = typeof (e as Partial<ComicError>).line === "number" ? (e as ComicError).line : 0;
+        const at = (node.position?.start.line ?? 0) + line;
+        throw new Error(`${file.path}:${at}: comic: ${(e as Error).message}`, { cause: e });
       }
     });
   };

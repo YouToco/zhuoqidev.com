@@ -1,4 +1,4 @@
-// Post-build checks on dist/. Run after `astro build`: npm run verify
+// Post-build checks on dist/. Run after `astro build`: pnpm run verify
 //
 //  1. every URL the Hugo site published still answers (tests/fixtures/hugo-urls.txt)
 //  2. every internal link, image and #anchor resolves
@@ -24,7 +24,11 @@ function walk(dir, out = []) {
 }
 const files = walk(DIST);
 const htmlFiles = files.filter((f) => f.endsWith(".html"));
-const urlOf = (file) => "/" + relative(DIST, file).replace(/index\.html$/, "").replace(/\\/g, "/");
+const urlOf = (file) =>
+  "/" +
+  relative(DIST, file)
+    .replace(/index\.html$/, "")
+    .replace(/\\/g, "/");
 const isRedirect = (html) => /<meta http-equiv="refresh"/.test(html);
 
 /** Resolve a site path to a file in dist, or null. */
@@ -38,10 +42,16 @@ function resolvePath(path) {
 
 const pages = new Map(htmlFiles.map((f) => [urlOf(f), readFileSync(f, "utf8")]));
 const ids = (html) => new Set([...html.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]));
-const decode = (s) => s.replace(/&amp;/g, "&").replace(/&#x27;|&#39;/g, "'").replace(/&quot;/g, '"');
+const decode = (s) =>
+  s
+    .replace(/&amp;/g, "&")
+    .replace(/&#x27;|&#39;/g, "'")
+    .replace(/&quot;/g, '"');
 
 // 1. URL parity with the Hugo site
-const legacy = readFileSync(new URL("../tests/fixtures/hugo-urls.txt", import.meta.url), "utf8").split("\n").filter(Boolean);
+const legacy = readFileSync(new URL("../tests/fixtures/hugo-urls.txt", import.meta.url), "utf8")
+  .split("\n")
+  .filter(Boolean);
 for (const u of legacy) if (!resolvePath(u)) fail(`missing legacy URL ${u}`);
 
 let links = 0;
@@ -98,11 +108,14 @@ for (const [url, html] of pages) {
     const tag = m[0];
     if (!/\ssrc="/.test(tag)) continue; // placeholder filled by script (image viewer)
     if (!/\salt="/.test(tag)) fail(`${url}: <img> without alt: ${tag.slice(0, 80)}`);
-    if (!/\swidth="/.test(tag) || !/\sheight="/.test(tag)) fail(`${url}: <img> without width/height: ${tag.slice(0, 80)}`);
+    if (!/\swidth="/.test(tag) || !/\sheight="/.test(tag))
+      fail(`${url}: <img> without width/height: ${tag.slice(0, 80)}`);
   }
   // diagrams are hand-drawn ahead of time; rehype-mermaid only fills in blocks that were missed
-  if (/<svg[^>]*\sid="mermaid/.test(html)) fail(`${url}: a Mermaid diagram has no hand-drawn version: run npm run diagrams`);
-  if (/class="language-comic"/.test(html)) fail(`${url}: a comic fence was not drawn (src/lib/markdown/remark-comic.ts)`);
+  if (/<svg[^>]*\sid="mermaid/.test(html))
+    fail(`${url}: a Mermaid diagram has no hand-drawn version: run pnpm run diagrams`);
+  if (/class="language-comic"/.test(html))
+    fail(`${url}: a comic fence was not drawn (src/lib/markdown/remark-comic.ts)`);
   const og = /<meta property="og:image" content="([^"]+)"/.exec(html)?.[1];
   if (!og) fail(`${url}: no og:image`);
   else if (og.startsWith(SITE) && !resolvePath(og.slice(SITE.length))) fail(`${url}: og:image ${og} does not exist`);
@@ -135,7 +148,12 @@ for (const [url, html] of pages) {
     fail(`${url}: no index.md`);
     continue;
   }
-  const mdBody = readFileSync(md, "utf8").split("\n---\n").slice(1).join("\n").replace(/```[\s\S]*?```/g, "").replace(/\s+/g, "");
+  const mdBody = readFileSync(md, "utf8")
+    .split("\n---\n")
+    .slice(1)
+    .join("\n")
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/\s+/g, "");
   const ratio = text(prose).length / Math.max(1, mdBody.length);
   if (ratio < 0.6) fail(`${url}: static HTML has ${Math.round(ratio * 100)}% of the Markdown text`);
   if (!html.includes('type="text/markdown"')) fail(`${url}: no rel=alternate text/markdown`);
@@ -143,13 +161,23 @@ for (const [url, html] of pages) {
 for (const lang of ["", "/en"]) {
   const llms = resolvePath(`${lang}/llms.txt`);
   const count = llms ? (readFileSync(llms, "utf8").match(/^- \[.*\/index\.md\):/gm) ?? []).length : 0;
-  const expected = [...pages.keys()].filter((u) => new RegExp(`^${lang}/posts/[^/]+/$`).test(u) && !isRedirect(pages.get(u))).length;
+  const expected = [...pages.keys()].filter(
+    (u) => new RegExp(`^${lang}/posts/[^/]+/$`).test(u) && !isRedirect(pages.get(u)),
+  ).length;
   if (count !== expected) fail(`${lang || "/"} llms.txt lists ${count} posts, site has ${expected}`);
 }
 
-console.log(`checked ${pages.size} HTML files, ${links} internal links, ${legacy.length} legacy URLs, ${posts} articles`);
+console.log(
+  `checked ${pages.size} HTML files, ${links} internal links, ${legacy.length} legacy URLs, ${posts} articles`,
+);
 if (errors.length) {
-  console.error(`\n${errors.length} problem(s):\n` + errors.slice(0, 80).map((e) => `  ✗ ${e}`).join("\n"));
+  console.error(
+    `\n${errors.length} problem(s):\n` +
+      errors
+        .slice(0, 80)
+        .map((e) => `  ✗ ${e}`)
+        .join("\n"),
+  );
   process.exit(1);
 }
 console.log("✓ dist looks good");

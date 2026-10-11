@@ -18,19 +18,23 @@ async function copyText(btn: HTMLButtonElement, text: () => Promise<string> | st
 }
 
 // Copy buttons on code blocks ship hidden so there is no dead control without JS.
+// The DOM types promise a clipboard, but browsers leave it undefined outside secure contexts.
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- see above
 if (navigator.clipboard) {
   for (const btn of document.querySelectorAll<HTMLButtonElement>(".code .copy")) {
     btn.hidden = false;
-    btn.addEventListener("click", () =>
+    btn.addEventListener("click", () => {
       // textContent, not innerText: the block may be folded, and folded text has no rendered layout.
-      copyText(btn, () => btn.closest(".code")?.querySelector("code")?.textContent ?? ""),
-    );
+      void copyText(btn, () => btn.closest(".code")?.querySelector("code")?.textContent ?? "");
+    });
   }
   for (const btn of document.querySelectorAll<HTMLButtonElement>("[data-copy-md]")) {
     btn.hidden = false;
-    btn.addEventListener("click", () =>
-      copyText(btn, () => fetch(btn.dataset.copyMd!).then((r) => (r.ok ? r.text() : Promise.reject()))),
-    );
+    btn.addEventListener("click", () => {
+      void copyText(btn, () =>
+        fetch(btn.dataset.copyMd!).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`)))),
+      );
+    });
   }
 }
 
@@ -62,7 +66,8 @@ if (toc) {
 // CSS bar (.read-progress) runs, this one is hidden and never listens to scroll.
 const bar = document.querySelector<HTMLElement>(".progress");
 const article = document.querySelector<HTMLElement>(".paper");
-const cssBar = CSS.supports("animation-timeline: view()") && matchMedia("(prefers-reduced-motion: no-preference)").matches;
+const cssBar =
+  CSS.supports("animation-timeline: view()") && matchMedia("(prefers-reduced-motion: no-preference)").matches;
 if (bar && article && !cssBar) {
   const update = () => {
     const r = article.getBoundingClientRect();
@@ -114,7 +119,7 @@ if (picker) {
 const zoomMap = document.getElementById("zoom-map");
 const dialog = document.querySelector<HTMLDialogElement>("dialog.zoom");
 if (zoomMap && dialog && typeof dialog.showModal === "function") {
-  const big = JSON.parse(zoomMap.textContent ?? "{}") as Record<string, { src: string; srcset?: string }>;
+  const big = JSON.parse(zoomMap.textContent) as Record<string, { src: string; srcset?: string }>;
   const stage = dialog.querySelector<HTMLElement>(".zoom-stage")!;
   const view = stage.querySelector("img")!;
   const btn = (k: string) => dialog.querySelector<HTMLButtonElement>(`[data-zoom="${k}"]`)!;
@@ -160,7 +165,8 @@ if (zoomMap && dialog && typeof dialog.showModal === "function") {
     img.replaceWith(opener);
     opener.append(img);
     opener.addEventListener("click", () => {
-      const ratio = img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : img.width / img.height;
+      const ratio =
+        img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : img.width / img.height;
       if (ratio > 0) view.style.setProperty("--r", String(ratio));
       else view.style.removeProperty("--r");
       scale = 1;

@@ -52,7 +52,10 @@ function norm(name: string): string {
     .normalize("NFKD")
     .replace(/\p{M}/gu, "")
     .toLowerCase()
-    .replace(/\b(province|sheng|shi|municipality|autonomous region|zizhiqu|special administrative region|sar|uygur|uyghur|uighur|zhuangzu|zhuang|huizu|hui)\b/g, "")
+    .replace(
+      /\b(province|sheng|shi|municipality|autonomous region|zizhiqu|special administrative region|sar|uygur|uyghur|uighur|zhuangzu|zhuang|huizu|hui)\b/g,
+      "",
+    )
     .replace(/(特别行政区|自治区|维吾尔|壮族|回族|省|市)/g, "")
     .replace(/[^\p{L}]/gu, "");
 }

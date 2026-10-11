@@ -77,13 +77,14 @@ function landDots(): Float32Array {
   return new Float32Array(out);
 }
 
-const css = (name: string) => new Color(getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "#888");
+const css = (name: string) =>
+  new Color(getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "#888");
 
-export async function mountGlobe(opts: {
+export function mountGlobe(opts: {
   stage: HTMLElement;
   reduced: boolean;
   onTip: (t: Tip | null, x?: number, y?: number) => void;
-}): Promise<GlobeScene> {
+}): GlobeScene {
   const { stage, reduced, onTip } = opts;
   const canvas = document.createElement("canvas");
   canvas.setAttribute("aria-hidden", "true");
@@ -220,7 +221,13 @@ export async function mountGlobe(opts: {
     shown = placed.map((row) => {
       const [lon, lat] = POINTS[row.code]!;
       const n = vec(lat, lon);
-      return { row, n, q: new Quaternion().setFromUnitVectors(UP, n), h: old.get(row.code) ?? 0, to: 0.04 + 0.42 * Math.sqrt(row.visitors / max) };
+      return {
+        row,
+        n,
+        q: new Quaternion().setFromUnitVectors(UP, n),
+        h: old.get(row.code) ?? 0,
+        to: 0.04 + 0.42 * Math.sqrt(row.visitors / max),
+      };
     });
     // Arcs from the countries with the most readers, skipping ones too close to Shenzhen to show.
     // Each rises from the country, peaks over the middle of the great circle and comes down at home.
@@ -345,7 +352,7 @@ export async function mountGlobe(opts: {
     }
     if (!reduced) {
       if (!dragging && now - idleSince > 2500) spin.rotation.y += dt * 0.08;
-      arcMat.uniforms.uTime!.value += dt;
+      (arcMat.uniforms.uTime!.value as number) += dt;
       const p = (now / 1600) % 1;
       ring.scale.setScalar(1 + p * 2.4);
       ringMat.opacity = 1 - p;

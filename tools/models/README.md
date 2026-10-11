@@ -18,7 +18,7 @@ The page shows a poster first: the same scene path traced, which readers without
 Render it again, with its camera and label spots, whenever the model changes:
 
 ```bash
-npm run poster
+pnpm run poster
 ```
 
 It installs this folder's packages on first use, builds the scene from the page's own model in
@@ -33,7 +33,7 @@ about two minutes on a laptop GPU) and writes three files to `src/assets/models/
 It needs a real GPU. On a laptop with switchable graphics, hand Chrome the discrete one:
 
 ```bash
-__NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia npm run poster
+__NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia pnpm run poster
 ```
 
 Each pass prints the GPU it ran on; software rendering (SwiftShader) is refused. A single
@@ -44,7 +44,7 @@ override the defaults.
 
 The 3D text (the `?` and the `10.0s – 25.0s` on the answer card) uses a few glyphs of Inter in
 `src/assets/models/argus-story-glyphs.json`. To set other characters, change `CHARS` and run
-`npm --prefix tools/models ci` once, then `node tools/models/argus-glyphs.mjs`; it downloads
+`pnpm --dir tools/models install --frozen-lockfile` once, then `node tools/models/argus-glyphs.mjs`; it downloads
 Inter 4.1 from a pinned commit and checks its SHA-256.
 
 ## Notes

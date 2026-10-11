@@ -179,7 +179,8 @@ const files = [];
 for (const file of await htmlFiles(DIST)) {
   const html = await readFile(file, "utf8");
   // Redirect stubs (meta refresh) draw nothing and would navigate away mid-collection.
-  if (/<html[\s>]/i.test(html) && !/http-equiv="refresh"/i.test(html)) files.push({ file, html, path: `/${relative(DIST, file).split(sep).join("/")}` });
+  if (/<html[\s>]/i.test(html) && !/http-equiv="refresh"/i.test(html))
+    files.push({ file, html, path: `/${relative(DIST, file).split(sep).join("/")}` });
 }
 
 const server = createServer(async (req, res) => {

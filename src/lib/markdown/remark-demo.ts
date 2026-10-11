@@ -1,8 +1,7 @@
 import type { Code, Root } from "mdast";
 import { visit } from "unist-util-visit";
 
-const esc = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 /**
  * ```html demo height=300 caption="..."  →  a sandboxed live preview.

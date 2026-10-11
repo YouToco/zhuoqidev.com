@@ -40,7 +40,12 @@ for (const ch of CHARS) {
   const run = font.layout(ch, ["tnum"]);
   const [g] = run.glyphs;
   const box = g.path.bbox;
-  glyphs[ch] = { ha: r(run.positions[0].xAdvance), x_min: r(box.minX), x_max: r(box.maxX), o: outline(g.path.commands) };
+  glyphs[ch] = {
+    ha: r(run.positions[0].xAdvance),
+    x_min: r(box.minX),
+    x_max: r(box.maxX),
+    o: outline(g.path.commands),
+  };
 }
 const out = {
   familyName: font.familyName,

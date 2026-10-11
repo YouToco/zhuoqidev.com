@@ -124,7 +124,8 @@ export const t = {
     },
     visitors: "访客地图",
     vis: {
-      description: "谁在看这个博客、哪些爬虫在抓它：真人访客按国家和省份落在 3D 地球和中国地图上，爬虫按类别和公司排行。",
+      description:
+        "谁在看这个博客、哪些爬虫在抓它：真人访客按国家和省份落在 3D 地球和中国地图上，爬虫按类别和公司排行。",
       intro: "谁在看这里？真人访客按国家和省份落在地球和中国地图上，爬虫按类别和公司排个队。每 5 分钟更新一次。",
       rangeLabel: "时间范围",
       ranges: { "7": "近 7 天", "30": "近 30 天", all: "全部" },
@@ -260,8 +261,10 @@ export const t = {
     zoomHint: "Scroll or pinch to zoom · drag to pan · double-click to toggle",
     guestbook: "Guestbook",
     gb: {
-      description: "Leave Liu ZhuoQi a sticky note: thoughts on a post, a topic you'd like to read, a typo you spotted, or just hi.",
-      intro: "Leave a sticky note: thoughts on a post, a topic you'd like to read, a typo you spotted, or just hi. I read each one and pin it up, usually within a day or two.",
+      description:
+        "Leave Liu ZhuoQi a sticky note: thoughts on a post, a topic you'd like to read, a typo you spotted, or just hi.",
+      intro:
+        "Leave a sticky note: thoughts on a post, a topic you'd like to read, a typo you spotted, or just hi. I read each one and pin it up, usually within a day or two.",
       bodyLabel: "Your note",
       placeholder: "What's on your mind?",
       nameLabel: "Signed",
@@ -290,11 +293,18 @@ export const t = {
     },
     visitors: "Visitor map",
     vis: {
-      description: "Who reads this blog and which crawlers fetch it: readers by country and province on a 3D globe and a map of China, crawlers by kind and by company.",
-      intro: "Who's reading? Readers land on a globe and a map of China by country and province; crawlers line up by kind and by company. Updated every five minutes.",
+      description:
+        "Who reads this blog and which crawlers fetch it: readers by country and province on a 3D globe and a map of China, crawlers by kind and by company.",
+      intro:
+        "Who's reading? Readers land on a globe and a map of China by country and province; crawlers line up by kind and by company. Updated every five minutes.",
       rangeLabel: "Time range",
       ranges: { "7": "7 days", "30": "30 days", all: "All time" },
-      kpi: { views: "Page views", visitors: "Visitors", countries: "Countries & regions", crawlers: "Crawler requests" },
+      kpi: {
+        views: "Page views",
+        visitors: "Visitors",
+        countries: "Countries & regions",
+        crawlers: "Crawler requests",
+      },
       visitorsNote: "each person counted once a day",
       globe: "Readers around the world",
       globeHint: "Drag to spin · taller beams, more readers · every arc flies to Shenzhen, where I am",
@@ -325,7 +335,7 @@ export const t = {
       method: [
         "Readers: once a page has loaded it sends a count, placed by country and province from Cloudflare's IP location. No IP is stored; cities stay on my own dashboard.",
         "Crawlers: on the overseas line (Cloudflare) they're counted live from the User-Agent; on the mainland line (Aliyun CDN) from the previous day's logs each morning, so that line runs a day behind.",
-        "A User-Agent can lie. \"Forged browser UAs\" are scrapers that claim to be a browser but name an impossible combination, such as mobile Chrome on a PowerPC Mac.",
+        'A User-Agent can lie. "Forged browser UAs" are scrapers that claim to be a browser but name an impossible combination, such as mobile Chrome on a PowerPC Mac.',
       ],
       cats: {
         "ai-user": "AI assistants fetching for a user",
@@ -342,7 +352,7 @@ export const t = {
         other: "Other crawlers",
       },
       regionNames: { TW: "Taiwan, China", HK: "Hong Kong SAR, China", MO: "Macao SAR, China" },
-      botNames: { "（空 UA）": "(empty UA)", "伪造浏览器标识": "Forged browser UA" },
+      botNames: { "（空 UA）": "(empty UA)", 伪造浏览器标识: "Forged browser UA" },
     },
   },
 } as const;

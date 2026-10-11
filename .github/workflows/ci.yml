@@ -18,11 +18,15 @@ jobs:
         with:
           persist-credentials: false
 
+      # Installs the pnpm version pinned in package.json ("packageManager").
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
       - name: Setup Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: npm
+          cache: pnpm
 
       # Mermaid diagrams and social cards are laid out in headless Chrome at build time;
       # the runner image ships Chrome but no CJK fonts, which would shift every Chinese label.
@@ -32,7 +36,7 @@ jobs:
           google-chrome --version
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Validate shell syntax
         run: bash -n scripts/install-aliyun.sh scripts/install-cjk-fonts.sh scripts/renew-cert.sh scripts/deploy-local.sh
@@ -41,13 +45,24 @@ jobs:
         run: python3 -m unittest discover -s tests -p "test_*.py" -v
 
       - name: Type-check
-        run: npm run check
+        run: pnpm run check
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Check formatting
+        run: pnpm run format:check
+
+      # Known advisories at moderate severity or above fail the PR. Deploy does not run this:
+      # an advisory published later must not hold back an already reviewed change on main.
+      - name: Audit dependencies
+        run: pnpm audit --audit-level moderate
 
       - name: Unit-test Pages Functions and scripts
-        run: npm test
+        run: pnpm test
 
       - name: Build site
-        run: npm run build
+        run: pnpm run build
 
       - name: Verify build output
-        run: npm run verify
+        run: pnpm run verify

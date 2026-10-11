@@ -84,15 +84,17 @@ if [[ $mode == deploy ]]; then
 fi
 
 mkdir -p "$tool_root"
-npm ci
+pnpm install --frozen-lockfile
 bash -n \
   scripts/install-aliyun.sh \
   scripts/renew-cert.sh \
   scripts/deploy-local.sh
 python3 -m unittest discover -s tests -p "test_*.py" -v
-npm run check
-npm run build
-npm run verify
+pnpm run check
+pnpm run lint
+pnpm run format:check
+pnpm run build
+pnpm run verify
 
 commit_sha=$(git rev-parse HEAD)
 built_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")

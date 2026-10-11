@@ -56,7 +56,8 @@ export function parseComic(body: string): ComicScript {
   let panel: ComicPanel = { lines: [] };
   let seen = false; // any non-blank line yet (a title must come first)
   const close = (line: number) => {
-    if (!panel.narration && !panel.lines.length) fail(line, "empty panel: put a `> narration` or a `[Name] line` between the `---` separators");
+    if (!panel.narration && !panel.lines.length)
+      fail(line, "empty panel: put a `> narration` or a `[Name] line` between the `---` separators");
     script.panels.push(panel);
   };
   const lines = body.replace(/\r\n/g, "\n").replace(/\n$/, "").split("\n");

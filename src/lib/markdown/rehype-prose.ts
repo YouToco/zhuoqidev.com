@@ -51,7 +51,7 @@ export function rehypeProse() {
     visit(tree, "element", (node, index, parent) => {
       if (!parent || index === undefined) return;
       // Shiki emits raw `class` / `data-language` keys rather than hast's camel-cased ones.
-      const props = node.properties ?? {};
+      const props = node.properties;
       const cls = props.className ?? props["class"];
       const classes = Array.isArray(cls) ? cls.map(String) : typeof cls === "string" ? cls.split(" ") : [];
 
@@ -75,15 +75,19 @@ export function rehypeProse() {
           ]),
         ]);
         visit(node, "element", (span) => {
-          if (typeof span.properties?.style === "string") span.properties.style = span.properties.style.replace(COMMENT.from, COMMENT.to);
+          if (typeof span.properties.style === "string")
+            span.properties.style = span.properties.style.replace(COMMENT.from, COMMENT.to);
         });
         const copy = el("button", { className: ["copy"], type: "button", hidden: true }, [text(COPY[lang])]);
-        parent.children[index] = el("figure", { className: ["code"] }, [el("details", open ? { open: true } : {}, [bar, node]), copy]);
+        parent.children[index] = el("figure", { className: ["code"] }, [
+          el("details", open ? { open: true } : {}, [bar, node]),
+          copy,
+        ]);
         return "skip";
       }
       // Article images render at most at the text column width (652 CSS px). Declaring it
       // here gives Astro a 1x/2x srcset around that width instead of one up to the 4K original.
-      if (node.tagName === "img" && !/^(https?:)?\/\//.test(String(node.properties?.src ?? ""))) {
+      if (node.tagName === "img" && !/^(https?:)?\/\//.test(node.properties.src ?? "")) {
         node.properties.width ??= COLUMN;
         return;
       }
@@ -100,7 +104,7 @@ export function rehypeProse() {
         parent.children[index] = el("div", { className: ["table-wrap"] }, [node]);
         return "skip";
       }
-      if (node.tagName === "svg" && String(node.properties?.id ?? "").startsWith("mermaid")) {
+      if (node.tagName === "svg" && (node.properties.id ?? "").startsWith("mermaid")) {
         parent.children[index] = el("figure", { className: ["diagram"] }, [node]);
         return "skip";
       }

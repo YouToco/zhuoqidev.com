@@ -15,5 +15,5 @@ from three small files in `src/data/geo/`, built here and checked in:
 Regenerate (downloads the pinned sources; nothing else on the site needs the network):
 
 ```bash
-npm run geo
+pnpm run geo
 ```

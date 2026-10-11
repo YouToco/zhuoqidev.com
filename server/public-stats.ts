@@ -109,22 +109,35 @@ export function shape(input: {
 export async function publicStats(db: D1Database, range: PublicStats["range"]): Promise<PublicStats> {
   const { from, to } = range;
   const [visits, crawlers, viewDays, crawlerDays, since, cnLatest] = await db.batch<Record<string, unknown>>([
-    db.prepare(
-      `SELECT country, region, SUM(views) AS views, SUM(visitors) AS visitors FROM visit_daily
+    db
+      .prepare(
+        `SELECT country, region, SUM(views) AS views, SUM(visitors) AS visitors FROM visit_daily
        WHERE day BETWEEN ?1 AND ?2 GROUP BY country, region`,
-    ).bind(from, to),
-    db.prepare(
-      `SELECT bot, MAX(company) AS company, MAX(category) AS category, line, SUM(hits) AS hits FROM crawler_daily
+      )
+      .bind(from, to),
+    db
+      .prepare(
+        `SELECT bot, MAX(company) AS company, MAX(category) AS category, line, SUM(hits) AS hits FROM crawler_daily
        WHERE day BETWEEN ?1 AND ?2 GROUP BY bot, line`,
-    ).bind(from, to),
-    db.prepare("SELECT day, SUM(views) AS views, SUM(visitors) AS visitors FROM visit_daily WHERE day BETWEEN ?1 AND ?2 GROUP BY day").bind(from, to),
-    db.prepare("SELECT day, SUM(hits) AS hits FROM crawler_daily WHERE day BETWEEN ?1 AND ?2 GROUP BY day").bind(from, to),
-    db.prepare("SELECT MIN(day) AS day FROM (SELECT MIN(day) AS day FROM visit_daily UNION ALL SELECT MIN(day) FROM crawler_daily)"),
+      )
+      .bind(from, to),
+    db
+      .prepare(
+        "SELECT day, SUM(views) AS views, SUM(visitors) AS visitors FROM visit_daily WHERE day BETWEEN ?1 AND ?2 GROUP BY day",
+      )
+      .bind(from, to),
+    db
+      .prepare("SELECT day, SUM(hits) AS hits FROM crawler_daily WHERE day BETWEEN ?1 AND ?2 GROUP BY day")
+      .bind(from, to),
+    db.prepare(
+      "SELECT MIN(day) AS day FROM (SELECT MIN(day) AS day FROM visit_daily UNION ALL SELECT MIN(day) FROM crawler_daily)",
+    ),
     db.prepare("SELECT MAX(day) AS day FROM crawler_daily WHERE line = 'cn'"),
   ]);
   const days = new Map<string, DayRow>();
   const day = (d: string) => days.get(d) ?? days.set(d, { day: d, views: 0, visitors: 0, crawlers: 0 }).get(d)!;
-  for (const r of viewDays!.results as { day: string; views: number; visitors: number }[]) Object.assign(day(r.day), { views: r.views, visitors: r.visitors });
+  for (const r of viewDays!.results as { day: string; views: number; visitors: number }[])
+    Object.assign(day(r.day), { views: r.views, visitors: r.visitors });
   for (const r of crawlerDays!.results as { day: string; hits: number }[]) day(r.day).crawlers = r.hits;
   return shape({
     range,

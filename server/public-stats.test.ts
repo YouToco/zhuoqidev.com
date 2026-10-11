@@ -27,7 +27,15 @@ test("visitors by country, and in China by province", () => {
     days: [],
   });
   assert.deepEqual(s.totals, { views: 16, visitors: 9, countries: 3, crawlers: 0 });
-  assert.deepEqual(s.countries.map((c) => [c.code, c.visitors]), [["CN", 4], ["US", 3], ["HK", 1], ["XX", 1]]);
+  assert.deepEqual(
+    s.countries.map((c) => [c.code, c.visitors]),
+    [
+      ["CN", 4],
+      ["US", 3],
+      ["HK", 1],
+      ["XX", 1],
+    ],
+  );
   assert.deepEqual(s.provinces, [
     { adcode: 440000, views: 6, visitors: 3 },
     { adcode: 810000, views: 3, visitors: 1 },
@@ -42,7 +50,14 @@ test("crawlers: both lines on one row per name, categories largest first, the ta
     { bot: "伪造浏览器标识", company: "未知", category: "fake", line: "cn", hits: 500 },
     ...Array.from({ length: 25 }, (_, i) => ({ bot: `bot${i}`, company: "x", category: "other", line: "cf", hits: 1 })),
   ];
-  const s = shape({ range: rangeFor("30", "2026-10-08"), since: null, cnLatestDay: null, visits: [], crawlers, days: [] });
+  const s = shape({
+    range: rangeFor("30", "2026-10-08"),
+    since: null,
+    cnLatestDay: null,
+    visits: [],
+    crawlers,
+    days: [],
+  });
   assert.equal(s.totals.crawlers, 634);
   assert.deepEqual(s.crawlers.categories, [
     { key: "fake", hits: 500 },
@@ -50,6 +65,12 @@ test("crawlers: both lines on one row per name, categories largest first, the ta
     { key: "other", hits: 25 },
   ]);
   assert.equal(s.crawlers.bots.length, 20);
-  assert.deepEqual(s.crawlers.bots[1], { bot: "ClaudeBot", company: "Anthropic", category: "ai-crawl", cf: 9, cn: 100 });
+  assert.deepEqual(s.crawlers.bots[1], {
+    bot: "ClaudeBot",
+    company: "Anthropic",
+    category: "ai-crawl",
+    cf: 9,
+    cn: 100,
+  });
   assert.equal(s.crawlers.rest, 7);
 });

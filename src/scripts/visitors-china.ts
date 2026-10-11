@@ -88,16 +88,17 @@ function outline(polys: Poly[], y: number, inset: boolean) {
   return g;
 }
 
-const css = (name: string) => new Color(getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "#888");
+const css = (name: string) =>
+  new Color(getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "#888");
 
-export async function mountChina(opts: {
+export function mountChina(opts: {
   stage: HTMLElement;
   reduced: boolean;
   southSea: string;
   /** Province names in the page's language, by adcode. */
   names: Map<number, string>;
   onTip: (t: Tip | null, x?: number, y?: number) => void;
-}): Promise<ChinaScene> {
+}): ChinaScene {
   const { stage, reduced, southSea, names, onTip } = opts;
   const canvas = document.createElement("canvas");
   canvas.setAttribute("aria-hidden", "true");
@@ -117,7 +118,18 @@ export async function mountChina(opts: {
 
   // One block per province: a unit-tall extrusion, stretched to its height. Caps and sides take
   // separate materials so the sides can be a shade darker.
-  type Block = { adcode: number; name: string; mesh: Mesh; cap: MeshLambertMaterial; side: MeshLambertMaterial; h: number; to: number; v: number; row: ProvinceRow | undefined; top: Vector3 };
+  type Block = {
+    adcode: number;
+    name: string;
+    mesh: Mesh;
+    cap: MeshLambertMaterial;
+    side: MeshLambertMaterial;
+    h: number;
+    to: number;
+    v: number;
+    row: ProvinceRow | undefined;
+    top: Vector3;
+  };
   const blocks: Block[] = [];
   const edgeMat = new LineBasicMaterial({ transparent: true, opacity: 0.85 });
   const insetPolys: Poly[] = [];
@@ -135,24 +147,41 @@ export async function mountChina(opts: {
     mesh.add(new LineSegments(outline(main, 1.001, false), edgeMat));
     map.add(mesh);
     const [cx, cn] = project(p.center[0]!, p.center[1]!);
-    blocks.push({ adcode: p.adcode, name: names.get(p.adcode) ?? p.name, mesh, cap, side, h: BASE, to: BASE, v: 0, row: undefined, top: new Vector3(cx, 0, -cn) });
+    blocks.push({
+      adcode: p.adcode,
+      name: names.get(p.adcode) ?? p.name,
+      mesh,
+      cap,
+      side,
+      h: BASE,
+      to: BASE,
+      v: 0,
+      row: undefined,
+      top: new Vector3(cx, 0, -cn),
+    });
   }
 
   // The inset: its frame, the islands and the nine-dash line, lying flat.
   const flat = new MeshBasicMaterial();
   const dashMat = new MeshBasicMaterial();
   const island = new Mesh(new ShapeGeometry(insetPolys.map((poly) => shapeOf(poly, true))).rotateX(-Math.PI / 2), flat);
-  const dash = new Mesh(new ShapeGeometry((china.dash as Poly[]).map((poly) => shapeOf(poly, true))).rotateX(-Math.PI / 2), dashMat);
+  const dash = new Mesh(
+    new ShapeGeometry((china.dash as Poly[]).map((poly) => shapeOf(poly, true))).rotateX(-Math.PI / 2),
+    dashMat,
+  );
   island.position.y = dash.position.y = 0.004;
   const [fx1, fn1] = project(INSET.west, INSET.north, true);
   const [fx2, fn2] = project(INSET.east, INSET.south, true);
   const frameGeo = new BufferGeometry();
   frameGeo.setAttribute(
     "position",
-    new Float32BufferAttribute([fx1, 0, -fn1, fx2, 0, -fn1, fx2, 0, -fn1, fx2, 0, -fn2, fx2, 0, -fn2, fx1, 0, -fn2, fx1, 0, -fn2, fx1, 0, -fn1], 3),
+    new Float32BufferAttribute(
+      [fx1, 0, -fn1, fx2, 0, -fn1, fx2, 0, -fn1, fx2, 0, -fn2, fx2, 0, -fn2, fx1, 0, -fn2, fx1, 0, -fn2, fx1, 0, -fn1],
+      3,
+    ),
   );
   const frameMat = new LineBasicMaterial();
-  const dashLine = new LineSegments(outline(china.dash as Poly[], 0.006, true), frameMat);
+  const dashLine = new LineSegments(outline(china.dash, 0.006, true), frameMat);
   map.add(island, dash, dashLine, new LineSegments(frameGeo, frameMat));
   const insetCorner = new Vector3(fx1, 0, -fn2); // the label goes under the frame's lower left corner
 
@@ -207,7 +236,10 @@ export async function mountChina(opts: {
       b.v = r?.visitors ?? 0;
       b.to = BASE + (b.v ? TALL * Math.sqrt(b.v / max) : 0);
     }
-    labelled = [...blocks].filter((b) => b.v > 0).sort((a, b) => b.v - a.v).slice(0, LABELS);
+    labelled = [...blocks]
+      .filter((b) => b.v > 0)
+      .sort((a, b) => b.v - a.v)
+      .slice(0, LABELS);
     labelled.forEach((b, i) => {
       labelEls[i]!.textContent = `${b.name} ${b.v}`;
     });
@@ -276,7 +308,10 @@ export async function mountChina(opts: {
     const r = canvas.getBoundingClientRect();
     ndc.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ndc, camera);
-    const hit = ray.intersectObjects(blocks.map((b) => b.mesh), false)[0];
+    const hit = ray.intersectObjects(
+      blocks.map((b) => b.mesh),
+      false,
+    )[0];
     setHover(blocks.find((b) => b.mesh === hit?.object) ?? null, x - r.left, y - r.top);
   }
 
@@ -311,8 +346,14 @@ export async function mountChina(opts: {
       const [x, y] = screen(at.copy(b.top).setY(b.h + 0.02));
       let spot: [number, number, number, number] | null = null;
       for (let up = 0; up < 3 && !spot; up++) {
-        const box: [number, number, number, number] = [x - bw / 2, y - bh - up * (bh + 2), x + bw / 2, y - up * (bh + 2)];
-        if (!boxes.some((o) => box[0] < o[2] + 2 && o[0] < box[2] + 2 && box[1] < o[3] + 1 && o[1] < box[3] + 1)) spot = box;
+        const box: [number, number, number, number] = [
+          x - bw / 2,
+          y - bh - up * (bh + 2),
+          x + bw / 2,
+          y - up * (bh + 2),
+        ];
+        if (!boxes.some((o) => box[0] < o[2] + 2 && o[0] < box[2] + 2 && box[1] < o[3] + 1 && o[1] < box[3] + 1))
+          spot = box;
       }
       el.classList.toggle("off", !spot);
       if (!spot) return;

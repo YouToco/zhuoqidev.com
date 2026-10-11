@@ -32,7 +32,12 @@ function postAliases(): Record<string, string> {
       if (!block) continue;
       const target = `${lang === "en" ? "/en" : ""}/posts/${slug}/`;
       for (const line of block[1]!.trim().split("\n")) {
-        out[line.slice(2).trim().replace(/^['"]|['"]$/g, "")] = target;
+        out[
+          line
+            .slice(2)
+            .trim()
+            .replace(/^['"]|['"]$/g, "")
+        ] = target;
       }
     }
   }
@@ -97,7 +102,7 @@ export default defineConfig({
     processor: unified({
       remarkPlugins: [remarkAlerts, remarkFigure, remarkDemo, remarkChart, remarkComic],
       rehypePlugins: [
-        // Hand-drawn versions first (`npm run diagrams`); rehype-mermaid draws whatever is left.
+        // Hand-drawn versions first (`pnpm run diagrams`); rehype-mermaid draws whatever is left.
         rehypeHandDiagrams,
         [
           rehypeMermaid,

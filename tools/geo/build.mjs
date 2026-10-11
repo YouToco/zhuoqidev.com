@@ -1,5 +1,5 @@
 // Builds the map data of the visitor map (src/pages/[...lang]/visitors/):
-//   npm run geo
+//   pnpm run geo
 // -> src/data/geo/land.json       where the land is, as a 0.5° bitmap: the globe draws its dots from it.
 //                                 Land only, no borders, so the globe takes no side on any border.
 // -> src/data/geo/countries.json  one point per country (Natural Earth's label point), where that
@@ -14,7 +14,8 @@ import { fileURLToPath } from "node:url";
 import mapshaper from "mapshaper";
 
 const OUT = fileURLToPath(new URL("../../src/data/geo/", import.meta.url));
-const NE = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/f1890d9f152c896d250a77557a5751a93d494776/geojson"; // v5.1.2
+const NE =
+  "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/f1890d9f152c896d250a77557a5751a93d494776/geojson"; // v5.1.2
 const DATAV = "https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json";
 
 async function get(url) {
@@ -78,15 +79,25 @@ const write = (name, data) => {
 {
   const raw = await get(DATAV);
   const isDash = (f) => String(f.properties.adcode).endsWith("_JD");
-  const out = await mapshaper.applyCommands("-i china.json -simplify 10% keep-shapes -o out.json format=geojson precision=0.01", {
-    "china.json": raw,
-  });
-  const polys = (g) => (g.type === "Polygon" ? [g.coordinates] : g.coordinates).map((poly) => poly.map((ring) => ring.flat().map(round)));
+  const out = await mapshaper.applyCommands(
+    "-i china.json -simplify 10% keep-shapes -o out.json format=geojson precision=0.01",
+    {
+      "china.json": raw,
+    },
+  );
+  const polys = (g) =>
+    (g.type === "Polygon" ? [g.coordinates] : g.coordinates).map((poly) => poly.map((ring) => ring.flat().map(round)));
   const provinces = JSON.parse(out["out.json"])
     .features.filter((f) => !isDash(f))
-    .map(({ properties: p, geometry }) => ({ adcode: p.adcode, name: p.name, center: p.centroid ?? p.center, polys: polys(geometry) }));
+    .map(({ properties: p, geometry }) => ({
+      adcode: p.adcode,
+      name: p.name,
+      center: p.centroid ?? p.center,
+      polys: polys(geometry),
+    }));
   const dash = polys(JSON.parse(raw).features.find(isDash).geometry);
-  if (provinces.length !== 34 || dash.length !== 10) throw new Error(`unexpected DataV data: ${provinces.length} provinces, ${dash.length} dashes`);
+  if (provinces.length !== 34 || dash.length !== 10)
+    throw new Error(`unexpected DataV data: ${provinces.length} provinces, ${dash.length} dashes`);
   write("china.json", { source: "DataV.GeoAtlas areas_v3 (AutoNavi)", provinces, dash });
 }
 

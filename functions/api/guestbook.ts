@@ -24,13 +24,16 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   if (!siteOrigin(request)) return json({ error: "forbidden" }, 403);
   const checked = checkNote(await readJson(request));
   // Tell a bot that filled the hidden field it worked, so it has no reason to try again.
-  if (!checked.ok) return checked.error === "spam" ? json({ id: 0, status: "pending" }, 201) : json({ error: checked.error }, 400);
+  if (!checked.ok)
+    return checked.error === "spam" ? json({ id: 0, status: "pending" }, 201) : json({ error: checked.error }, 400);
 
   const db = env.DB;
   const now = new Date();
   const ipHash = await dailyHash(db, request, beijingDay(now), false);
   const [recent, today, pending] = await db.batch<{ n: number }>([
-    db.prepare("SELECT COUNT(*) AS n FROM notes WHERE ip_hash = ?1 AND created_at > ?2").bind(ipHash, new Date(+now - 600_000).toISOString()),
+    db
+      .prepare("SELECT COUNT(*) AS n FROM notes WHERE ip_hash = ?1 AND created_at > ?2")
+      .bind(ipHash, new Date(+now - 600_000).toISOString()),
     db.prepare("SELECT COUNT(*) AS n FROM notes WHERE ip_hash = ?1").bind(ipHash),
     db.prepare("SELECT COUNT(*) AS n FROM notes WHERE status = 'pending'"),
   ]);

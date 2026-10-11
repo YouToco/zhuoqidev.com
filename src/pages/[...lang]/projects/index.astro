@@ -17,30 +17,38 @@ const intro =
 <Base lang={lang} title={L.projects} path="/projects/" section="projects" bodyClass="dotgrid">
   <main class="shelf" id="main">
     <header class="shelf-head">
-      <div class="crumb">~/projects/ <b>ls</b></div>
+      <div class="crumb">
+        ~/projects/ <b>ls</b>
+      </div>
       <h1>✦ {L.projects}</h1>
       <p>{intro}</p>
     </header>
     <ol class="post-list">
-      {
-        projects.map((p) => {
-          const { main, sub } = splitTitle(p.data.title);
-          return (
-            <li>
-              <article class="post-item card">
-                {p.data.date ? <time class="d" datetime={ymd(p.data.date)}>{ymd(p.data.date)}</time> : <span />}
-                <div>
-                  <h2>
-                    <a href={url(lang, `/projects/${slugOf(p)}/`)} class="stretch" data-vt>{main}</a>
-                  </h2>
-                  {sub && <p class="sub">{sub}</p>}
-                  <p>{p.data.description}</p>
-                </div>
-              </article>
-            </li>
-          );
-        })
-      }
+      {projects.map((p) => {
+        const { main, sub } = splitTitle(p.data.title);
+        return (
+          <li>
+            <article class="post-item card">
+              {p.data.date ? (
+                <time class="d" datetime={ymd(p.data.date)}>
+                  {ymd(p.data.date)}
+                </time>
+              ) : (
+                <span />
+              )}
+              <div>
+                <h2>
+                  <a href={url(lang, `/projects/${slugOf(p)}/`)} class="stretch" data-vt>
+                    {main}
+                  </a>
+                </h2>
+                {sub && <p class="sub">{sub}</p>}
+                <p>{p.data.description}</p>
+              </div>
+            </article>
+          </li>
+        );
+      })}
     </ol>
   </main>
 </Base>

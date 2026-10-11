@@ -1,4 +1,4 @@
-import type { Image, Paragraph, Root } from "mdast";
+import type { Paragraph, Root } from "mdast";
 import { visit } from "unist-util-visit";
 
 /**
@@ -11,7 +11,7 @@ export function remarkFigure() {
       if (!parent || index === undefined) return;
       const kids = node.children.filter((c) => !(c.type === "text" && !c.value.trim()));
       if (kids.length !== 1 || kids[0]?.type !== "image") return;
-      const image = kids[0] as Image;
+      const image = kids[0];
       const caption = image.title;
       if (!caption) return;
       image.title = null;

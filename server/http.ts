@@ -1,7 +1,8 @@
 // Shared HTTP helpers for the Pages Functions.
 
 // The blog's own pages: both mainland and overseas lines, pages.dev (and its preview aliases), local dev.
-const SITE_ORIGIN = /^(https:\/\/(www\.)?zhuoqidev\.com|https:\/\/([a-z0-9-]+\.)?zhuoqidev\.pages\.dev|http:\/\/(localhost|127\.0\.0\.1)(:\d+)?)$/;
+const SITE_ORIGIN =
+  /^(https:\/\/(www\.)?zhuoqidev\.com|https:\/\/([a-z0-9-]+\.)?zhuoqidev\.pages\.dev|http:\/\/(localhost|127\.0\.0\.1)(:\d+)?)$/;
 
 /** The request's Origin when it is one of the blog's pages, else null. */
 export function siteOrigin(request: Request): string | null {
@@ -33,7 +34,7 @@ export function preflight(request: Request): Response {
   );
 }
 
-export function json(body: unknown, status = 200, headers: HeadersInit = {}): Response {
+export function json(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...headers },

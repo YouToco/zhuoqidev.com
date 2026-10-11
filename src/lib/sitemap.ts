@@ -9,7 +9,9 @@ async function entries(lang: Lang): Promise<Entry[]> {
   const posts = await getPosts(lang);
   const newest = posts[0] ? ymd(posts[0].data.updated ?? posts[0].data.date) : undefined;
   const otherTerms = Object.fromEntries(
-    await Promise.all(TAXES.map(async (tax) => [tax, new Set((await termsOf(other(lang), tax)).map((x) => x.slug))] as const)),
+    await Promise.all(
+      TAXES.map(async (tax) => [tax, new Set((await termsOf(other(lang), tax)).map((x) => x.slug))] as const),
+    ),
   );
   const list: Entry[] = [
     { path: "/", lastmod: newest, alt: true },
@@ -34,7 +36,10 @@ async function entries(lang: Lang): Promise<Entry[]> {
 function urlXml(lang: Lang, e: Entry) {
   const loc = new URL(url(lang, e.path), SITE_URL).href;
   const alts = e.alt
-    ? LANGS.map((l) => `<xhtml:link rel="alternate" hreflang="${l === "zh" ? "zh-CN" : "en"}" href="${new URL(url(l, e.path), SITE_URL).href}"/>`).join("")
+    ? LANGS.map(
+        (l) =>
+          `<xhtml:link rel="alternate" hreflang="${l === "zh" ? "zh-CN" : "en"}" href="${new URL(url(l, e.path), SITE_URL).href}"/>`,
+      ).join("")
     : "";
   return `<url><loc>${loc}</loc>${e.lastmod ? `<lastmod>${e.lastmod}</lastmod>` : ""}${alts}</url>`;
 }

@@ -1,7 +1,7 @@
 // Draws every ```mermaid block in src/content as an Excalidraw sketch.
 //
-//   npm run diagrams            draw the blocks that have no drawing yet; re-export edited scenes
-//   npm run diagrams -- --force redraw every scene from its Mermaid text (discards hand edits)
+//   pnpm run diagrams          draw the blocks that have no drawing yet; re-export edited scenes
+//   pnpm run diagrams --force  redraw every scene from its Mermaid text (discards hand edits)
 //
 // Per block it writes diagrams/<id>.excalidraw (the editable scene: open it on excalidraw.com,
 // edit, save it back, run this again) and public/diagrams/<id>.svg (what the page shows). Posts

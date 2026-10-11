@@ -8,13 +8,17 @@ export const MAX_BODY = 200;
 export const MIN_MS_ON_PAGE = 3000;
 
 export type Note = { name: string; body: string; color: Color; lang: "zh" | "en" };
-export type Checked = { ok: true; note: Note } | { ok: false; error: "bad-request" | "empty" | "too-long" | "too-fast" | "spam" };
+export type Checked =
+  { ok: true; note: Note } | { ok: false; error: "bad-request" | "empty" | "too-long" | "too-fast" | "spam" };
 
 // Control characters (other than newline) and invisible formatting characters that could
 // hide or reorder text; plain line breaks stay.
-const INVISIBLE = /[\u0000-\u0009\u000b-\u001f\u007f-\u009f​-‏‪-‮⁠-⁩﻿]/g;
+// eslint-disable-next-line no-control-regex -- stripping control characters is the point
+const INVISIBLE = /[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]/g;
 
 const clean = (s: string) => s.normalize("NFC").replace(/\r\n?/g, "\n").replace(INVISIBLE, "");
+// The limit counts code points (an emoji is one character, as readers count it).
+// eslint-disable-next-line @typescript-eslint/no-misused-spread -- code points are what is counted
 const length = (s: string) => [...s].length;
 
 export function checkNote(input: unknown): Checked {
@@ -23,9 +27,14 @@ export function checkNote(input: unknown): Checked {
   // The form has a field people never see; anything typed into it came from a bot.
   if (typeof o.website === "string" && o.website !== "") return { ok: false, error: "spam" };
   if (typeof o.ms !== "number" || o.ms < MIN_MS_ON_PAGE) return { ok: false, error: "too-fast" };
-  if (typeof o.body !== "string" || (o.name !== undefined && typeof o.name !== "string")) return { ok: false, error: "bad-request" };
-  const body = clean(o.body).replace(/\n{3,}/g, "\n\n").trim();
-  const name = clean(typeof o.name === "string" ? o.name : "").replace(/\s+/g, " ").trim();
+  if (typeof o.body !== "string" || (o.name !== undefined && typeof o.name !== "string"))
+    return { ok: false, error: "bad-request" };
+  const body = clean(o.body)
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  const name = clean(typeof o.name === "string" ? o.name : "")
+    .replace(/\s+/g, " ")
+    .trim();
   if (!body) return { ok: false, error: "empty" };
   if (length(body) > MAX_BODY || length(name) > MAX_NAME) return { ok: false, error: "too-long" };
   const color = COLORS.includes(o.color as Color) ? (o.color as Color) : "yellow";

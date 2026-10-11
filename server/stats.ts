@@ -30,7 +30,9 @@ async function saltFor(db: D1Database, day: string): Promise<string> {
   let row = await read();
   if (!row) {
     await db.batch([
-      db.prepare("INSERT OR IGNORE INTO daily_salt (day, salt) VALUES (?1, ?2)").bind(day, hex(crypto.getRandomValues(new Uint8Array(16)))),
+      db
+        .prepare("INSERT OR IGNORE INTO daily_salt (day, salt) VALUES (?1, ?2)")
+        .bind(day, hex(crypto.getRandomValues(new Uint8Array(16)))),
       db.prepare("DELETE FROM daily_salt WHERE day < ?1").bind(day),
       db.prepare("DELETE FROM visitor_seen WHERE day < ?1").bind(day),
     ]);

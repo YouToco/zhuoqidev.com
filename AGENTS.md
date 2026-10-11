@@ -71,12 +71,24 @@
 - Readers pick the article width (narrow / default / wide / full) in the rail; it is
   stored as `zq-width` and applied by the head script in `Base.astro`. Charts, tables
   and diagrams must work from a 640 px column up to a full-width one.
-- `npm run build` runs `astro build`, subsets the CJK display fonts per page
+- `pnpm run build` runs `astro build`, subsets the CJK display fonts per page
   (`scripts/subset-fonts.mjs`), screenshots the social cards
   (`scripts/og-images.mjs`) and builds the Pagefind search index.
-  `npm run verify` then checks every legacy Hugo URL, internal link and anchor,
+  `pnpm run verify` then checks every legacy Hugo URL, internal link and anchor,
   hreflang pair, JSON-LD block, image size, font subset and Markdown twin.
-  `npm run check` is the strict TypeScript gate. Run all three before pushing.
+  `pnpm run check` is the strict TypeScript gate and `pnpm run lint` the ESLint one
+  (`eslint.config.js`: typescript-eslint strict type-checked plus the Astro rules; each
+  exception there says why). `pnpm run format` applies Prettier to code and config
+  (`.prettierignore` says what it leaves alone and why); CI fails on unformatted code.
+  Run build, verify, check, lint and `pnpm run format:check` before pushing.
+- Dependencies: pnpm, at the version in `package.json` `"packageManager"` (Corepack or
+  `pnpm/action-setup` picks it up); install with `pnpm install --frozen-lockfile`, add
+  with `pnpm add --save-exact`. `pnpm-workspace.yaml` sets the supply-chain policy: only
+  versions public for a day, no release whose publishing evidence is weaker than its
+  predecessors', and no dependency install scripts unless listed in `allowBuilds`. When
+  an install stops on one of these, check the package before adding an exception, and
+  write the reason next to it as the existing entries do. The strict `node_modules` only
+  exposes declared packages: import nothing that is not in `package.json`.
 - Fonts: Inter, JetBrains Mono and Caveat (Latin) come from Astro's font API and
   are inlined by `src/components/Fonts.astro`. The CJK display faces are not:
   `"ZQ Serif"` (Noto Serif SC, weights 700/900) and `"ZQ Hand"` (Long Cang) are
@@ -95,17 +107,17 @@
   installs the same font files and fontconfig rules with
   `scripts/install-cjk-fonts.sh` (pinned upstream commit + sha256, no apt).
 - Diagrams are drawn ahead of time, not at build time: after adding or editing a
-  ```` ```mermaid ```` fence, run `npm run diagrams` and commit what it writes.
+  ```` ```mermaid ```` fence, run `pnpm run diagrams` and commit what it writes.
   Each fence gets `diagrams/<id>.excalidraw` (the editable scene) and
   `public/diagrams/<id>.svg` (what the page shows), where the id is a hash of the
   fence text (`src/lib/markdown/diagram-id.ts`); the Markdown keeps the Mermaid
   text for `index.md`, and the page keeps it too, folded under each drawing
   (`details.diagram-src`, with a copy button), so an agent reading the HTML gets the
-  structure, not just the labels in the alt text. `npm run verify` fails while any
+  structure, not just the labels in the alt text. `pnpm run verify` fails while any
   fence lacks a drawing.
   To touch up a drawing by hand, open its `.excalidraw` file on excalidraw.com,
-  save it back over the file and run `npm run diagrams` again (it re-exports the
-  SVG); `-- --force` redraws everything from Mermaid and discards such edits. The
+  save it back over the file and run `pnpm run diagrams` again (it re-exports the
+  SVG); `--force` redraws everything from Mermaid and discards such edits. The
   generator lives in `tools/diagrams/` with its own dependencies (installed on
   first run, never in CI); mermaid-to-excalidraw cannot draw mindmaps, so
   `tools/diagrams/mindmap.js` lays those out itself, and a flowchart with a
@@ -127,7 +139,7 @@
   `load` and never reads layout while the page loads, and three.js plus the model
   load only after the reader's first scroll, tap or key press. The model is code
   (`src/scripts/argus-story-model.ts`); after changing it, render the poster, its
-  camera and label spots again with `npm run poster` (`tools/models/README.md`).
+  camera and label spots again with `pnpm run poster` (`tools/models/README.md`).
   The step text lives in `src/data/argus-story.ts` and follows the recorded run in
   `tools/models/argus-story-run.json`. After changing any of it,
   compare mobile Lighthouse on that page with `main`.
@@ -137,7 +149,7 @@
 - The site stays static; the only server code is `functions/` (Cloudflare Pages Functions) with one
   D1 database (binding `DB`, schema in `migrations/`). Shared code lives in `server/`: `bots.ts` is
   dependency-free so both the Functions and Node scripts use it. Node runs the `.ts` files directly
-  (`npm test` = `node --test`); `npm run check` also type-checks `functions/` + `server/` against
+  (`pnpm test` = `node --test`); `pnpm run check` also type-checks `functions/` + `server/` against
   `@cloudflare/workers-types` (`functions/tsconfig.json`).
 - Two hosting lines, two ways of counting. Overseas visitors reach Cloudflare Pages, where
   `functions/_middleware.ts` counts crawler page requests by User-Agent (line `cf`). Mainland visitors
@@ -158,13 +170,13 @@
   (`functions/api/stats.ts`, `server/public-stats.ts`), which Cloudflare caches for five minutes.
   City-level counts and anything per visitor stay on `/admin/`. The 3D scenes
   (`src/scripts/visitors-globe.ts`, `visitors-china.ts`) load after the reader's first input, like
-  the Argus scene; their map data is built by `npm run geo` (tools/geo/README.md).
+  the Argus scene; their map data is built by `pnpm run geo` (tools/geo/README.md).
 - `/admin/` (served by `functions/admin/index.ts`, page in `server/admin.html`) shows the counts and
   the guestbook review queue; it and `/api/admin/*` need the `ADMIN_TOKEN` Pages secret. Guestbook
   notes are text only, stay `pending` until approved there, and are rendered with `textContent` on
   both the wall and the admin page. Keep it that way.
-- Local run: `npm run build`, put `ADMIN_TOKEN=<32+ random characters>` in `.dev.vars` (git-ignored),
-  then `npm run dev:functions` (global `wrangler`; applies migrations to a local D1 under `.wrangler/`)
+- Local run: `pnpm run build`, put `ADMIN_TOKEN=<32+ random characters>` in `.dev.vars` (git-ignored),
+  then `pnpm run dev:functions` (global `wrangler`; applies migrations to a local D1 under `.wrangler/`)
   and open http://localhost:8788/. `node scripts/stats-cn.ts --day YYYY-MM-DD --dry-run` prints a
   mainland day's crawler counts without storing them.
 - New migrations go in `migrations/` and are applied to the real database with

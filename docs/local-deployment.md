@@ -10,10 +10,10 @@ from a workstation when GitHub Actions is unavailable.
 
 ## What a release does
 
-1. `npm ci`, shell syntax checks, repository tests, `npm run check` (TypeScript).
-2. `npm run build`: `astro build`, social cards (`scripts/og-images.mjs`, which
+1. `pnpm install --frozen-lockfile`, shell syntax checks, repository tests, `pnpm run check` (TypeScript).
+2. `pnpm run build`: `astro build`, social cards (`scripts/og-images.mjs`, which
    screenshots build-time card pages in Chrome), Pagefind search index.
-3. `npm run verify`: legacy URLs, links, anchors, hreflang, JSON-LD, images,
+3. `pnpm run verify`: legacy URLs, links, anchors, hreflang, JSON-LD, images,
    Markdown twins, search index.
 4. `aliyun oss sync dist/ oss://zhuoqidev/ --delete`, then `aliyun oss cp --meta`
    re-uploads `*.md` and `*.txt` with a UTF-8 charset (OSS omits it, which turns

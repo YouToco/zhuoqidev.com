@@ -1,0 +1,16 @@
+# Prettier formats code and config (`pnpm run format`; CI runs `pnpm run format:check`).
+# Writing, generated data, lockfiles and hand-tuned HTML stay as they are, and so does CSS:
+# it is written one rule per line, which Prettier would spread over four times the lines
+# (.prettierrc.json leaves the <style> and <script> blocks in .astro files alone for the
+# same reason, and because inline scripts ship byte for byte). .gitignore'd paths are
+# skipped as well.
+*.md
+*.html
+*.css
+pnpm-lock.yaml
+diagrams/
+public/
+src/data/
+src/assets/models/
+tools/models/argus-story-run.json
+tests/fixtures/

@@ -22,7 +22,6 @@ const notes = B.notes.map((n) => ({ ...n, post: bySlug.get(n.slug)! }));
 const stickyPost = bySlug.get(B.sticky.slug)!;
 const years = [...new Set(posts.map((p) => p.data.date.getUTCFullYear()))];
 const md = (d: Date) => ymd(d).slice(5);
-// Desk icons: each opens its page in a window on the desk (src/scripts/windows.ts).
 const icons = [
   { name: "posts/", href: url(lang, "/posts/"), kind: "folder" },
   { name: "projects/", href: url(lang, "/projects/"), kind: "folder" },
@@ -40,7 +39,12 @@ const jsonLd = {
   url: new URL(url(lang, "/"), SITE_URL).href,
   inLanguage: lang === "zh" ? "zh-CN" : "en",
   description: site[lang].description,
-  author: { "@type": "Person", name: site[lang].author, jobTitle: site[lang].headline, sameAs: [social.github, social.x] },
+  author: {
+    "@type": "Person",
+    name: site[lang].author,
+    jobTitle: site[lang].headline,
+    sameAs: [social.github, social.x],
+  },
 };
 ---
 
@@ -61,14 +65,30 @@ const jsonLd = {
   <div class="boot" data-boot aria-hidden="true" slot="before">
     <div class="laptop">
       <div class="terminal">
-        <div class="bar"><i></i><i></i><i></i><span>{B.terminal.title}</span></div>
+        <div class="bar">
+          <i></i>
+          <i></i>
+          <i></i>
+          <span>{B.terminal.title}</span>
+        </div>
         <div class="tty">
-          <p class="ln cmd"><span class="p">$</span> whoami</p>
+          <p class="ln cmd">
+            <span class="p">$</span> whoami
+          </p>
           <p class="ln o">&gt; {B.terminal.whoami}</p>
-          <p class="ln cmd gap"><span class="p">$</span> ls ~/desk</p>
+          <p class="ln cmd gap">
+            <span class="p">$</span> ls ~/desk
+          </p>
           <p class="ln o">&gt; {L.bootLs(posts.length, projects.length)}</p>
-          <p class="ln cmd gap"><span class="p">$</span> open zhuoqidev.com</p>
-          <p class="ln o">&gt; <span class="boot-bar"><i></i></span></p>
+          <p class="ln cmd gap">
+            <span class="p">$</span> open zhuoqidev.com
+          </p>
+          <p class="ln o">
+            &gt;{" "}
+            <span class="boot-bar">
+              <i></i>
+            </span>
+          </p>
         </div>
       </div>
     </div>
@@ -76,30 +96,31 @@ const jsonLd = {
   </div>
   <div class="home">
     <aside class="index" aria-labelledby="idx-h">
-      <h2 id="idx-h">✦ {L.allPosts} <small>{L.postsCount(posts.length)}</small></h2>
-      {
-        years.map((y) => (
-          <>
-            <div class="year">{y}</div>
-            <ol>
-              {posts
-                .filter((p) => p.data.date.getUTCFullYear() === y)
-                .map((p) => (
-                  <li>
-                    <a class:list={{ on: p === latest }} href={postUrl(lang, slugOf(p))} data-vt>
-                      <span class="dot" />
-                      <span class="d">{md(p.data.date)}</span>
-                      <span>{shortTitle(p)}</span>
-                    </a>
-                  </li>
-                ))}
-            </ol>
-          </>
-        ))
-      }
+      <h2 id="idx-h">
+        ✦ {L.allPosts} <small>{L.postsCount(posts.length)}</small>
+      </h2>
+      {years.map((y) => (
+        <>
+          <div class="year">{y}</div>
+          <ol>
+            {posts
+              .filter((p) => p.data.date.getUTCFullYear() === y)
+              .map((p) => (
+                <li>
+                  <a class:list={{ on: p === latest }} href={postUrl(lang, slugOf(p))} data-vt>
+                    <span class="dot" />
+                    <span class="d">{md(p.data.date)}</span>
+                    <span>{shortTitle(p)}</span>
+                  </a>
+                </li>
+              ))}
+          </ol>
+        </>
+      ))}
       <div class="agent-links">
-        {L.forAgentsIndex}<br /><a href={url(lang, "/llms.txt")}>/llms.txt</a> ·
-        <a href={url(lang, "/llms-full.txt")}>/llms-full.txt</a> ·
+        {L.forAgentsIndex}
+        <br />
+        <a href={url(lang, "/llms.txt")}>/llms.txt</a> ·<a href={url(lang, "/llms-full.txt")}>/llms-full.txt</a> ·
         <a href={`${postUrl(lang, slugOf(latest))}index.md`}>{L.eachPostMd}</a>
       </div>
     </aside>
@@ -108,11 +129,16 @@ const jsonLd = {
       <div class="board-tools">
         <span class="hint">{L.boardHint}</span>
         <time class="clock" data-clock hidden></time>
-        <button class="chip-btn" id="reset-board" type="button">{L.boardReset}</button>
+        <button class="chip-btn" id="reset-board" type="button">
+          {L.boardReset}
+        </button>
       </div>
       <div class="board" id="board">
         <section class="pin hero" id="hero" style={layout.hero}>
-          <h1>{B.hero.before}<span class="mark">{B.hero.mark}</span></h1>
+          <h1>
+            {B.hero.before}
+            <span class="mark">{B.hero.mark}</span>
+          </h1>
           <p>{B.hero.tagline}</p>
           <div class="sub">{B.hero.sub}</div>
         </section>
@@ -120,18 +146,42 @@ const jsonLd = {
         <Polaroid lang={lang} width={130} class="pin" id="portrait" style={layout.portrait} drag />
 
         <svg class="pin doodle" style={layout.doodle} width="150" height="86" viewBox="0 0 150 86" aria-hidden="true">
-          <text x="2" y="20">{B.doodle}</text>
-          <path d="M20 32 C 50 44, 92 46, 128 74" fill="none" stroke="#d9452b" stroke-width="2.2" stroke-linecap="round"></path>
-          <path d="M114 76 L129 75 L124 61" fill="none" stroke="#d9452b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+          <text x="2" y="20">
+            {B.doodle}
+          </text>
+          <path
+            d="M20 32 C 50 44, 92 46, 128 74"
+            fill="none"
+            stroke="#d9452b"
+            stroke-width="2.2"
+            stroke-linecap="round"
+          ></path>
+          <path
+            d="M114 76 L129 75 L124 61"
+            fill="none"
+            stroke="#d9452b"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          ></path>
         </svg>
 
         <figure class="pin sticky" id="sticky" data-drag style={layout.sticky}>
-          <blockquote><q>{B.sticky.quote}</q></blockquote>
-          <figcaption>{B.sticky.from} <a href={postUrl(lang, B.sticky.slug)}>{shortTitle(stickyPost)}</a></figcaption>
+          <blockquote>
+            <q>{B.sticky.quote}</q>
+          </blockquote>
+          <figcaption>
+            {B.sticky.from} <a href={postUrl(lang, B.sticky.slug)}>{shortTitle(stickyPost)}</a>
+          </figcaption>
         </figure>
 
         <div class="pin terminal" id="term" data-drag style={layout.term}>
-          <div class="bar"><i></i><i></i><i></i><span>{B.terminal.title}</span></div>
+          <div class="bar">
+            <i></i>
+            <i></i>
+            <i></i>
+            <span>{B.terminal.title}</span>
+          </div>
           <pre><span class="p">$</span> whoami
 <span class="o">{B.terminal.whoami}</span>
 
@@ -148,85 +198,103 @@ const jsonLd = {
           <span class="tape"></span>
           <div class="row">
             <span class="tag red">{L.latest}</span>
-            {latest.data.series && <span class="tag">{latest.data.series} #{String(latest.data.seriesOrder ?? 1).padStart(2, "0")}</span>}
+            {latest.data.series && (
+              <span class="tag">
+                {latest.data.series} #{String(latest.data.seriesOrder ?? 1).padStart(2, "0")}
+              </span>
+            )}
           </div>
-          <h2><a href={postUrl(lang, slugOf(latest))} data-vt>{splitTitle(latest.data.title).main}</a></h2>
+          <h2>
+            <a href={postUrl(lang, slugOf(latest))} data-vt>
+              {splitTitle(latest.data.title).main}
+            </a>
+          </h2>
           <p>{latest.data.description}</p>
           <div class="foot">
             <time datetime={ymd(latest.data.date)}>{ymd(latest.data.date)}</time>
-            <a class="go" href={postUrl(lang, slugOf(latest))}>{L.readMore}</a>
+            <a class="go" href={postUrl(lang, slugOf(latest))}>
+              {L.readMore}
+            </a>
           </div>
         </article>
 
-        {
-          series.map((s, i) => (
-            <section class="pin card folder" id={`series-${i}`} data-drag style={layout[`series-${i}`]}>
-              <span class="tab">series/</span>
-              <div class="in">
-                <h3>
-                  <a href={url(lang, `/series/${s.slug}/`)}>{s.name}</a> <small>{L.postsCount(s.posts.length)}</small>
-                </h3>
-                <ol>
-                  {s.posts.map((p, n) => (
-                    <li>
-                      <a href={postUrl(lang, slugOf(p))} data-vt>
-                        <span class="n">{String(n + 1).padStart(2, "0")}</span>
-                        {shortTitle(p)}
-                      </a>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            </section>
-          ))
-        }
-
-        <div class="pin sticker" id="robot" data-drag style={layout.robot} aria-hidden="true">🤖</div>
-
-        {
-          notes.map((n, i) => (
-            <article class="pin card memo" id={`note-${i}`} data-drag style={layout[`note-${i}`]}>
-              {i === 1 && <span class="tape blue" />}
-              <span class="big-n" aria-hidden="true">{String(i + 1).padStart(2, "0")}</span>
-              <span class="kicker">
-                {n.label} · {md(n.post.data.date)}
-              </span>
+        {series.map((s, i) => (
+          <section class="pin card folder" id={`series-${i}`} data-drag style={layout[`series-${i}`]}>
+            <span class="tab">series/</span>
+            <div class="in">
               <h3>
-                <a href={postUrl(lang, n.slug)} data-vt>{shortTitle(n.post)}</a>
+                <a href={url(lang, `/series/${s.slug}/`)}>{s.name}</a> <small>{L.postsCount(s.posts.length)}</small>
               </h3>
-              <p>{n.blurb}</p>
-            </article>
-          ))
-        }
+              <ol>
+                {s.posts.map((p, n) => (
+                  <li>
+                    <a href={postUrl(lang, slugOf(p))} data-vt>
+                      <span class="n">{String(n + 1).padStart(2, "0")}</span>
+                      {shortTitle(p)}
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </section>
+        ))}
+
+        <div class="pin sticker" id="robot" data-drag style={layout.robot} aria-hidden="true">
+          🤖
+        </div>
+
+        {notes.map((n, i) => (
+          <article class="pin card memo" id={`note-${i}`} data-drag style={layout[`note-${i}`]}>
+            {i === 1 && <span class="tape blue" />}
+            <span class="big-n" aria-hidden="true">
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <span class="kicker">
+              {n.label} · {md(n.post.data.date)}
+            </span>
+            <h3>
+              <a href={postUrl(lang, n.slug)} data-vt>
+                {shortTitle(n.post)}
+              </a>
+            </h3>
+            <p>{n.blurb}</p>
+          </article>
+        ))}
 
         <section class="pin card projects" id="projects" data-drag style={layout.projects}>
-          <h3 class="kicker"><a href={url(lang, "/projects/")}>{B.projectsLabel}</a></h3>
-          {
-            projects.map((p) => (
-              <a href={url(lang, `/projects/${slugOf(p)}/`)}>
-                <b data-vt>{splitTitle(p.data.title).main}</b>
-                <span>{p.data.description}</span>
-              </a>
-            ))
-          }
+          <h3 class="kicker">
+            <a href={url(lang, "/projects/")}>{B.projectsLabel}</a>
+          </h3>
+          {projects.map((p) => (
+            <a href={url(lang, `/projects/${slugOf(p)}/`)}>
+              <b data-vt>{splitTitle(p.data.title).main}</b>
+              <span>{p.data.description}</span>
+            </a>
+          ))}
         </section>
 
         <section class="pin card stamps" id="stamps" data-drag style={layout.stamps} aria-label={B.stampsLabel}>
-          <span class="stamp-round">CKA</span><span class="stamp-round">CKS</span><span class="stamp-round">RHCE</span>
+          <span class="stamp-round">CKA</span>
+          <span class="stamp-round">CKS</span>
+          <span class="stamp-round">RHCE</span>
         </section>
 
-        <div class="pin sticker" id="coffee" data-drag style={layout.coffee} aria-hidden="true">☕</div>
+        <div class="pin sticker" id="coffee" data-drag style={layout.coffee} aria-hidden="true">
+          ☕
+        </div>
 
         <div class="pin desk-icons" id="icons" style={layout.icons}>
-        <ul aria-label={L.deskIcons}>
-          {
-            icons.map((i) => (
+          <ul aria-label={L.deskIcons}>
+            {icons.map((i) => (
               <li>
                 <a class="desk-icon" href={i.href} data-kind={i.kind}>
                   <span class="glyph" aria-hidden="true">
                     {i.kind === "folder" ? (
                       <svg width="58" height="46" viewBox="0 0 58 46">
-                        <path class="back" d="M1 6a3 3 0 0 1 3-3h15l5 5h30a3 3 0 0 1 3 3v29a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3z" />
+                        <path
+                          class="back"
+                          d="M1 6a3 3 0 0 1 3-3h15l5 5h30a3 3 0 0 1 3 3v29a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3z"
+                        />
                         <path class="front" d="M1 14h56v26a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3z" />
                       </svg>
                     ) : (
@@ -243,10 +311,11 @@ const jsonLd = {
                   <span class="name">{i.name}</span>
                 </a>
               </li>
-            ))
-          }
-        </ul>
-        <p class="icons-hint" aria-hidden="true">{L.iconsHint}</p>
+            ))}
+          </ul>
+          <p class="icons-hint" aria-hidden="true">
+            {L.iconsHint}
+          </p>
         </div>
       </div>
     </main>

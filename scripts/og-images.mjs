@@ -34,7 +34,10 @@ for (const lang of ["zh", "en"]) {
   const dir = join(CARDS, lang);
   if (!existsSync(dir)) continue;
   for (const slug of readdirSync(dir)) {
-    jobs.push({ page: `/og-cards/${lang}/${slug}/`, out: join(DIST, lang === "en" ? "en" : "", "posts", slug, "og.png") });
+    jobs.push({
+      page: `/og-cards/${lang}/${slug}/`,
+      out: join(DIST, lang === "en" ? "en" : "", "posts", slug, "og.png"),
+    });
   }
 }
 jobs.push({ page: "/og-cards/site/", out: join(DIST, "og-default.png") });

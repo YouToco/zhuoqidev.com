@@ -22,13 +22,27 @@ const intro =
 <Base lang={lang} title={L.allPosts} path="/posts/" section="posts" bodyClass="dotgrid">
   <main class="shelf" id="main">
     <header class="shelf-head">
-      <div class="crumb">~/posts/ <b>ls -lt</b></div>
+      <div class="crumb">
+        ~/posts/ <b>ls -lt</b>
+      </div>
       <h1>✦ {L.allPosts}</h1>
       <p>{intro}</p>
       <nav class="filters" aria-label={`${L.series} / ${L.categories}`}>
-        {series.map((s) => <a class="tag red" href={url(lang, `/series/${s.slug}/`)}>{s.name}<small>{s.posts.length}</small></a>)}
-        {cats.map((c) => <a class="tag" href={url(lang, `/categories/${c.slug}/`)}>{c.name}<small>{c.posts.length}</small></a>)}
-        <a class="tag" href={url(lang, "/tags/")}>#{L.tags} →</a>
+        {series.map((s) => (
+          <a class="tag red" href={url(lang, `/series/${s.slug}/`)}>
+            {s.name}
+            <small>{s.posts.length}</small>
+          </a>
+        ))}
+        {cats.map((c) => (
+          <a class="tag" href={url(lang, `/categories/${c.slug}/`)}>
+            {c.name}
+            <small>{c.posts.length}</small>
+          </a>
+        ))}
+        <a class="tag" href={url(lang, "/tags/")}>
+          #{L.tags} →
+        </a>
       </nav>
     </header>
     <PostList lang={lang} posts={posts} byYear />
