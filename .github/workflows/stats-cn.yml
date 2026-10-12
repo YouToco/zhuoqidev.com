@@ -1,10 +1,11 @@
 name: Mainland crawler counts
 
 # Readers in mainland China are served by Aliyun CDN, where the Pages middleware never runs, so
-# crawler visits there are counted from Aliyun's hourly CDN access logs (scripts/stats-cn.ts) and
-# sent to the stats database behind https://api.zhuoqidev.com/admin/. Only per-crawler counts leave
-# the runner. Re-importing a day replaces it, so the day before yesterday is redone to pick up logs
-# that Aliyun published late.
+# crawler visits and readers' page views there are counted from Aliyun's hourly CDN access logs
+# (scripts/stats-cn.ts) and sent to the stats database behind https://api.zhuoqidev.com/admin/.
+# Readers are placed by IP with ip2region on the runner; only per-crawler and per-place counts leave
+# it. Re-importing a day replaces it, so the day before yesterday is redone to pick up logs that
+# Aliyun published late.
 on:
   schedule:
     # 09:23 Beijing time: each hour's log appears a few hours late, so yesterday is complete by then.
@@ -52,8 +53,28 @@ jobs:
             --access-key-secret "$ALIYUN_ACCESS_KEY_SECRET" \
             --region cn-shenzhen
 
-      - name: Import crawler counts
+      - name: Download pinned ip2region data
+        # IP location files from github.com/lionsoul2014/ip2region (Apache-2.0 OR MIT), fixed to one
+        # commit and checked against known hashes. To update: pick a newer commit, download both
+        # files, and replace the commit and the two hashes here.
         env:
+          IP2REGION_COMMIT: 8104997908c98d2213e3b716bfc2b70113c2ba1e
+        run: |
+          dir="$RUNNER_TEMP/ip2region"
+          mkdir -p "$dir"
+          for f in ip2region_v4.xdb ip2region_v6.xdb; do
+            curl -fsSL --retry 3 --connect-timeout 10 --max-time 300 -o "$dir/$f" \
+              "https://raw.githubusercontent.com/lionsoul2014/ip2region/$IP2REGION_COMMIT/data/$f"
+          done
+          cd "$dir"
+          sha256sum -c <<'SUMS'
+          f5ccf366678c91394ac5e469f93b624d5df290e7353c748b920c6b84ffc4e551  ip2region_v4.xdb
+          939f6b46bd2b8bec3cf7c5ceb8ba782266ae9b1f35b5ba7916700dec0b7506ed  ip2region_v6.xdb
+          SUMS
+
+      - name: Import crawler and visit counts
+        env:
+          IP2REGION_DIR: ${{ runner.temp }}/ip2region
           ALIYUN_BIN: ${{ runner.temp }}/aliyun-3.5.1/aliyun
           STATS_ADMIN_TOKEN: ${{ secrets.STATS_ADMIN_TOKEN }}
           DAY: ${{ inputs.day }}

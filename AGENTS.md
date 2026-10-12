@@ -155,8 +155,14 @@
   `functions/_middleware.ts` counts crawler page requests by User-Agent (line `cf`). Mainland visitors
   reach Aliyun CDN, which never runs Functions, so `.github/workflows/stats-cn.yml` runs
   `scripts/stats-cn.ts` every morning to count crawlers in Aliyun's CDN logs (line `cn`). People are
-  counted on both lines by the page beacon in `src/components/Analytics.astro` (POST `/api/hit`),
-  by Cloudflare's IP location; no IP is stored and visitor hashes use a salt deleted the next day.
+  counted by `src/components/Analytics.astro`: pages from Cloudflare carry `Server-Timing: line;desc=cf`
+  (added by the middleware) and send the beacon (POST `/api/hit` → `visit_daily`, placed by Cloudflare;
+  no IP is stored and visitor hashes use a salt deleted the next day). Pages from Aliyun fetch
+  `/hit.gif` instead, because a beacon from the mainland to Cloudflare was often lost; the same daily
+  import counts those requests in the CDN logs, places the IPs with ip2region (`scripts/ip2region.ts`,
+  data files pinned by commit and hash in the workflow) and replaces that day in `visit_daily_cn`.
+  Everything that reads visits sums both tables (`ALL_VISITS` in `server/stats.ts`). Browsers without
+  `serverTiming` always send the beacon.
 - The published pages call the API on `https://api.zhuoqidev.com` (`api` / `apiBase` in `src/site.ts`):
   a CNAME to `zhuoqidev.pages.dev` on every DNS line plus a custom domain on the Pages project, so
   readers on the mainland line reach it too. Local previews and `*.pages.dev` call their own origin.
@@ -178,7 +184,7 @@
 - Local run: `pnpm run build`, put `ADMIN_TOKEN=<32+ random characters>` in `.dev.vars` (git-ignored),
   then `pnpm run dev:functions` (global `wrangler`; applies migrations to a local D1 under `.wrangler/`)
   and open http://localhost:8788/. `node scripts/stats-cn.ts --day YYYY-MM-DD --dry-run` prints a
-  mainland day's crawler counts without storing them.
+  mainland day's crawler counts (and, with `IP2REGION_DIR` set, its visits) without storing them.
 - New migrations go in `migrations/` and are applied to the real database with
   `wrangler d1 migrations apply DB --remote` before the deploy that needs them.
 - Anything that changes what is collected or shown must update both privacy pages.

@@ -1,8 +1,44 @@
-// Writing the daily counts (schema: migrations/0001_init.sql).
+// Writing the daily counts (schema: migrations/).
 import { beijingDay, type Crawler } from "./bots.ts";
 import { hex, sha256 } from "./http.ts";
 
 export type Place = { country: string; region: string; city: string };
+
+/** Every counted page view: the beacon's (visit_daily) plus the mainland log import's (visit_daily_cn). */
+export const ALL_VISITS = `(SELECT day, country, region, city, views, visitors FROM visit_daily
+  UNION ALL SELECT day, country, region, city, views, visitors FROM visit_daily_cn)`;
+
+export type VisitCount = Place & { views: number; visitors: number };
+
+/** The `visits` of a mainland import (scripts/stats-cn.ts), or null when any row is malformed. */
+export function validVisits(input: unknown): VisitCount[] | null {
+  if (!Array.isArray(input) || input.length > 2000) return null;
+  const ok = (input as unknown[]).every((x) => {
+    if (typeof x !== "object" || x === null) return false;
+    const v = x as Record<string, unknown>;
+    return (
+      typeof v.country === "string" &&
+      /^[A-Z]{2}$/.test(v.country) &&
+      typeof v.region === "string" &&
+      v.region.length <= 80 &&
+      typeof v.city === "string" &&
+      v.city.length <= 80 &&
+      Number.isInteger(v.visitors) &&
+      (v.visitors as number) > 0 &&
+      Number.isInteger(v.views) &&
+      (v.views as number) >= (v.visitors as number)
+    );
+  });
+  return ok
+    ? (input as VisitCount[]).map(({ country, region, city, views, visitors }) => ({
+        country,
+        region,
+        city,
+        views,
+        visitors,
+      }))
+    : null;
+}
 
 /** Where Cloudflare places the visitor's IP. Only these names are kept, never the IP. */
 export function placeOf(request: Request): Place {

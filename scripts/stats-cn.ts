@@ -1,44 +1,89 @@
-// Crawler counts for the mainland line. Readers in China are served by Aliyun CDN, which never
-// runs our Pages Functions, so the overseas middleware cannot see Baiduspider and friends. Aliyun
-// publishes an hourly access log per domain (kept 30 days, a few hours late). This script reads one
-// Beijing day of those logs, classifies each page request with the same rules as the middleware,
-// and replaces that day's mainland rows in the stats database. Visitor IPs never leave this process.
+// Counts for the mainland line. Readers in China are served by Aliyun CDN, which never runs our Pages
+// Functions, so the overseas middleware cannot see Baiduspider and friends, and a beacon sent across
+// the border to api.zhuoqidev.com is often lost. Aliyun publishes an hourly access log per domain
+// (kept 30 days, a few hours late). This script reads one Beijing day of those logs and counts
+//   - crawlers: page requests, classified with the same rules as the middleware;
+//   - people: requests for /hit.gif, which pages served by this line fetch once they have loaded
+//     (src/components/Analytics.astro), placed by IP with ip2region (scripts/ip2region.ts);
+// then replaces that day's mainland rows in the stats database. Only counts per crawler and per
+// place leave this process; visitor IPs never do.
 //
 //   node scripts/stats-cn.ts --day 2026-10-07 [--dry-run]
 //   node scripts/stats-cn.ts --logs <dir of .gz files> --day 2026-10-07 --dry-run
 //
 // Needs the aliyun CLI (ALIYUN_BIN, default "aliyun") with a profile allowed to call
-// cdn:DescribeCdnDomainLogs, and STATS_ADMIN_TOKEN (plus STATS_API) unless --dry-run.
+// cdn:DescribeCdnDomainLogs, the two ip2region xdb files in IP2REGION_DIR (without them only
+// crawlers are counted, and only with --dry-run), and STATS_ADMIN_TOKEN (plus STATS_API) unless --dry-run.
 import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { gunzipSync } from "node:zlib";
 import { beijingDay, type Crawler, classify, isPageLike } from "../server/bots.ts";
+import { openIp2region, type Place } from "./ip2region.ts";
 
 const DOMAINS = ["zhuoqidev.com", "www.zhuoqidev.com"];
 
 // [7/Oct/2026:12:52:11 +0800] ip proxy ms "referer" "GET https://zhuoqidev.com/path" 200 req resp HIT "ua" "type"
 const LINE =
-  /^\[(\d{1,2})\/(\w{3})\/(\d{4}):[^\]]*\+0800\] \S+ \S+ \S+ "[^"]*" "(\S+) (\S+)[^"]*" \d+ \d+ \d+ \S+ "((?:[^"\\]|\\.)*)"/;
+  /^\[(\d{1,2})\/(\w{3})\/(\d{4}):[^\]]*\+0800\] (\S+) \S+ \S+ "[^"]*" "(\S+) (\S+)[^"]*" \d+ \d+ \d+ \S+ "((?:[^"\\]|\\.)*)"/;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-export type Row = Crawler & { hits: number };
+/** The page view signal fetched by pages on this line (public/hit.gif). */
+export const HIT_PATH = "/hit.gif";
+// Same cap as the beacon (server/stats.ts): one visitor adds at most this many views a day.
+const MAX_VIEWS_PER_VISITOR = 300;
 
-/** The crawler page request in one log line, or null for people, assets and other days. */
-export function crawlerHit(line: string, day: string): Crawler | null {
+export type Row = Crawler & { hits: number };
+export type VisitRow = Place & { views: number; visitors: number };
+type Request = { ip: string; method: string; path: string; ua: string };
+
+/** The parts of one log line of the given Beijing day, or null for other days and other lines. */
+function parse(line: string, day: string): Request | null {
   const m = LINE.exec(line);
   if (!m) return null;
-  const [, dd, mon, yyyy, method, target, ua] = m;
+  const [, dd, mon, yyyy, ip, method, target, ua] = m;
   if (`${yyyy}-${String(MONTHS.indexOf(mon!) + 1).padStart(2, "0")}-${dd!.padStart(2, "0")}` !== day) return null;
-  if (method !== "GET" && method !== "HEAD") return null;
   let path: string;
   try {
     path = new URL(target!, "https://zhuoqidev.com").pathname;
   } catch {
     return null;
   }
-  return isPageLike(path) ? classify(ua!.replace(/\\(.)/g, "$1")) : null;
+  return { ip: ip!, method: method!, path, ua: ua!.replace(/\\(.)/g, "$1") };
+}
+
+/** The crawler page request in one log line, or null for people, assets and other days. */
+export function crawlerHit(line: string, day: string): Crawler | null {
+  const r = parse(line, day);
+  if (!r || (r.method !== "GET" && r.method !== "HEAD")) return null;
+  return isPageLike(r.path) ? classify(r.ua) : null;
+}
+
+/** "ip|User-Agent" of a person's page view signal in one log line, or null. */
+export function viewHit(line: string, day: string): string | null {
+  const r = parse(line, day);
+  if (!r || r.method !== "GET" || r.path !== HIT_PATH || classify(r.ua)) return null;
+  return `${r.ip}|${r.ua}`;
+}
+
+/** Views and visitors (one per IP and browser) by place; the IPs stay inside this function. */
+export function aggregateVisits(lines: Iterable<string>, day: string, locate: (ip: string) => Place): VisitRow[] {
+  const perVisitor = new Map<string, number>();
+  for (const line of lines) {
+    const v = viewHit(line, day);
+    if (v) perVisitor.set(v, (perVisitor.get(v) ?? 0) + 1);
+  }
+  const rows = new Map<string, VisitRow>();
+  for (const [visitor, views] of perVisitor) {
+    const place = locate(visitor.slice(0, visitor.indexOf("|")));
+    const key = `${place.country}|${place.region}|${place.city}`;
+    const row = rows.get(key) ?? { ...place, views: 0, visitors: 0 };
+    row.views += Math.min(views, MAX_VIEWS_PER_VISITOR);
+    row.visitors++;
+    rows.set(key, row);
+  }
+  return [...rows.values()].sort((a, b) => b.visitors - a.visitors || b.views - a.views);
 }
 
 export function aggregate(lines: Iterable<string>, day: string): Row[] {
@@ -108,14 +153,24 @@ async function main() {
         .filter((f) => f.endsWith(".gz"))
         .map((f) => readFileSync(join(values.logs!, f)))
     : await downloadDay(day);
-  const rows = aggregate(
-    (function* () {
-      for (const f of files) yield* linesOf(f);
-    })(),
-    day,
-  );
+  const lines = function* () {
+    for (const f of files) yield* linesOf(f);
+  };
+  const rows = aggregate(lines(), day);
   console.log(`${day}: ${files.length} log files, ${rows.reduce((n, r) => n + r.hits, 0)} crawler page requests`);
   for (const r of rows) console.log(`  ${String(r.hits).padStart(5)}  ${r.category.padEnd(9)} ${r.company} / ${r.bot}`);
+
+  const geo = process.env.IP2REGION_DIR;
+  if (!geo && !values["dry-run"]) throw new Error("IP2REGION_DIR is not set, so visitors cannot be placed");
+  const visits = geo ? aggregateVisits(lines(), day, openIp2region(geo)) : undefined;
+  if (visits) {
+    const sum = (k: "views" | "visitors") => visits.reduce((n, r) => n + r[k], 0);
+    console.log(`${day}: ${sum("views")} page views by ${sum("visitors")} visitors`);
+    const byRegion = new Map<string, number>();
+    for (const r of visits)
+      byRegion.set(`${r.country} ${r.region}`, (byRegion.get(`${r.country} ${r.region}`) ?? 0) + r.visitors);
+    for (const [k, n] of [...byRegion].sort((a, b) => b[1] - a[1])) console.log(`  ${String(n).padStart(5)}  ${k}`);
+  } else console.log(`${day}: IP2REGION_DIR not set, visitors not counted`);
   if (values["dry-run"]) return;
 
   const token = process.env.STATS_ADMIN_TOKEN;
@@ -124,7 +179,7 @@ async function main() {
   const res = await fetch(`${api}/api/admin/ingest`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ day, line: "cn", rows }),
+    body: JSON.stringify({ day, line: "cn", rows, visits }),
   });
   if (!res.ok) throw new Error(`ingest: HTTP ${res.status} ${await res.text()}`);
   console.log(`stored: ${await res.text()}`);

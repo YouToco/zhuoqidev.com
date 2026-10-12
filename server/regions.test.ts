@@ -23,6 +23,11 @@ test("Chinese regions in the spellings IP location data uses", () => {
     ["Shanxi", 140000],
     ["广东省", 440000],
     ["新疆维吾尔自治区", 650000],
+    // ip2region's names (scripts/ip2region.ts): short names for the autonomous regions.
+    ["上海市", 310000],
+    ["内蒙古", 150000],
+    ["广西", 450000],
+    ["新疆", 650000],
   ];
   for (const [region, code] of cases) assert.equal(provinceOf("CN", region)?.adcode, code, region);
 });
