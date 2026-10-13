@@ -155,11 +155,11 @@ export const t = {
       poster: "滚动或移动鼠标后加载 3D 地图",
       no3d: "这台设备跑不了 3D 地图，数字都在旁边的列表里。",
       since: "从 {d} 开始统计",
-      cnLatest: "国内线爬虫数据到 {d}",
+      cnLatest: "国内线数据到 {d}",
       updated: "更新于 {t}",
       method: [
-        "真人：页面加载完会发一个计数信号，按 Cloudflare 判断的 IP 归属地记到国家和省份。不存 IP，城市一级只在我自己的后台。",
-        "爬虫：海外线（Cloudflare）按访问时的 User-Agent 实时数；国内线（阿里云 CDN）每天上午读前一天的日志补上，所以国内线晚一天。",
+        "真人：页面加载完会发一个计数信号。海外线（Cloudflare）实时数，按 Cloudflare 判断的 IP 归属地记；国内线（阿里云 CDN）的信号落在 CDN 日志里，每天读一次前一天的日志，用 ip2region 查归属地。都只记到国家和省份，不存 IP，城市一级只在我自己的后台。",
+        "爬虫：海外线按访问时的 User-Agent 实时数；国内线同样从前一天的 CDN 日志里数。所以国内线的真人和爬虫都晚一天。",
         "User-Agent 可以冒充。「伪造浏览器标识」是自称浏览器、但标识里有不可能出现的组合的采集器，比如 PowerPC Mac 上的手机 Chrome。",
       ],
       cats: {
@@ -330,11 +330,11 @@ export const t = {
       poster: "The 3D maps load once you scroll or move the mouse",
       no3d: "This device can't run the 3D maps; the numbers are all in the lists.",
       since: "Counting since {d}",
-      cnLatest: "Mainland crawler counts up to {d}",
+      cnLatest: "Mainland line counted up to {d}",
       updated: "Updated {t}",
       method: [
-        "Readers: once a page has loaded it sends a count, placed by country and province from Cloudflare's IP location. No IP is stored; cities stay on my own dashboard.",
-        "Crawlers: on the overseas line (Cloudflare) they're counted live from the User-Agent; on the mainland line (Aliyun CDN) from the previous day's logs each morning, so that line runs a day behind.",
+        "Readers: once a page has loaded it sends a count. On the overseas line (Cloudflare) it's counted live and placed by Cloudflare's IP location; on the mainland line (Aliyun CDN) it lands in the CDN logs, which are read once a day and placed with ip2region. Either way only the country and province are shown, no IP is stored, and cities stay on my own dashboard.",
+        "Crawlers: on the overseas line they're counted live from the User-Agent; on the mainland line from the same daily CDN logs. So the mainland line, readers and crawlers alike, runs a day behind.",
         'A User-Agent can lie. "Forged browser UAs" are scrapers that claim to be a browser but name an impossible combination, such as mobile Chrome on a PowerPC Mac.',
       ],
       cats: {

@@ -3,6 +3,7 @@
 // stay on /admin/.
 import { beijingDay, CATEGORIES, type Category } from "./bots.ts";
 import { provinceOf } from "./regions.ts";
+import { ALL_VISITS } from "./stats.ts";
 
 export const RANGES = { "7": 7, "30": 30, all: 0 } as const;
 export type RangeKey = keyof typeof RANGES;
@@ -111,7 +112,7 @@ export async function publicStats(db: D1Database, range: PublicStats["range"]): 
   const [visits, crawlers, viewDays, crawlerDays, since, cnLatest] = await db.batch<Record<string, unknown>>([
     db
       .prepare(
-        `SELECT country, region, SUM(views) AS views, SUM(visitors) AS visitors FROM visit_daily
+        `SELECT country, region, SUM(views) AS views, SUM(visitors) AS visitors FROM ${ALL_VISITS}
        WHERE day BETWEEN ?1 AND ?2 GROUP BY country, region`,
       )
       .bind(from, to),
@@ -123,7 +124,8 @@ export async function publicStats(db: D1Database, range: PublicStats["range"]): 
       .bind(from, to),
     db
       .prepare(
-        "SELECT day, SUM(views) AS views, SUM(visitors) AS visitors FROM visit_daily WHERE day BETWEEN ?1 AND ?2 GROUP BY day",
+        `SELECT day, SUM(views) AS views, SUM(visitors) AS visitors FROM ${ALL_VISITS}
+         WHERE day BETWEEN ?1 AND ?2 GROUP BY day`,
       )
       .bind(from, to),
     db

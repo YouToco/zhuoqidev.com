@@ -27,10 +27,21 @@ import { analytics, api } from "../site";
     var start = function () {
       if (started) return;
       started = true;
-      // The site's own count (functions/api/hit.ts): one empty POST, no cookie. It records where the
-      // visitor is, not who; crawlers never run this, so they are counted from the server side.
+      // The site's own count: one empty request, no cookie. It records where the visitor is, not
+      // who; crawlers never run this, so they are counted from the server side. Pages from the
+      // overseas line carry `Server-Timing: line;desc=cf` (functions/_middleware.ts) and POST to
+      // functions/api/hit.ts. Pages from the mainland line (Aliyun CDN) fetch /hit.gif from the
+      // same CDN instead, whose logs scripts/stats-cn.ts reads each day: a beacon from there to
+      // Cloudflare is often lost on its way across the border. Browsers that cannot tell which line
+      // they are on send the beacon.
       try {
-        navigator.sendBeacon(api + "/api/hit");
+        var nav = performance.getEntriesByType("navigation")[0];
+        var timing = nav && nav.serverTiming;
+        var cf = timing && timing.some(function (t) {
+          return t.name === "line" && t.description === "cf";
+        });
+        if (timing && !cf) fetch("/hit.gif", { cache: "no-store", keepalive: true }).catch(function () {});
+        else navigator.sendBeacon(api + "/api/hit");
       } catch (e) {}
       add("https://www.googletagmanager.com/gtag/js?id=" + a.google);
       add("https://hm.baidu.com/hm.js?" + a.baidu);

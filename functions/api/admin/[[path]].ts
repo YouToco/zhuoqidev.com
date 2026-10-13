@@ -3,9 +3,10 @@
 //   GET    /api/admin/notes?status=pending|approved          guestbook notes, newest first
 //   POST   /api/admin/notes/<id>/approve                     put a note on the wall
 //   DELETE /api/admin/notes/<id>                             delete a note
-//   POST   /api/admin/ingest {day, line: "cn", rows}         replace a day of mainland crawler counts
+//   POST   /api/admin/ingest {day, line: "cn", rows, visits?} replace a day of mainland crawler (and visit) counts
 import { beijingDay, CATEGORIES, type Category } from "../../../server/bots.ts";
 import { isAdmin, json, readJson } from "../../../server/http.ts";
+import { ALL_VISITS, validVisits } from "../../../server/stats.ts";
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -34,13 +35,14 @@ export const onRequest: PagesFunction<Env, "path"> = async ({ request, env, para
         .bind(from, to),
       db
         .prepare(
-          `SELECT country, region, city, SUM(views) AS views, SUM(visitors) AS visitors FROM visit_daily
+          `SELECT country, region, city, SUM(views) AS views, SUM(visitors) AS visitors FROM ${ALL_VISITS}
          WHERE day BETWEEN ?1 AND ?2 GROUP BY country, region, city ORDER BY views DESC`,
         )
         .bind(from, to),
       db
         .prepare(
-          "SELECT day, SUM(views) AS views, SUM(visitors) AS visitors FROM visit_daily WHERE day BETWEEN ?1 AND ?2 GROUP BY day ORDER BY day",
+          `SELECT day, SUM(views) AS views, SUM(visitors) AS visitors FROM ${ALL_VISITS}
+         WHERE day BETWEEN ?1 AND ?2 GROUP BY day ORDER BY day`,
         )
         .bind(from, to),
       db.prepare("SELECT COUNT(*) AS n FROM notes WHERE status = 'pending'"),
@@ -84,8 +86,15 @@ export const onRequest: PagesFunction<Env, "path"> = async ({ request, env, para
   }
 
   if (m === "POST" && path === "ingest") {
-    const body = (await readJson(request, 1 << 20)) as { day?: unknown; line?: unknown; rows?: unknown } | null;
+    const body = (await readJson(request, 1 << 20)) as {
+      day?: unknown;
+      line?: unknown;
+      rows?: unknown;
+      visits?: unknown;
+    } | null;
     const rows = Array.isArray(body?.rows) ? (body.rows as Record<string, unknown>[]) : null;
+    // Older callers send crawlers only; then the day's visits are left alone.
+    const visits = body?.visits === undefined ? undefined : validVisits(body.visits);
     if (
       !body ||
       typeof body.day !== "string" ||
@@ -107,9 +116,21 @@ export const onRequest: PagesFunction<Env, "path"> = async ({ request, env, para
         Number.isInteger(r.hits) &&
         (r.hits as number) > 0,
     );
-    if (!valid) return json({ error: "bad-rows" }, 400);
+    if (!valid || visits === null) return json({ error: "bad-rows" }, 400);
     const day = body.day;
     await db.batch([
+      ...(visits
+        ? [
+            db.prepare("DELETE FROM visit_daily_cn WHERE day = ?1").bind(day),
+            ...visits.map((v) =>
+              db
+                .prepare(
+                  "INSERT INTO visit_daily_cn (day, country, region, city, views, visitors) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                )
+                .bind(day, v.country, v.region, v.city, v.views, v.visitors),
+            ),
+          ]
+        : []),
       db.prepare("DELETE FROM crawler_daily WHERE day = ?1 AND line = 'cn'").bind(day),
       ...rows.map((r) =>
         db
@@ -119,7 +140,12 @@ export const onRequest: PagesFunction<Env, "path"> = async ({ request, env, para
           .bind(day, r.bot as string, r.company as string, r.category as Category, r.hits as number),
       ),
     ]);
-    return json({ day, rows: rows.length, hits: rows.reduce((n, r) => n + (r.hits as number), 0) });
+    return json({
+      day,
+      rows: rows.length,
+      hits: rows.reduce((n, r) => n + (r.hits as number), 0),
+      ...(visits && { places: visits.length, visitors: visits.reduce((n, v) => n + v.visitors, 0) }),
+    });
   }
 
   return json({ error: "not-found" }, 404);
