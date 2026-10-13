@@ -48,7 +48,8 @@
     "subset-font": "2.9.0",
     "typescript": "6.0.3",
     "typescript-eslint": "8.71.1",
-    "vfile": "6.0.3"
+    "vfile": "6.0.3",
+    "wrangler": "4.149.0"
   },
   "allowScripts": {
     "esbuild": false
