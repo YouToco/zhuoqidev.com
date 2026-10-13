@@ -18,6 +18,7 @@ trustPolicyExclude:
 # and passes `pnpm run verify` with that script skipped.
 allowBuilds:
   esbuild: false # postinstall only verifies and swaps in the native binary; the package works without it
+  workerd: false # same as esbuild: the binary comes from the @cloudflare/workerd-<platform> optional dependency
 
 # Fail when the running Node does not satisfy package.json "engines".
 engineStrict: true

@@ -182,7 +182,7 @@
   notes are text only, stay `pending` until approved there, and are rendered with `textContent` on
   both the wall and the admin page. Keep it that way.
 - Local run: `pnpm run build`, put `ADMIN_TOKEN=<32+ random characters>` in `.dev.vars` (git-ignored),
-  then `pnpm run dev:functions` (global `wrangler`; applies migrations to a local D1 under `.wrangler/`)
+  then `pnpm run dev:functions` (`wrangler` from devDependencies; applies migrations to a local D1 under `.wrangler/`)
   and open http://localhost:8788/. `node scripts/stats-cn.ts --day YYYY-MM-DD --dry-run` prints a
   mainland day's crawler counts (and, with `IP2REGION_DIR` set, its visits) without storing them.
 - New migrations go in `migrations/` and are applied to the real database with
