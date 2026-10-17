@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { aggregate, aggregateVisits, crawlerHit, viewHit } from "./stats-cn.ts";
+import { aggregate, aggregateVisits, corroborated, crawlerHit, viewHit } from "./stats-cn.ts";
 
 // Aliyun CDN log lines (addresses replaced with documentation ranges).
 const log = (time: string, url: string, ua: string, type = "text/html", ip = "203.0.113.7") =>
@@ -32,7 +32,13 @@ test("counts people's /hit.gif requests by place, one visitor per IP and browser
   const phone =
     "Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1";
   const hit = (time: string, ua: string, ip: string) => log(time, "https://zhuoqidev.com/hit.gif", ua, "image/gif", ip);
+  const page = (time: string, ua: string, ip: string) =>
+    log(time, "https://zhuoqidev.com/posts/x/", ua, "text/html", ip);
   const lines = [
+    page("7/Oct/2026:08:59:59", person, "203.0.113.7"),
+    log("7/Oct/2026:09:06:00", "https://zhuoqidev.com/_astro/a.js", phone, "text/javascript", "203.0.113.7"),
+    page("7/Oct/2026:09:59:59", person, "2001:db8::1"),
+    page("7/Oct/2026:10:59:59", person, "192.0.2.1"),
     hit("7/Oct/2026:09:00:00", person, "203.0.113.7"),
     hit("7/Oct/2026:09:05:00", person, "203.0.113.7"), // same visitor, second page
     hit("7/Oct/2026:09:06:00", phone, "203.0.113.7"), // same IP, another browser
@@ -40,6 +46,7 @@ test("counts people's /hit.gif requests by place, one visitor per IP and browser
     hit("7/Oct/2026:11:00:00", person, "192.0.2.1"),
     hit("7/Oct/2026:11:00:01", claude, "203.0.113.8"), // a crawler that runs scripts
     log("7/Oct/2026:11:00:02", "https://zhuoqidev.com/posts/x/", person, "text/html", "203.0.113.9"), // a page, not the signal
+    hit("7/Oct/2026:11:00:03", person, "203.0.113.10"), // a signal with nothing else from that IP and browser
     hit("8/Oct/2026:00:00:01", person, "203.0.113.7"), // next day
   ];
   const places: Record<string, { country: string; region: string; city: string }> = {
@@ -59,10 +66,36 @@ test("counts people's /hit.gif requests by place, one visitor per IP and browser
   assert.equal(crawlerHit(hit("7/Oct/2026:11:00:01", claude, "203.0.113.8"), "2026-10-07"), null);
 });
 
+test("does not count a signal that came without the page", () => {
+  const hit = (ip: string, ua = person) =>
+    log("7/Oct/2026:09:00:00", "https://zhuoqidev.com/hit.gif", ua, "image/gif", ip);
+  const lines = [
+    hit("203.0.113.20"), // a script handed the page by another machine
+    log("7/Oct/2026:08:59:59", "https://zhuoqidev.com/tags/", person, "text/html", "203.0.113.21"), // page from one IP…
+    hit("203.0.113.22"), // …signal from another
+    log(
+      "7/Oct/2026:08:59:58",
+      "https://zhuoqidev.com/",
+      "Mozilla/5.0 (X11; Linux x86_64) Firefox/140.0",
+      "text/html",
+      "203.0.113.23",
+    ),
+    hit("203.0.113.23"), // same IP, different browser: not backed up
+    log("7/Oct/2026:08:59:57", "https://zhuoqidev.com/fonts/a.woff2", person, "font/woff2", "203.0.113.24"),
+    hit("203.0.113.24"), // a cached page whose font was fetched: backed up
+  ];
+  const { kept, alone } = corroborated(lines, "2026-10-07");
+  assert.deepEqual([...kept.keys()], [`203.0.113.24|${person}`]);
+  assert.equal(alone, 3);
+});
+
 test("caps one visitor's views like the beacon does", () => {
-  const lines = Array.from({ length: 400 }, () =>
-    log("7/Oct/2026:09:00:00", "https://zhuoqidev.com/hit.gif", person, "image/gif"),
-  );
+  const lines = [
+    log("7/Oct/2026:08:59:59", "https://zhuoqidev.com/", person),
+    ...Array.from({ length: 400 }, () =>
+      log("7/Oct/2026:09:00:00", "https://zhuoqidev.com/hit.gif", person, "image/gif"),
+    ),
+  ];
   assert.deepEqual(
     aggregateVisits(lines, "2026-10-07", () => ({ country: "CN", region: "", city: "" })),
     [{ country: "CN", region: "", city: "", views: 300, visitors: 1 }],
