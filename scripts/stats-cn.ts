@@ -4,7 +4,10 @@
 // (kept 30 days, a few hours late). This script reads one Beijing day of those logs and counts
 //   - crawlers: page requests, classified with the same rules as the middleware;
 //   - people: requests for /hit.gif, which pages served by this line fetch once they have loaded
-//     (src/components/Analytics.astro), placed by IP with ip2region (scripts/ip2region.ts);
+//     (src/components/Analytics.astro), placed by IP with ip2region (scripts/ip2region.ts). A signal
+//     counts only when the same IP and browser also fetched something else that day (the page, a
+//     script, a font): crawlers that run scripts from a pool of addresses fetch the page from one IP and
+//     the signal from another, and showed up as one-view "readers" (2026-10-18, see corroborated());
 // then replaces that day's mainland rows in the stats database. Only counts per crawler and per
 // place leave this process; visitor IPs never do.
 //
@@ -67,15 +70,36 @@ export function viewHit(line: string, day: string): string | null {
   return `${r.ip}|${r.ua}`;
 }
 
+/**
+ * Page view signals per visitor ("ip|User-Agent"), split into those the same IP and browser backed up
+ * with another request that day and those that came alone. A person's browser fetches the page (or at
+ * least one of its files) from the same address it sends the signal from; a lone signal is a script
+ * that was handed the page by another machine. A returning reader whose browser served the whole page
+ * from its cache also sends a lone signal; that rare case is the price of not counting the crawlers.
+ */
+export function corroborated(lines: Iterable<string>, day: string) {
+  const signals = new Map<string, number>();
+  const other = new Set<string>();
+  for (const line of lines) {
+    const r = parse(line, day);
+    if (!r || (r.method !== "GET" && r.method !== "HEAD")) continue;
+    const visitor = `${r.ip}|${r.ua}`;
+    if (r.path !== HIT_PATH) other.add(visitor);
+    else if (r.method === "GET" && !classify(r.ua)) signals.set(visitor, (signals.get(visitor) ?? 0) + 1);
+  }
+  const kept = new Map<string, number>();
+  let alone = 0;
+  for (const [visitor, views] of signals) {
+    if (other.has(visitor)) kept.set(visitor, views);
+    else alone++;
+  }
+  return { kept, alone };
+}
+
 /** Views and visitors (one per IP and browser) by place; the IPs stay inside this function. */
 export function aggregateVisits(lines: Iterable<string>, day: string, locate: (ip: string) => Place): VisitRow[] {
-  const perVisitor = new Map<string, number>();
-  for (const line of lines) {
-    const v = viewHit(line, day);
-    if (v) perVisitor.set(v, (perVisitor.get(v) ?? 0) + 1);
-  }
   const rows = new Map<string, VisitRow>();
-  for (const [visitor, views] of perVisitor) {
+  for (const [visitor, views] of corroborated(lines, day).kept) {
     const place = locate(visitor.slice(0, visitor.indexOf("|")));
     const key = `${place.country}|${place.region}|${place.city}`;
     const row = rows.get(key) ?? { ...place, views: 0, visitors: 0 };
@@ -165,7 +189,10 @@ async function main() {
   const visits = geo ? aggregateVisits(lines(), day, openIp2region(geo)) : undefined;
   if (visits) {
     const sum = (k: "views" | "visitors") => visits.reduce((n, r) => n + r[k], 0);
-    console.log(`${day}: ${sum("views")} page views by ${sum("visitors")} visitors`);
+    const { alone } = corroborated(lines(), day);
+    console.log(
+      `${day}: ${sum("views")} page views by ${sum("visitors")} visitors (${alone} lone signals not counted)`,
+    );
     const byRegion = new Map<string, number>();
     for (const r of visits)
       byRegion.set(`${r.country} ${r.region}`, (byRegion.get(`${r.country} ${r.region}`) ?? 0) + r.visitors);
