@@ -829,14 +829,22 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 }
 /* ---------- ```opener 开场（src/lib/markdown/opener.ts） ---------- */
 /* Static by default: the last frame. site.ts adds .armed (start hidden) and .play (run the scene once). */
-.opener { margin: 1.4em 0 2.6em; padding: 36px 8px 26px; text-align: center; border-radius: 18px;
+.opener { margin: 1.4em 0 2.6em; padding: 40px 8px 26px; text-align: center; border-radius: 18px;
   background: radial-gradient(120% 90% at 50% 0%, var(--card) 0%, transparent 70%); }
-.opener-stage { display: grid; place-items: center; }
-.opener-stage > * { grid-area: 1 / 1; margin: 0; }
-.opener-word { font: 900 clamp(72px, 17vw, 156px)/1 var(--f-serif); letter-spacing: -.03em; color: var(--ink); opacity: 0; }
+.opener-stage { position: relative; display: grid; place-items: center; }
+/* .prose p sets paragraph margins in em; inside the scene every gap is set here instead */
+.prose .opener p { margin: 0; }
+.prose .opener .opener-sub { margin: 36px auto 0; }
+.prose .opener .opener-reads { margin: 30px auto 0; padding: 0; }
+.prose .opener .opener-read { margin: 0; }
+.opener-word {
+  position: absolute; left: 50%; top: 50%; translate: -50% -55%; white-space: nowrap; pointer-events: none;
+  font: 900 clamp(72px, 15vw, 140px)/1 var(--f-serif); letter-spacing: -0.03em; color: var(--ink); opacity: 0;
+}
 .opener-head { font: 900 clamp(30px, 6.4vw, 58px)/1.18 var(--f-serif); letter-spacing: -.01em; color: var(--ink); max-width: 16em; }
-.opener-sub { margin: 40px auto 0; max-width: 34em; font: 400 15.5px/1.7 var(--f-sans); color: var(--ink-2); }
-.opener-device { position: relative; margin: 26px auto 0; width: min(300px, 64%); aspect-ratio: 2.85 / 1;
+.opener-sub { max-width: 34em; font: 400 15.5px/1.7 var(--f-sans); color: var(--ink-2); }
+.opener-device {
+  position: relative; margin: 34px auto 0; width: min(260px, 58%); aspect-ratio: 2.85 / 1;
   border-radius: 18px 18px 13px 13px;
   background: linear-gradient(180deg, #f7f7f8 0%, #e2e3e6 42%, #c6c7cb 100%);
   box-shadow: inset 0 1px 0 #fff, inset 0 -2px 0 #a3a4a8, 0 30px 44px -26px rgba(0, 0, 0, .5); }
