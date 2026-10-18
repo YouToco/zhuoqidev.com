@@ -637,11 +637,19 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 /* At the bottom of a page the footer fills the whole screen, so no sliver of the content above is left
    between the top bar and the laptop. Its first 60px sit under the sticky bar (dashed edge included). */
 .site-footer {
-  min-height: 100svh; display: flex; flex-direction: column; justify-content: center;
+  /* lvh, not svh: on a phone the address bar collapses while scrolling, and a footer sized to the smaller
+     viewport would leave the sliver showing again; a taller footer just tucks more under the bar. */
+  min-height: 100vh; min-height: 100lvh; display: flex; flex-direction: column; justify-content: center;
   padding: 100px 20px 110px; text-align: center;
   font: 400 12px/1.9 var(--f-mono); color: var(--ink-3); border-top: 2px dashed var(--blue-line); background: var(--paper); overflow-x: clip;
 }
 .site-footer > .back-top { align-self: center; }
+/* On large screens a 600px laptop is a speck in a full-screen footer: the footer's contents grow in steps.
+   zoom (not transform) so the layout grows with them and the centring still holds. */
+.site-footer > * { zoom: var(--footer-zoom, 1); }
+@media (min-width: 1800px) and (min-height: 1000px) { .site-footer { --footer-zoom: 1.25; } }
+@media (min-width: 2400px) and (min-height: 1300px) { .site-footer { --footer-zoom: 1.5; } }
+@media (min-width: 3200px) and (min-height: 1800px) { .site-footer { --footer-zoom: 2; } }
 .site-footer a { color: var(--ink-2); text-decoration: none; }
 .site-footer a:hover { color: var(--blue); }
 .site-footer .beian { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; margin-top: 6px; }
