@@ -68,6 +68,12 @@
   `云厂商` / `Cloud` (carries flying money: it sends the bill) and `你` / `You`. Their pictures are
   Microsoft Fluent Emoji 3D (MIT, `public/comics/LICENSE.txt`), self-hosted as 128px webp; the
   dialogue face is LXGW WenKai Screen, subset per page as "ZQ Comic" like the other CJK faces.
+- Opening scenes: an ```` ```opener ```` fence holds JSON (`word`, `headline`, optional `sub`,
+  `device: "mac-mini"`, `readouts` with `tone: "bad"`, `note`; see `src/lib/markdown/opener.ts`). It is
+  drawn at build time as plain HTML with a CSS-drawn device, and `src/scripts/site.ts` plays it once
+  (big word → device rises → headline → readouts) when half of it is on screen; without the script or
+  with reduced motion the reader sees the last frame. `index.md` gets the headline and the readouts as
+  a quote. Use at most one per article, at the top, for the single claim the article proves.
 - Readers pick the article width (narrow / default / wide / full) in the rail; it is
   stored as `zq-width` and applied by the head script in `Base.astro`. Charts, tables
   and diagrams must work from a 640 px column up to a full-width one.

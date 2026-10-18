@@ -349,7 +349,9 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 .margin-note svg { display: block; margin-top: 4px; }
 .tldr { position: relative; margin: 8px 0 36px; padding: 26px 28px 22px; background: var(--note); border-radius: 4px; transform: rotate(-.6deg); box-shadow: 0 16px 24px -18px rgba(120, 90, 0, .5); }
 .tldr .k { font: 700 26px/1 var(--f-hand); color: #7a5a00; display: block; margin-bottom: 8px; }
-.tldr p { margin: 0; font-size: 16px; line-height: 1.85; color: #3b2f05; }
+.tldr p { margin: 0; font: 400 17px/1.85 var(--f-comic); color: #3b2f05; letter-spacing: .01em; }
+/* WenKai ships one weight: mark the key sentence with a marker stroke instead of a faked bold */
+.tldr p strong { font-weight: 400; color: #2a2003; background: linear-gradient(transparent 58%, rgba(217, 112, 63, .32) 58%); }
 
 .prose { font-size: 17px; line-height: 1.9; color: var(--ink); }
 .prose > p, .prose li { color: var(--prose); }
@@ -825,6 +827,69 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
   .callout .stamp { width: 40px; height: 40px; font-size: 12px; }
   .code pre.astro-code { font-size: 12.5px; padding: 14px; }
 }
+/* ---------- ```opener 开场（src/lib/markdown/opener.ts） ---------- */
+/* Static by default: the last frame. site.ts adds .armed (start hidden) and .play (run the scene once). */
+.opener { margin: 1.4em 0 2.6em; padding: 40px 8px 26px; text-align: center; border-radius: 18px;
+  background: radial-gradient(120% 90% at 50% 0%, var(--card) 0%, transparent 70%); }
+.opener-stage { position: relative; display: grid; place-items: center; }
+/* .prose p sets paragraph margins in em; inside the scene every gap is set here instead */
+.prose .opener p { margin: 0; }
+.prose .opener .opener-sub { margin: 36px auto 0; }
+.prose .opener .opener-reads { margin: 30px auto 0; padding: 0; }
+.prose .opener .opener-read { margin: 0; }
+.opener-word {
+  position: absolute; left: 50%; top: 50%; translate: -50% -55%; white-space: nowrap; pointer-events: none;
+  font: 900 clamp(72px, 15vw, 140px)/1 var(--f-serif); letter-spacing: -0.03em; color: var(--ink); opacity: 0;
+}
+.opener-head { font: 900 clamp(30px, 6.4vw, 58px)/1.18 var(--f-serif); letter-spacing: -.01em; color: var(--ink); max-width: 16em; }
+.opener-sub { max-width: 34em; font: 400 15.5px/1.7 var(--f-sans); color: var(--ink-2); }
+.opener-device {
+  position: relative; margin: 34px auto 0; width: min(260px, 58%); aspect-ratio: 2.85 / 1;
+  border-radius: 18px 18px 13px 13px;
+  background: linear-gradient(180deg, #f7f7f8 0%, #e2e3e6 42%, #c6c7cb 100%);
+  box-shadow: inset 0 1px 0 #fff, inset 0 -2px 0 #a3a4a8, 0 30px 44px -26px rgba(0, 0, 0, .5); }
+.opener-device::after { content: ""; position: absolute; left: 7%; right: 7%; top: 100%; height: 10%;
+  border-radius: 0 0 46% 46% / 0 0 100% 100%;
+  background: repeating-linear-gradient(90deg, #232325 0 2px, #3b3b3e 2px 4px); }
+.opener-device .port { position: absolute; top: 40%; width: 2.6%; height: 27%; border-radius: 99px; background: #1d1d1f;
+  box-shadow: inset 0 1px 1px #000, 0 1px 0 rgba(255, 255, 255, .7); }
+.opener-device .port:nth-child(1) { left: 19%; }
+.opener-device .port:nth-child(2) { left: 28%; }
+.opener-device .jack { position: absolute; top: 46%; left: 76%; width: 4%; aspect-ratio: 1; border-radius: 50%; background: #1d1d1f;
+  box-shadow: inset 0 1px 2px #000, 0 1px 0 rgba(255, 255, 255, .7); }
+.opener-device .led { position: absolute; top: 51%; left: 69%; width: 1.5%; aspect-ratio: 1; border-radius: 50%; background: #fbfbfb;
+  box-shadow: 0 0 6px 1px rgba(255, 255, 255, .9); }
+.opener-device.has-bad .led { background: #ff453a; box-shadow: 0 0 10px 2px rgba(255, 69, 58, .75); }
+.opener-reads { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; max-width: 640px; margin: 34px auto 0; padding: 0; list-style: none; }
+.opener-read { display: flex; flex-direction: column; gap: 6px; padding: 12px 10px; border-top: 1px solid var(--line); }
+.hr-label { font: 500 12px/1.3 var(--f-mono); letter-spacing: .06em; color: var(--ink-3); }
+.hr-value { font: 900 clamp(26px, 4.4vw, 36px)/1.05 var(--f-serif); color: var(--ink); font-variant-numeric: tabular-nums; }
+.opener-read.bad .hr-value { color: var(--seal); }
+.opener figcaption { margin-top: 18px; font: 400 12px/1.5 var(--f-sans); color: var(--ink-3); }
+
+.opener.armed:not(.play) :is(.opener-word, .opener-head, .opener-device, .opener-sub, .opener-read, figcaption) { opacity: 0; }
+.opener.play .opener-word { animation: opener-word 2.6s var(--ease) both; }
+.opener.play .opener-device { animation: opener-rise 1.2s .45s cubic-bezier(.2, .8, .2, 1) both; }
+.opener.play .opener-head { animation: opener-in .8s 2.1s var(--ease) both; }
+.opener.play .opener-sub { animation: opener-in .7s 2.6s var(--ease) both; }
+.opener.play .opener-read { animation: opener-in .55s calc(3s + var(--i) * .45s) var(--ease) both; }
+.opener.play figcaption { animation: opener-in .6s 4.3s ease-out both; }
+.opener.play .opener-device.has-bad .led { animation: opener-led .4s 3.9s ease-out both; }
+@keyframes opener-word {
+  0% { opacity: 0; transform: scale(1.14); }
+  24% { opacity: 1; transform: scale(1); }
+  72% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(.9); }
+}
+@keyframes opener-rise { from { opacity: 0; transform: translateY(70px) scale(.94); } }
+@keyframes opener-in { from { opacity: 0; transform: translateY(14px); } }
+@keyframes opener-led { from { background: #fbfbfb; box-shadow: 0 0 6px 1px rgba(255, 255, 255, .9); } }
+@media (max-width: 640px) {
+  .opener { padding: 26px 0 18px; }
+  .opener-reads { grid-template-columns: 1fr; gap: 4px; }
+  .opener-read { flex-direction: row; justify-content: space-between; align-items: baseline; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
