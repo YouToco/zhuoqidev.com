@@ -17,6 +17,21 @@ categories:
   - Deep Dives
 ---
 
+```opener
+{
+  "word": "It runs.",
+  "headline": "Running is not running well.",
+  "sub": "A 16 GB Mac mini running a 14B model the way Apple's own footnote tests it:",
+  "device": "mac-mini",
+  "readouts": [
+    {"label": "8K prompt · first token", "value": "15 s"},
+    {"label": "16K prompt · first token", "value": "35 s"},
+    {"label": "32K prompt", "value": "Crashed", "tone": "bad"}
+  ],
+  "note": "Qwen3-14B 4-bit · mlx-lm 0.32 · measured 2026-10-18"
+}
+```
+
 *This is for anyone about to buy a machine to run large models locally and deciding from product pages. Most of the data comes from the llama.cpp community's shared benchmarks; I checked it by running the same command on the Mac mini (M6, 16 GB) and the RTX 3060 laptop I own, and re-ran Apple's own footnoted test on the 16 GB base model. How I ran everything and the full numbers are in the [appendix](#appendix-how-i-ran-it-and-the-full-numbers).*
 
 ---

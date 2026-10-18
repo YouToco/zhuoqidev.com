@@ -6,6 +6,7 @@ import { rehypeHandDiagrams } from "./src/lib/markdown/rehype-hand-diagrams";
 import { rehypeProse } from "./src/lib/markdown/rehype-prose";
 import { remarkAlerts } from "./src/lib/markdown/remark-alerts";
 import { remarkChart } from "./src/lib/markdown/remark-chart";
+import { remarkOpener } from "./src/lib/markdown/remark-opener";
 import { remarkComic } from "./src/lib/markdown/remark-comic";
 import { remarkDemo } from "./src/lib/markdown/remark-demo";
 import { remarkFigure } from "./src/lib/markdown/remark-figure";
@@ -84,7 +85,7 @@ export default defineConfig({
     // Noto Serif SC and Long Cang are subset per page after the build (scripts/subset-fonts.mjs).
   ],
   markdown: {
-    syntaxHighlight: { type: "shiki", excludeLangs: ["mermaid", "math", "chart", "comic"] },
+    syntaxHighlight: { type: "shiki", excludeLangs: ["mermaid", "math", "chart", "comic", "opener"] },
     shikiConfig: {
       theme: "github-dark-dimmed",
       wrap: false,
@@ -100,7 +101,7 @@ export default defineConfig({
       ],
     },
     processor: unified({
-      remarkPlugins: [remarkAlerts, remarkFigure, remarkDemo, remarkChart, remarkComic],
+      remarkPlugins: [remarkAlerts, remarkFigure, remarkDemo, remarkChart, remarkOpener, remarkComic],
       rehypePlugins: [
         // Hand-drawn versions first (`pnpm run diagrams`); rehype-mermaid draws whatever is left.
         rehypeHandDiagrams,

@@ -1,5 +1,6 @@
 import { other } from "../i18n";
 import { type ChartSpec, chartMarkdown } from "./markdown/chart";
+import { type OpenerSpec, openerMarkdown } from "./markdown/opener";
 import { imageUrl, langOf, plainMd, postImage, postUrl, type Post, slugOf, ymd } from "./content";
 import { SITE_URL, site } from "../site";
 
@@ -33,6 +34,10 @@ export async function postMarkdown(post: Post) {
   // Charts are JSON in the source; an agent reads them better as tables.
   body = body.replace(/^```chart\n([\s\S]*?)\n```$/gm, (_, json: string) =>
     chartMarkdown(JSON.parse(json) as ChartSpec, lang),
+  );
+  // An opening scene is an animation on the page; an agent gets its headline and readouts.
+  body = body.replace(/^```opener\n([\s\S]*?)\n```$/gm, (_, json: string) =>
+    openerMarkdown(JSON.parse(json) as OpenerSpec, lang),
   );
 
   const field = (k: string, v: string) => `${k}: ${JSON.stringify(v)}`;

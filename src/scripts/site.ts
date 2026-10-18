@@ -102,6 +102,26 @@ if (bye && "IntersectionObserver" in window && !matchMedia("(prefers-reduced-mot
   io.observe(bye);
 }
 
+// Opening scenes (```opener fences, src/lib/markdown/opener.ts) play once when half of one is on screen.
+// Without the observer, or with reduced motion, they stay on their last frame.
+const openers = document.querySelectorAll<HTMLElement>("[data-opener]");
+if (openers.length && "IntersectionObserver" in window && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        e.target.classList.add("play");
+        io.unobserve(e.target);
+      }
+    },
+    { threshold: 0.45 },
+  );
+  openers.forEach((h) => {
+    h.classList.add("armed");
+    io.observe(h);
+  });
+}
+
 // Looping decorations (the home terminal's cursor, the footer's floating arrow) pause while off
 // screen; see .idle in global.css.
 const loops = document.querySelectorAll<HTMLElement>(".cursor, .back-top span");
