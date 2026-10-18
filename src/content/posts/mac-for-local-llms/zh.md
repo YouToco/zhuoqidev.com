@@ -190,6 +190,30 @@ llama.cpp 社区有两个统一跑分帖（[苹果芯片](https://github.com/ggm
 - **它慢的是系统调用多的小动作**：起子进程、增删小文件、`git grep` 慢两到三倍。但都是毫秒级——起一个子进程 1.4 毫秒对 0.5 毫秒，人感觉不到。连续满载 120 秒后，它会掉约 5% 的速度，笔记本不掉。
 - **所以苹果（英文版）宣传页上说可以借助 Claude Code、Codex 这类 Agent 提升效率，这一句是成立的**：这类 Agent 的模型跑在云端，本机干的正是编译、跑测试、读写文件、调 git，这些 Mac mini 做得又快又稳。办公、写文档就更不在话下。
 
+**还有一个宣传页上没吹、但实测很硬的长处：省电，也安静。** 我用 macOS 自带的功耗遥测（不用 root，每秒采样，取累加平均）测了整机功耗，又用 `nvidia-smi` 读了 3060 笔记本显卡的功耗：
+
+```chart
+{
+  "type": "bars",
+  "fmt": {"suf": " W"},
+  "legend": [
+    {"color": "blue", "label": "Mac mini M6 整机"},
+    {"color": "seal", "label": "RTX 3060 笔记本，只算显卡"}
+  ],
+  "rows": [
+    {"label": "Mac mini 空闲", "sub": "苹果官方数据", "value": 4, "color": "blue"},
+    {"label": "Mac mini CPU 12 核跑满", "sub": "实测 60 秒平均", "value": 21, "color": "blue"},
+    {"label": "Mac mini 跑 14B 模型", "sub": "实测，出字 14.6 token/秒", "value": 30, "color": "blue"},
+    {"label": "Mac mini 官方上限", "sub": "苹果官方数据", "value": 70, "color": "blue"},
+    {"label": "3060 显卡空闲", "sub": "实测 30–37 W", "value": 33, "color": "seal"},
+    {"label": "3060 显卡跑 14B 模型", "sub": "实测，一半放显卡，出字 4.5 token/秒", "value": 86, "color": "seal"}
+  ],
+  "caption": "功耗（瓦）。Mac mini 为系统功耗遥测（PowerTelemetryData，板上功耗加电源损耗，不是插座电表），空闲与上限取苹果官方插座实测数据；3060 只读得到显卡本身，不含 CPU 和屏幕。2026-10-18 实测。"
+}
+```
+
+Mac mini 把 14B 整个放进内存跑，整机不到 30 W；3060 笔记本光是显卡空闲就有 30 W 出头，跑同一个模型要 86 W，还因为装不下只出得了三分之一的字。跑满的时候 Mac mini 也几乎听不到风扇——这是我的主观感受，没有测分贝。一台 24 小时开着、给 Agent 当工作机的电脑，这一点很实在。
+
 问题只出在「把模型也搬到这台机器上跑」。
 
 ## 苹果没写在显眼处的
@@ -241,6 +265,7 @@ llama.cpp 社区有两个统一跑分帖（[苹果芯片](https://github.com/ggm
 
 - 社区跑分只测 7B 模型、单人、512 token 短提示，只覆盖 llama.cpp；各条结果软件版本不同，新版本本身会快一到三成，只看量级。
 - 日常开发那组对比的是 2022 年的 i7-12700H 游戏本，不是同价位的新 PC；测试时笔记本上开着更多程序（快速重跑过一次，单核多核结果几乎一样）。npm 安装依赖的耗时受网络和缓存影响，没有计入。
+- 功耗：Mac mini 用的是系统自带的功耗遥测，不是插座电表；3060 笔记本只读得到显卡，CPU 功耗要 root 才能读，没测。
 - 我的复现只有 Mac mini 16 GB 一台，Mac 上只用了 mlx-lm 一个引擎，苹果原测用的是 LM Studio；32 GB 版、Mac Studio 没有实测。14B 的数字用的是 Qwen3-14B，和苹果脚注里的模型未必相同。
 - 价格、出口管制都是 2026-10-18 查到的状态，变化很快；6000D 的规格来自拆解和跑分，不是官方数据。
 
@@ -251,7 +276,7 @@ llama.cpp 社区有两个统一跑分帖（[苹果芯片](https://github.com/ggm
 - 宣传页与脚注：苹果 [Mac mini](https://www.apple.com/mac-mini/)（[中文版](https://www.apple.com.cn/mac-mini/)，脚注 6 为「13.5 倍」的测试条件）、[Mac Studio](https://www.apple.com/mac-studio/)；英伟达 [RTX 5090](https://www.nvidia.com/en-us/geforce/graphics-cards/50-series/rtx-5090/)、[RTX 50 系笔记本](https://www.nvidia.com/en-us/geforce/laptops/50-series/)。均为 2026-10-18 读取。
 - 跑分：llama.cpp 社区 [苹果芯片帖 #4167](https://github.com/ggml-org/llama.cpp/discussions/4167)、[N 卡帖 #15013](https://github.com/ggml-org/llama.cpp/discussions/15013)（2026-10-17 抓取原文）。
 - 规格：[英伟达显卡对比页](https://www.nvidia.com/en-us/geforce/graphics-cards/compare/)、[3060 笔记本版（Notebookcheck）](https://www.notebookcheck.net/NVIDIA-GeForce-RTX-3060-Mobile-GPU-Benchmarks-and-Specs.497453.0.html)；苹果 [Mac mini 规格](https://www.apple.com/mac-mini/specs/)、[Mac Studio 规格](https://www.apple.com/mac-studio/specs/)；国行价格取自 [apple.com.cn](https://www.apple.com.cn/shop/buy-mac/mac-studio)。
-- 功耗与插座：[DGX Rubin NVL8](https://www.nvidia.com/en-us/data-center/dgx-rubin-nvl8/)；国标 [GB 1002-2024](https://www.chinesestandard.net/PDF/English.aspx/GB1002-2024)。
+- 功耗：苹果 [Mac mini 功耗与散热数据](https://support.apple.com/103253)（M6：空闲 4 W、最高 70 W，插座端测量）；[DGX Rubin NVL8](https://www.nvidia.com/en-us/data-center/dgx-rubin-nvl8/)；国标 [GB 1002-2024](https://www.chinesestandard.net/PDF/English.aspx/GB1002-2024)。
 - 出口管制：[Tom's Hardware 关于 6000D](https://www.tomshardware.com/pc-components/gpus/nvidia-rtx-pro-6000d-b40-blackwell-gpus-reportedly-set-to-supersede-banned-h20-accelerators-in-china)、[PCGH 拆解](https://www.pcgameshardware.de/Grafikkarten-Grafikkarte-97980/News/Nvidia-RTX-6000D-mit-84-GiByte-GDDR7-1487562/)。
 
 ---
@@ -284,6 +309,7 @@ mlx_lm.benchmark --model mlx-community/Qwen3-14B-4bit -p 8192 -g 128 -n 2
 | SQLite 1,000 次逐条提交 | 2.4 秒 | 0.15 秒 |
 | 起子进程 / 两万小文件增删 / git grep | 2,119 个/秒 / 0.74 秒 / 175 毫秒 | 717 个/秒 / 1.63 秒 / 428 毫秒 |
 | 120 秒满载末段 ÷ 首段 | 1.005 | 0.954 |
+| 功耗：空闲 / CPU 跑满 / 跑 14B 模型 | 显卡 30–37 W / 没测 / 显卡 86 W（最高 90 W） | 4 W（官方）/ 21 W / 30 W（整机遥测） |
 | Qwen3-4B 4 bit 单人出字（最快引擎） | 96 | 56（MLX） |
 | Qwen3-4B 4 bit 8 路同时（引擎直测） | 296 | 256（llama.cpp） |
 | GPU 能用的内存 | 6 GB 显存 | 约 12.7 GB（系统上限） |

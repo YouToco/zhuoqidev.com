@@ -190,6 +190,30 @@ Having covered the weak spots, fairness needs the strengths too. The same 16 GB 
 - **Where it is slower is small actions heavy on system calls**: spawning subprocesses, creating and deleting small files and `git grep` are two to three times slower. But these are milliseconds — one subprocess takes 1.4 ms against 0.5 ms, which nobody notices. After 120 seconds at full load it loses about 5 % of its speed; the laptop does not.
 - **So the line on Apple's page about using "agents like Claude Code or Codex to be more productive" holds**: those Agents run their model in the cloud, and what the local machine does is compile, run tests, read and write files and call git — all things the Mac mini does fast and steadily. Office work and writing are no contest.
 
+**One more strength the product page does not even push, and that holds up hard when measured: low power, and quiet.** I read whole-machine power from macOS's own power telemetry (no root needed, sampled every second, averaged from the accumulators), and the 3060 laptop's GPU power from `nvidia-smi`:
+
+```chart
+{
+  "type": "bars",
+  "fmt": {"suf": " W"},
+  "legend": [
+    {"color": "blue", "label": "Mac mini M6, whole machine"},
+    {"color": "seal", "label": "RTX 3060 laptop, GPU only"}
+  ],
+  "rows": [
+    {"label": "Mac mini idle", "sub": "Apple's published figure", "value": 4, "color": "blue"},
+    {"label": "Mac mini, all 12 CPU cores busy", "sub": "measured, 60 s average", "value": 21, "color": "blue"},
+    {"label": "Mac mini running the 14B model", "sub": "measured, 14.6 tokens/s output", "value": 30, "color": "blue"},
+    {"label": "Mac mini maximum", "sub": "Apple's published figure", "value": 70, "color": "blue"},
+    {"label": "3060 GPU idle", "sub": "measured 30–37 W", "value": 33, "color": "seal"},
+    {"label": "3060 GPU running the 14B model", "sub": "measured, half on the GPU, 4.5 tokens/s output", "value": 86, "color": "seal"}
+  ],
+  "caption": "Power (watts). Mac mini from the system power telemetry (PowerTelemetryData: board power plus power-supply loss, not a wall meter); idle and maximum are Apple's figures measured at the wall. For the 3060 only the GPU itself can be read, without CPU or screen. Measured 2026-10-18."
+}
+```
+
+The Mac mini runs the whole 14B model from memory at under 30 W for the entire machine; the 3060 laptop's GPU alone idles at just over 30 W and draws 86 W on the same model, while writing only a third as fast because the model does not fit. Even fully loaded, I can barely hear the Mac mini's fan — my impression, not a decibel measurement. For a computer left on around the clock as an Agent's workstation, this matters.
+
 The trouble only starts when you move the model onto the same machine.
 
 ## What Apple does not put up front
@@ -241,6 +265,7 @@ Beyond that, you rent GPUs or buy tokens.
 
 - The community numbers only cover a 7B model, one user, a 512-token prompt and llama.cpp; entries use different software versions, and newer versions alone are 10–30 % faster, so read the order of magnitude.
 - The everyday-development comparison is against a 2022 i7-12700H gaming laptop, not a new PC at the same price; the laptop had more programs open during the run (a quick re-run gave nearly the same single- and multi-core results). Dependency install times depend on the network and caches and are left out.
+- Power: the Mac mini numbers come from the system's own power telemetry, not a wall meter; on the 3060 laptop only the GPU can be read, and CPU power needs root, so it was not measured.
 - My re-run covers one 16 GB Mac mini and, on the Mac, one engine (mlx-lm), while Apple's test used LM Studio; I did not measure the 32 GB version or a Mac Studio. The 14B numbers use Qwen3-14B, which may not be the model in Apple's footnote.
 - Prices and export controls are as checked on 2026-10-18 and change quickly; the 6000D specs come from teardowns and benchmarks, not from NVIDIA.
 
@@ -251,7 +276,7 @@ Beyond that, you rent GPUs or buy tokens.
 - Product pages and footnotes: Apple [Mac mini](https://www.apple.com/mac-mini/) ([Chinese edition](https://www.apple.com.cn/mac-mini/); footnote 6 gives the conditions for "13.5x"), [Mac Studio](https://www.apple.com/mac-studio/); NVIDIA [RTX 5090](https://www.nvidia.com/en-us/geforce/graphics-cards/50-series/rtx-5090/), [RTX 50 Series laptops](https://www.nvidia.com/en-us/geforce/laptops/50-series/). All read on 2026-10-18.
 - Benchmarks: llama.cpp community threads [Apple Silicon #4167](https://github.com/ggml-org/llama.cpp/discussions/4167) and [NVIDIA #15013](https://github.com/ggml-org/llama.cpp/discussions/15013) (raw posts fetched 2026-10-17).
 - Specs: [NVIDIA GPU comparison](https://www.nvidia.com/en-us/geforce/graphics-cards/compare/), [RTX 3060 Laptop GPU (Notebookcheck)](https://www.notebookcheck.net/NVIDIA-GeForce-RTX-3060-Mobile-GPU-Benchmarks-and-Specs.497453.0.html); Apple [Mac mini specs](https://www.apple.com/mac-mini/specs/), [Mac Studio specs](https://www.apple.com/mac-studio/specs/); China prices from [apple.com.cn](https://www.apple.com.cn/shop/buy-mac/mac-studio).
-- Power and sockets: [DGX Rubin NVL8](https://www.nvidia.com/en-us/data-center/dgx-rubin-nvl8/); Chinese standard [GB 1002-2024](https://www.chinesestandard.net/PDF/English.aspx/GB1002-2024).
+- Power: Apple [Mac mini power consumption and thermal output](https://support.apple.com/103253) (M6: 4 W idle, 70 W maximum, measured at the wall); [DGX Rubin NVL8](https://www.nvidia.com/en-us/data-center/dgx-rubin-nvl8/); Chinese standard [GB 1002-2024](https://www.chinesestandard.net/PDF/English.aspx/GB1002-2024).
 - Export controls: [Tom's Hardware on the 6000D](https://www.tomshardware.com/pc-components/gpus/nvidia-rtx-pro-6000d-b40-blackwell-gpus-reportedly-set-to-supersede-banned-h20-accelerators-in-china), [PCGH teardown](https://www.pcgameshardware.de/Grafikkarten-Grafikkarte-97980/News/Nvidia-RTX-6000D-mit-84-GiByte-GDDR7-1487562/).
 
 ---
@@ -284,6 +309,7 @@ mlx_lm.benchmark --model mlx-community/Qwen3-14B-4bit -p 8192 -g 128 -n 2
 | SQLite 1,000 one-by-one commits | 2.4 s | 0.15 s |
 | Spawn subprocesses / 20,000 small files / git grep | 2,119 per s / 0.74 s / 175 ms | 717 per s / 1.63 s / 428 ms |
 | Last ÷ first stretch of 120 s at full load | 1.005 | 0.954 |
+| Power: idle / all CPU cores / running the 14B model | GPU 30–37 W / not measured / GPU 86 W (peak 90 W) | 4 W (Apple) / 21 W / 30 W (whole-machine telemetry) |
 | Qwen3-4B 4-bit single-user output (fastest engine) | 96 | 56 (MLX) |
 | Qwen3-4B 4-bit, 8 at once (engine benchmark) | 296 | 256 (llama.cpp) |
 | Memory the GPU can use | 6 GB of video memory | about 12.7 GB (system limit) |
