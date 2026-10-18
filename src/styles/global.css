@@ -349,7 +349,9 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 .margin-note svg { display: block; margin-top: 4px; }
 .tldr { position: relative; margin: 8px 0 36px; padding: 26px 28px 22px; background: var(--note); border-radius: 4px; transform: rotate(-.6deg); box-shadow: 0 16px 24px -18px rgba(120, 90, 0, .5); }
 .tldr .k { font: 700 26px/1 var(--f-hand); color: #7a5a00; display: block; margin-bottom: 8px; }
-.tldr p { margin: 0; font-size: 16px; line-height: 1.85; color: #3b2f05; }
+.tldr p { margin: 0; font: 400 17px/1.85 var(--f-comic); color: #3b2f05; letter-spacing: .01em; }
+/* WenKai ships one weight: mark the key sentence with a marker stroke instead of a faked bold */
+.tldr p strong { font-weight: 400; color: #2a2003; background: linear-gradient(transparent 58%, rgba(217, 112, 63, .32) 58%); }
 
 .prose { font-size: 17px; line-height: 1.9; color: var(--ink); }
 .prose > p, .prose li { color: var(--prose); }
