@@ -634,7 +634,14 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 .skip:focus { left: 12px; }
 :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 /* clip: the farewell terminal's ::after and the lid's 3D tilt must not widen the page on narrow screens */
-.site-footer { padding: 40px 20px 110px; text-align: center; font: 400 12px/1.9 var(--f-mono); color: var(--ink-3); border-top: 2px dashed var(--blue-line); background: var(--paper); overflow-x: clip; }
+/* At the bottom of a page the footer fills the whole screen, so no sliver of the content above is left
+   between the top bar and the laptop. Its first 60px sit under the sticky bar (dashed edge included). */
+.site-footer {
+  min-height: 100svh; display: flex; flex-direction: column; justify-content: center;
+  padding: 100px 20px 110px; text-align: center;
+  font: 400 12px/1.9 var(--f-mono); color: var(--ink-3); border-top: 2px dashed var(--blue-line); background: var(--paper); overflow-x: clip;
+}
+.site-footer > .back-top { align-self: center; }
 .site-footer a { color: var(--ink-2); text-decoration: none; }
 .site-footer a:hover { color: var(--blue); }
 .site-footer .beian { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; margin-top: 6px; }
