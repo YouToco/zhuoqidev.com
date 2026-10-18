@@ -1085,6 +1085,14 @@ dialog.wechat h2 { margin: 0 0 16px; font: 400 30px/1.15 var(--f-hand-zh); color
 /* Goodbye terminal: every page ends with see you, how to reach me, a fortune, exit. */
 .site-footer .laptop { margin-bottom: 30px; }
 .site-footer .bye a { color: var(--yellow); border-bottom: 1px dashed rgba(255, 224, 102, .45); }
+/* .tty lines wrap anywhere (long fortunes); a link should move to the next line whole, not split mid-word. */
+.site-footer .bye .ln a { white-space: nowrap; }
+@media (max-width: 640px) {
+  /* A phone's end screen in three parts: back-to-top under the bar, the laptop, the filing numbers just
+     above the dock (and the home indicator), instead of one centred block floating in empty space. */
+  .site-footer { justify-content: space-between; gap: 28px; padding: 76px 16px calc(96px + env(safe-area-inset-bottom)); }
+  .site-footer .back-top, .site-footer .laptop { margin-bottom: 0; }
+}
 .site-footer .bye a:hover { color: var(--yellow); border-bottom-style: solid; }
 .bye .ln.f { color: #b7bfcf; }
 .bye-foot {
