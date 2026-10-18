@@ -665,7 +665,7 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 .shelf-head .crumb { margin-bottom: 14px; }
 .filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0 0; }
 .filters .tag { text-decoration: none; }
-.filters .tag small { opacity: .65; margin-left: 4px; }
+.filters .tag small { opacity: .65; margin-left: 4px; font-size: inherit; }
 .year-h { display: flex; align-items: center; gap: 14px; margin: 40px 0 16px; font: 500 13px/1 var(--f-mono); color: var(--ink-3); letter-spacing: .14em; }
 .year-h::after { content: ""; flex: 1; border-top: 1px dashed var(--line); }
 .post-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
@@ -903,6 +903,21 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
   .opener { padding: 26px 0 18px; }
   .opener-reads { grid-template-columns: 1fr; gap: 4px; }
   .opener-read { flex-direction: row; justify-content: space-between; align-items: baseline; }
+}
+
+/* ---------- 触屏 ---------- */
+/* Words for a keyboard or a mouse only where there is one: a phone gets the touch wording instead. */
+.only-touch { display: none; }
+@media (hover: none) and (pointer: coarse) {
+  .only-touch { display: inline; }
+  .only-mouse, .only-keys { display: none; }
+  /* Fingers need about 24px or more; these grow on touch screens only, so the desktop look stays. */
+  .tag { padding: 5px 9px; }
+  .code .copy { padding: 8px 11px; }
+  .feature .go { display: inline-block; padding: 12px 0; margin: -12px 0; }
+  .story-skip { padding: 4px 0; }
+  /* Under 16px, iOS Safari zooms the page into a field when it gets focus. */
+  .gb-form .gb-name input { padding: 10px 12px; font-size: 16px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
