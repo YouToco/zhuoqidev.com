@@ -1092,6 +1092,10 @@ dialog.wechat h2 { margin: 0 0 16px; font: 400 30px/1.15 var(--f-hand-zh); color
      above the dock (and the home indicator), instead of one centred block floating in empty space. */
   .site-footer { justify-content: space-between; gap: 28px; padding: 76px 16px calc(96px + env(safe-area-inset-bottom)); }
   .site-footer .back-top, .site-footer .laptop { margin-bottom: 0; }
+  /* A laptop screen is landscape; on a phone the goodbye text makes it a tall strip on a keyboard base,
+     which reads as neither. Here it is just a terminal window: no base, no bezel. */
+  .site-footer .laptop::after { display: none; }
+  .site-footer .laptop > .terminal { border: 0; border-radius: 14px; box-shadow: var(--shadow); }
 }
 .site-footer .bye a:hover { color: var(--yellow); border-bottom-style: solid; }
 .bye .ln.f { color: #b7bfcf; }
@@ -1421,5 +1425,11 @@ html.booting .board > .pin { animation-play-state: paused; }
 @keyframes bar-lift { to { opacity: 1; } }
 @keyframes rise { from { opacity: 0; translate: 0 36px; scale: .97; } }
 /* The lid swings on its hinge (bottom edge), so the near edge never grows wider than the page. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) and (max-width: 640px) {
+    /* No lid to open on a phone (see the footer's terminal window above). */
+    .site-footer .laptop { animation-name: rise; }
+  }
+}
 @keyframes lid-open { from { opacity: .35; transform: perspective(1100px) rotateX(32deg) translateY(24px); } }
 @keyframes drift { to { translate: 0 -90px; } }
