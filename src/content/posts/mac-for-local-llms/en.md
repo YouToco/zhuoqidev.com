@@ -1,10 +1,10 @@
 ---
 title: 'Is a Mac Actually Good for Running Large Language Models? The Numbers Neither Apple nor NVIDIA Puts on the Product Page'
 short: 'Is a Mac actually good for local LLMs'
-description: "Apple says the Mac mini offers \"fast, private, on-device inference\" and up to 13.5x faster LLM prompt processing; NVIDIA says the RTX 5090 Laptop GPU has 1,824 AI TOPS. What they compare against, how the test machines were configured, and the three numbers that decide how fast a model actually feels — memory bandwidth, the compute for reading prompts, and how much memory the GPU can really use — are not where you look first. Using the llama.cpp community's shared benchmarks across dozens of machines, a check on two machines of my own, and a re-run of Apple's own footnoted test on the 16 GB base model, this post answers, case by case, whether a Mac mini, a Mac Studio or an NVIDIA card is a good machine for running models."
+description: "Apple says the Mac mini offers \"fast, private, on-device inference\" and up to 13.5x faster LLM prompt processing; NVIDIA says the RTX 5090 Laptop GPU has 1,824 AI TOPS. What they compare against, how the test machines were configured, and the three numbers that decide how fast a model actually feels — memory bandwidth, the compute for reading prompts, and how much memory the GPU can really use — are not where you look first. Using the llama.cpp community's shared benchmarks across dozens of machines, a check on two machines of my own, and a re-run of Apple's own footnoted test on the 16 GB base model, and the coding, compiling and testing work where the Mac mini measurably wins, this post answers, case by case, what a Mac mini, a Mac Studio and each class of NVIDIA card are actually good for."
 date: 2026-10-18
 updated: 2026-10-18
-lead: "Being able to run a model and running it well are separated by a few numbers that product pages leave out. **Output speed follows memory bandwidth, reading long input follows compute, and the size you can run follows the memory the GPU can actually use.** Meanwhile one vendor compares its new Mac against an M1 from five years ago, and the other gives a desktop card and a laptop chip the same name, 5090. The verdict: a Mac mini is good for small models and Apple Intelligence, not as your main local-LLM machine; a Mac Studio is the easiest way to fit a big model, but slow at reading long input; NVIDIA cards are fastest as long as the model fits in video memory, and fall off a cliff when it does not."
+lead: "Being able to run a model and running it well are separated by a few numbers that product pages leave out. **Output speed follows memory bandwidth, reading long input follows compute, and the size you can run follows the memory the GPU can actually use.** Meanwhile one vendor compares its new Mac against an M1 from five years ago, and the other gives a desktop card and a laptop chip the same name, 5090. The verdict has two halves: as a machine for writing code, compiling, running tests and hosting an Agent whose model runs in the cloud, a Mac mini measured more than twice as fast as a gaming laptop of its time and fits well; as your main local-LLM machine it does not; a Mac Studio is the easiest way to fit a big model, but slow at reading long input; NVIDIA cards are fastest as long as the model fits in video memory, and fall off a cliff when it does not."
 tags:
   - Local LLM
   - Hardware
@@ -156,13 +156,49 @@ Apple's "13.5x faster" uses a 14B model at 4 bits with an 8K-token prompt and me
 
 ---
 
+## The Mac mini is bad at running models, but good at something else
+
+Having covered the weak spots, fairness needs the strengths too. The same 16 GB Mac mini and the RTX 3060 laptop (its CPU is an i7-12700H, a 14-core gaming laptop from 2022) ran the same scripts on the work I actually do every day. The real project is a TypeScript gateway repository with 5,139 tests:
+
+```chart
+{
+  "type": "bars",
+  "fmt": {"suf": "×", "digits": 1},
+  "ref": {"value": 1, "label": "Even"},
+  "legend": [
+    {"color": "blue", "label": "Mac mini faster"},
+    {"color": "seal", "label": "3060 laptop faster"}
+  ],
+  "rows": [
+    {"label": "Full test suite", "sub": "65 s vs 136 s", "value": 2.1, "color": "blue"},
+    {"label": "TypeScript type check", "sub": "3.3 s vs 7.9 s", "value": 2.4, "color": "blue"},
+    {"label": "Front-end build", "sub": "31 s vs 73 s", "value": 2.4, "color": "blue"},
+    {"label": "Single-core Python mix", "sub": "0.05 s vs 0.16 s", "value": 3.1, "color": "blue"},
+    {"label": "CPU memory copy bandwidth", "sub": "114 vs 16 GB/s", "value": 7.2, "color": "blue"},
+    {"label": "numpy single-precision matmul", "sub": "1,988 vs 434 GFLOPS", "value": 4.6, "color": "blue"},
+    {"label": "Spawning subprocesses", "sub": "717 vs 2,119 per second", "value": 3.0, "color": "seal"},
+    {"label": "Create and delete 20,000 small files", "sub": "1.63 s vs 0.74 s", "value": 2.2, "color": "seal"},
+    {"label": "git grep a whole repository", "sub": "428 vs 175 ms", "value": 2.4, "color": "seal"},
+    {"label": "Train a small CNN", "sub": "fastest framework on each", "value": 2.7, "color": "seal"},
+    {"label": "4B model, one user, output", "sub": "56 vs 96 tokens/s", "value": 1.7, "color": "seal"}
+  ],
+  "caption": "How many times faster (faster side ÷ slower side). Measured 2026-10-15 to 10-17, several runs each, stable values. Full numbers in the appendix."
+}
+```
+
+- **Writing code, running tests and compiling: the Mac mini is more than twice as fast.** About three times faster on one core, seven times faster at moving memory on the CPU; SQLite one-by-one commits are 16 times faster (0.15 s vs 2.4 s).
+- **Where it is slower is small actions heavy on system calls**: spawning subprocesses, creating and deleting small files and `git grep` are two to three times slower. But these are milliseconds — one subprocess takes 1.4 ms against 0.5 ms, which nobody notices. After 120 seconds at full load it loses about 5 % of its speed; the laptop does not.
+- **So the line on Apple's page about using "agents like Claude Code or Codex to be more productive" holds**: those Agents run their model in the cloud, and what the local machine does is compile, run tests, read and write files and call git — all things the Mac mini does fast and steadily. Office work and writing are no contest.
+
+The trouble only starts when you move the model onto the same machine.
+
 ## What Apple does not put up front
 
 1. **Bandwidth follows the configuration, and the page says "up to".** The Mac mini M6 page says "up to 170GB/s"; the 16 GB entry model has 153. The Mac Studio page lists 614 GB/s for the M5 Max — that is the 40-core-GPU version; the 32-core entry version has 460. On the line above, a tenth less bandwidth is a tenth slower output.
 2. **The GPU cannot use all of the unified memory.** 16 GB gives the GPU about 12.7 GB, before subtracting whatever else you have open.
 3. **Reading long input is the weak spot.** Every "X times faster" Apple quotes is against older Macs; against an NVIDIA card at the same price, prompt reading is two to three times slower. On the 16 GB base model a 14B with an 8K prompt waits 15 seconds and 32K does not run — and Agents, code repositories and long documents are exactly how "local AI" gets used most.
 4. **The software version decides whether you get the new hardware.** An old MLX cannot use the M6's Neural Accelerators and reads prompts 3.6 times slower.
-5. **Its real strength is capacity.** A Mac Studio holds up to 128 GB / 512 GB of unified memory; one machine fits a model that would take several NVIDIA cards, and it is quiet and frugal. On this point the marketing does not exaggerate.
+5. **Its real strength is capacity.** A Mac Studio holds up to 128 GB / 512 GB of unified memory; one machine fits a model that would take several NVIDIA cards. On this point the marketing does not exaggerate.
 
 ## What NVIDIA does not put up front
 
@@ -177,7 +213,8 @@ Apple's "13.5x faster" uses a 14B model at 4 bits with an 8K-token prompt and me
 
 | What you want to do | Is a Mac a good fit? | A better fit |
 |---|---|---|
-| Apple Intelligence, a 4B–8B model now and then, writing code | **Yes**; a Mac mini is enough | — |
+| Writing code with Agents like Claude Code or Codex (model in the cloud), compiling, running tests, office work | **Very good**: compiling and testing measured more than twice as fast as an i7-12700H gaming laptop | — |
+| Apple Intelligence, a 4B–8B model now and then | **Yes**; a Mac mini is enough | — |
 | A 14B-class model as an everyday assistant, or an Agent reading a code repository | **Not really**: on the 16 GB base model an 8K prompt waits 15 seconds and 32K does not run; 32 GB fits it but still reads long input slowly | A desktop NVIDIA card with 16 GB or more |
 | A 30B-class model for yourself, fast | **So-so**: it takes a Mac Studio to fit; output on par with a 4090, slow on long input | A 24–32 GB desktop NVIDIA card (4090, 5090) |
 | 100B and up, fitting matters more than speed | **Best fit**: one Mac Studio with 128 GB / 512 GB holds it; NVIDIA needs several cards | — |
@@ -185,7 +222,7 @@ Apple's "13.5x faster" uses a 14B model at 4 bits with an 8K-token prompt and me
 
 China prices for reference (apple.com.cn, 2026-10-18): Mac mini M6 16 GB from ¥6,999; Mac Studio M5 Max from ¥19,999; M5 Ultra from ¥46,999.
 
-In one line: **a Mac is the easiest machine to fit a model on, not the fastest machine to run it on.** The Mac mini's marketing suggests it is the natural entry point for local LLMs, but for running large models it sits closer to "it runs, the experience is so-so"; what makes a Mac worth its price here is the large memory of the Mac Studio tier.
+In one line: **a Mac mini is a very good development and Agent machine, not a good local-LLM machine.** Its product page puts the two side by side — "create your own AI agents" and running large models on device — and the first holds up when measured, while the second, on the 16 GB base model, is closer to "it runs, the experience is so-so". To fit a truly large model locally, look at the large memory of the Mac Studio tier; to run it fast, it is still NVIDIA.
 
 ---
 
@@ -203,6 +240,7 @@ Beyond that, you rent GPUs or buy tokens.
 ## Limitations
 
 - The community numbers only cover a 7B model, one user, a 512-token prompt and llama.cpp; entries use different software versions, and newer versions alone are 10–30 % faster, so read the order of magnitude.
+- The everyday-development comparison is against a 2022 i7-12700H gaming laptop, not a new PC at the same price; the laptop had more programs open during the run (a quick re-run gave nearly the same single- and multi-core results). Dependency install times depend on the network and caches and are left out.
 - My re-run covers one 16 GB Mac mini and, on the Mac, one engine (mlx-lm), while Apple's test used LM Studio; I did not measure the 32 GB version or a Mac Studio. The 14B numbers use Qwen3-14B, which may not be the model in Apple's footnote.
 - Prices and export controls are as checked on 2026-10-18 and change quickly; the 6000D specs come from teardowns and benchmarks, not from NVIDIA.
 
@@ -239,6 +277,13 @@ mlx_lm.benchmark --model mlx-community/Qwen3-14B-4bit -p 8192 -g 128 -n 2
 | Item | RTX 3060 laptop (6 GB) | Mac mini M6 (16 GB) |
 |---|---|---|
 | Llama 2 7B 4-bit output / prompt reading (tokens/s) | 75.2 / 2,311 | 35.0 / 1,016 |
+| Full test suite (5,139 tests, 4 shards) | 136 s | 65 s |
+| TypeScript type check / front-end build | 7.9 s / 72.5 s | 3.3 s / 30.8 s |
+| Single-core Python mix / all cores | 0.157 s / 2.67 s | 0.051 s / 0.44 s |
+| CPU memory copy / numpy single-precision matmul | 15.9 GB/s / 434 GFLOPS | 114 GB/s / 1,988 GFLOPS |
+| SQLite 1,000 one-by-one commits | 2.4 s | 0.15 s |
+| Spawn subprocesses / 20,000 small files / git grep | 2,119 per s / 0.74 s / 175 ms | 717 per s / 1.63 s / 428 ms |
+| Last ÷ first stretch of 120 s at full load | 1.005 | 0.954 |
 | Qwen3-4B 4-bit single-user output (fastest engine) | 96 | 56 (MLX) |
 | Qwen3-4B 4-bit, 8 at once (engine benchmark) | 296 | 256 (llama.cpp) |
 | Memory the GPU can use | 6 GB of video memory | about 12.7 GB (system limit) |
