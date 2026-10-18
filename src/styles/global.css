@@ -634,7 +634,22 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 .skip:focus { left: 12px; }
 :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 /* clip: the farewell terminal's ::after and the lid's 3D tilt must not widen the page on narrow screens */
-.site-footer { padding: 40px 20px 110px; text-align: center; font: 400 12px/1.9 var(--f-mono); color: var(--ink-3); border-top: 2px dashed var(--blue-line); background: var(--paper); overflow-x: clip; }
+/* At the bottom of a page the footer fills the whole screen, so no sliver of the content above is left
+   between the top bar and the laptop. Its first 60px sit under the sticky bar (dashed edge included). */
+.site-footer {
+  /* lvh, not svh: on a phone the address bar collapses while scrolling, and a footer sized to the smaller
+     viewport would leave the sliver showing again; a taller footer just tucks more under the bar. */
+  min-height: 100vh; min-height: 100lvh; display: flex; flex-direction: column; justify-content: center;
+  padding: 100px 20px 110px; text-align: center;
+  font: 400 12px/1.9 var(--f-mono); color: var(--ink-3); border-top: 2px dashed var(--blue-line); background: var(--paper); overflow-x: clip;
+}
+.site-footer > .back-top { align-self: center; }
+/* On large screens a 600px laptop is a speck in a full-screen footer: the footer's contents grow in steps.
+   zoom (not transform) so the layout grows with them and the centring still holds. */
+.site-footer > * { zoom: var(--footer-zoom, 1); }
+@media (min-width: 1800px) and (min-height: 1000px) { .site-footer { --footer-zoom: 1.25; } }
+@media (min-width: 2400px) and (min-height: 1300px) { .site-footer { --footer-zoom: 1.5; } }
+@media (min-width: 3200px) and (min-height: 1800px) { .site-footer { --footer-zoom: 2; } }
 .site-footer a { color: var(--ink-2); text-decoration: none; }
 .site-footer a:hover { color: var(--blue); }
 .site-footer .beian { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; margin-top: 6px; }
@@ -650,7 +665,7 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 .shelf-head .crumb { margin-bottom: 14px; }
 .filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0 0; }
 .filters .tag { text-decoration: none; }
-.filters .tag small { opacity: .65; margin-left: 4px; }
+.filters .tag small { opacity: .65; margin-left: 4px; font-size: inherit; }
 .year-h { display: flex; align-items: center; gap: 14px; margin: 40px 0 16px; font: 500 13px/1 var(--f-mono); color: var(--ink-3); letter-spacing: .14em; }
 .year-h::after { content: ""; flex: 1; border-top: 1px dashed var(--line); }
 .post-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
@@ -890,6 +905,21 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
   .opener-read { flex-direction: row; justify-content: space-between; align-items: baseline; }
 }
 
+/* ---------- 触屏 ---------- */
+/* Words for a keyboard or a mouse only where there is one: a phone gets the touch wording instead. */
+.only-touch { display: none; }
+@media (hover: none) and (pointer: coarse) {
+  .only-touch { display: inline; }
+  .only-mouse, .only-keys { display: none; }
+  /* Fingers need about 24px or more; these grow on touch screens only, so the desktop look stays. */
+  .tag { padding: 5px 9px; }
+  .code .copy { padding: 8px 11px; }
+  .feature .go { display: inline-block; padding: 12px 0; margin: -12px 0; }
+  .story-skip { padding: 4px 0; }
+  /* Under 16px, iOS Safari zooms the page into a field when it gets focus. */
+  .gb-form .gb-name input { padding: 10px 12px; font-size: 16px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
@@ -1070,6 +1100,18 @@ dialog.wechat h2 { margin: 0 0 16px; font: 400 30px/1.15 var(--f-hand-zh); color
 /* Goodbye terminal: every page ends with see you, how to reach me, a fortune, exit. */
 .site-footer .laptop { margin-bottom: 30px; }
 .site-footer .bye a { color: var(--yellow); border-bottom: 1px dashed rgba(255, 224, 102, .45); }
+/* .tty lines wrap anywhere (long fortunes); a link should move to the next line whole, not split mid-word. */
+.site-footer .bye .ln a { white-space: nowrap; }
+@media (max-width: 640px) {
+  /* A phone's end screen in three parts: back-to-top under the bar, the laptop, the filing numbers just
+     above the dock (and the home indicator), instead of one centred block floating in empty space. */
+  .site-footer { justify-content: space-between; gap: 28px; padding: 76px 16px calc(96px + env(safe-area-inset-bottom)); }
+  .site-footer .back-top, .site-footer .laptop { margin-bottom: 0; }
+  /* A laptop screen is landscape; on a phone the goodbye text makes it a tall strip on a keyboard base,
+     which reads as neither. Here it is just a terminal window: no base, no bezel. */
+  .site-footer .laptop::after { display: none; }
+  .site-footer .laptop > .terminal { border: 0; border-radius: 14px; box-shadow: var(--shadow); }
+}
 .site-footer .bye a:hover { color: var(--yellow); border-bottom-style: solid; }
 .bye .ln.f { color: #b7bfcf; }
 .bye-foot {
@@ -1398,5 +1440,11 @@ html.booting .board > .pin { animation-play-state: paused; }
 @keyframes bar-lift { to { opacity: 1; } }
 @keyframes rise { from { opacity: 0; translate: 0 36px; scale: .97; } }
 /* The lid swings on its hinge (bottom edge), so the near edge never grows wider than the page. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) and (max-width: 640px) {
+    /* No lid to open on a phone (see the footer's terminal window above). */
+    .site-footer .laptop { animation-name: rise; }
+  }
+}
 @keyframes lid-open { from { opacity: .35; transform: perspective(1100px) rotateX(32deg) translateY(24px); } }
 @keyframes drift { to { translate: 0 -90px; } }

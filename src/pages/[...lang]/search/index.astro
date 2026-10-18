@@ -33,7 +33,10 @@ const L = t[lang];
       </span>
       <input id="q" name="q" type="search" autocomplete="off" spellcheck="false" placeholder={L.searchPlaceholder} />
     </form>
-    <p class="search-hint">{L.searchHint}</p>
+    <p class="search-hint">
+      <span class="only-keys">{L.searchHintKeys}</span>
+      {L.searchHint}
+    </p>
     <noscript>
       <p class="search-hint">
         {L.searchNoJs} <a href={url(lang, "/posts/")}>{L.allPosts} →</a>
