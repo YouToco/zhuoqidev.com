@@ -36,7 +36,14 @@ const hasAlt = all.some((p) => slugOf(p) === slug && p.id !== project.id);
   ogType="article"
   bodyClass="dotgrid"
 >
-  <Page lang={lang} title={project.data.title} crumb={`~/projects/${slug}.md`} date={project.data.date} searchable>
+  <Page
+    lang={lang}
+    title={project.data.title}
+    crumb={`~/projects/${slug}.md`}
+    date={project.data.date}
+    glyph={project.data.glyph}
+    searchable
+  >
     {project.data.scene === "argus" && <ArgusStory slot="hero" lang={lang} />}
     <Content />
   </Page>

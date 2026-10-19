@@ -11,6 +11,10 @@
   --blue-soft: #e8eefc;
   --seal: #c0391f;
   --stamp: #c0391f; /* seal background behind cream text, the same in both themes */
+  /* Article-header tiles (src/lib/glyphs.ts): pastel ground and dark ink in both themes, like a
+     sticker on the page; dark mode only takes the edge off the pastels. */
+  --tile-ink: #161a22; --tile-paper: #fffdf8; --tile-red: #c0391f;
+  --tile-1: #dcd5f3; --tile-2: #c4dbf6; --tile-3: #f8cdc1; --tile-4: #f7e3a1;
   --hi: #ffe066;
   --note: #ffe88a;
   --term: #161a22;
@@ -54,7 +58,7 @@
   --ink: #ece7dc; --ink-2: #bab6ac; --ink-3: #959aa8;
   --line: #31353f; --dot: #2c3039;
   --blue: #8eaaff; --blue-soft: #1f2a47; --seal: #f0694e;
-  --hi: #7d6416; --note: #ecd77e; --term: #0d0f13;
+  --hi: #7d6416; --note: #ecd77e; --term: #0d0f13; --tile-1: #c3bae6; --tile-2: #a9c6ea; --tile-3: #e7b2a4; --tile-4: #e6cf84;
   --topbar: rgba(20, 22, 27, .86); --seal-soft: #3b211b; --prose: #dcd8ce;
   --hi-strong: rgba(255, 214, 90, .26); --blue-line: rgba(142, 170, 255, .45); --code-ink: #f4957f;
   --callout-seal: #2a1915; --callout-blue: #172038; --callout-green: #14261b; --green: #5cc189; --on-blue: #14161b;
@@ -67,7 +71,7 @@
     --ink: #ece7dc; --ink-2: #bab6ac; --ink-3: #959aa8;
     --line: #31353f; --dot: #2c3039;
     --blue: #8eaaff; --blue-soft: #1f2a47; --seal: #f0694e;
-    --hi: #7d6416; --note: #ecd77e; --term: #0d0f13;
+    --hi: #7d6416; --note: #ecd77e; --term: #0d0f13; --tile-1: #c3bae6; --tile-2: #a9c6ea; --tile-3: #e7b2a4; --tile-4: #e6cf84;
     --topbar: rgba(20, 22, 27, .86); --seal-soft: #3b211b; --prose: #dcd8ce;
     --hi-strong: rgba(255, 214, 90, .26); --blue-line: rgba(142, 170, 255, .45); --code-ink: #f4957f;
     --callout-seal: #2a1915; --callout-blue: #172038; --callout-green: #14261b; --green: #5cc189; --on-blue: #14161b;
@@ -341,6 +345,26 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 .meta-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 18px; }
 .meta-row .m { font: 400 12px/1 var(--f-mono); color: var(--ink-3); }
 .post-title { margin: 0 0 30px; font: 900 40px/1.25 var(--f-serif); letter-spacing: .5px; }
+/* The same object inked on a tile, taped to the top right of the sheet; the title wraps around it. */
+.post-sticker { position: relative; float: right; width: 136px; margin: 2px -6px 18px 24px; transform: rotate(2.5deg); }
+.post-sticker .tape { width: 58px; top: -8px; }
+.post-tile { display: block; width: 100%; height: auto; border-radius: 12px; box-shadow: var(--shadow); }
+.post-tile .bg { fill: var(--tile-1); }
+.post-tile.t2 .bg { fill: var(--tile-2); }
+.post-tile.t3 .bg { fill: var(--tile-3); }
+.post-tile.t4 .bg { fill: var(--tile-4); }
+.post-tile path, .post-tile ellipse, .post-tile rect:not(.bg), .post-tile line { stroke-linecap: round; stroke-linejoin: round; }
+.post-tile .sk { stroke: var(--tile-ink); }
+.post-tile .sa { stroke: var(--tile-red); }
+.post-tile .sp { stroke: var(--tile-paper); }
+.post-tile .fk, .post-tile .spark { fill: var(--tile-ink); }
+.post-tile .fa { fill: var(--tile-red); }
+.post-tile .fp { fill: var(--tile-paper); }
+.post-tile .fn { fill: none; }
+.post-tile text, .post-glyph text { font-family: var(--f-hand); font-weight: 700; }
+.post-tile .tk { fill: var(--tile-ink); }
+.post-tile .ta { fill: var(--tile-red); }
+.post-tile .tp { fill: var(--tile-paper); }
 .post-sub { display: block; margin-top: 10px; font: 700 21px/1.5 var(--f-serif); color: var(--ink-2); letter-spacing: 0; }
 .margin-note {
   position: absolute; top: 236px; right: -172px; width: 150px;
@@ -676,6 +700,27 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 .post-item:hover h2, .post-item:hover h3 { color: var(--blue); }
 .post-item p { margin: 0 0 10px; font-size: 14px; line-height: 1.75; color: var(--ink-2); }
 .post-item .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+/* The pen sketch under the date (src/lib/glyphs.ts). It carries two drawings of the same object;
+   they only take turns while the card is hovered, so the lines seem to boil like a hand-drawn
+   animation. */
+.post-rail { display: grid; gap: 12px; align-content: start; justify-items: start; }
+.post-glyph { display: block; width: 84px; height: 84px; margin-left: -4px; overflow: visible; }
+.post-glyph path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.post-glyph .k { stroke: var(--ink); }
+.post-glyph .a { stroke: var(--seal); }
+.post-glyph .kf { fill: var(--ink); }
+.post-glyph .af { fill: var(--seal); }
+.post-glyph .pf { fill: var(--card); }
+.post-glyph .kt { fill: var(--ink); }
+.post-glyph .at { fill: var(--seal); }
+/* Lettering on a hatched or inked patch gets a paper rim so it stays readable. */
+.post-glyph .halo { paint-order: stroke; stroke: var(--card); stroke-width: 3px; stroke-linejoin: round; }
+.post-glyph .fr + .fr { visibility: hidden; }
+@keyframes glyph-boil { 0%, 49.9% { visibility: visible; } 50%, 100% { visibility: hidden; } }
+@media (prefers-reduced-motion: no-preference) {
+  .post-item:hover .post-glyph .fr { animation: glyph-boil .3s infinite; }
+  .post-item:hover .post-glyph .fr:nth-child(2) { animation-delay: -.15s; }
+}
 .term-cloud { display: flex; flex-wrap: wrap; gap: 10px; }
 .term-cloud a { display: inline-flex; gap: 6px; align-items: baseline; padding: 8px 12px; text-decoration: none; font: 500 14px/1 var(--f-sans); }
 .term-cloud a small { font: 400 11px/1 var(--f-mono); color: var(--ink-3); }
@@ -836,6 +881,10 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
   .shelf { padding: 36px 16px 60px; }
   .shelf-head h1 { font-size: 40px; }
   .post-item { grid-template-columns: 1fr; gap: 4px; padding: 16px 18px; }
+  .post-rail { grid-template-columns: 1fr auto; align-items: start; }
+  .post-glyph { width: 52px; height: 52px; margin: -6px -4px -40px 0; }
+  .post-item h2, .post-item h3 { padding-right: 48px; }
+  .post-sticker { width: 92px; margin: 0 -4px 10px 14px; }
   .page-wrap { padding: 0 0 80px; }
   .page-wrap .paper { padding: 30px 20px 28px; border-radius: 0; border-left: none; border-right: none; }
   .callout { flex-direction: column; gap: 10px; padding: 16px; }

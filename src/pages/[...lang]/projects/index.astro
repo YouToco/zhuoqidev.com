@@ -1,5 +1,6 @@
 ---
 import { type Lang, langParams, t, url } from "../../../i18n";
+import PostGlyph from "../../../components/PostGlyph.astro";
 import Base from "../../../layouts/Base.astro";
 import { getProjects, slugOf, splitTitle, ymd } from "../../../lib/content";
 
@@ -29,13 +30,14 @@ const intro =
         return (
           <li>
             <article class="post-item card">
-              {p.data.date ? (
-                <time class="d" datetime={ymd(p.data.date)}>
-                  {ymd(p.data.date)}
-                </time>
-              ) : (
-                <span />
-              )}
+              <div class="post-rail">
+                {p.data.date && (
+                  <time class="d" datetime={ymd(p.data.date)}>
+                    {ymd(p.data.date)}
+                  </time>
+                )}
+                {p.data.glyph && <PostGlyph name={p.data.glyph} />}
+              </div>
               <div>
                 <h2>
                   <a href={url(lang, `/projects/${slugOf(p)}/`)} class="stretch" data-vt>

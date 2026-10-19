@@ -3,6 +3,7 @@ title: Five Codex Harness Designs Worth Copying After Reading the Source
 short: "Five Codex Harness Designs Worth Copying"
 description: A source-grounded analysis of selective parallelism, Unified Exec, ExecCell, progressive Skills, persistent Goal continuation, and embedding the runtime through App Server.
 date: 2026-08-02
+glyph: queue-ticket
 updated: 2026-08-03
 lead: 'Think of Codex as a small construction crew. The model is the site lead deciding what should happen next. The agent harness is everything around that lead: dispatch desk, access control, job records, and the progress board. The source is valuable not merely because the lead can issue commands, but because the surrounding system keeps work safe, recoverable, and understandable to the customer.'
 tags:

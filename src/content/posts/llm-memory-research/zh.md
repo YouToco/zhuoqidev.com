@@ -2,6 +2,7 @@
 title: Agent 如何记住你：人脑记忆史与六大开源系统代码审计
 description: 从 Ebbinghaus、H.M.、工作记忆与 engram 出发，重建 Agent 记忆发展史；再对 Mem0、Letta、Graphiti、LangMem、Cognee、MemoryOS 做宣传卖点与实际代码架构对照。
 date: 2026-07-30
+glyph: forgetting-curve
 updated: 2026-07-30
 tags:
 - AI Agent

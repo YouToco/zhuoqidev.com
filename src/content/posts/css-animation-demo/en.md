@@ -2,6 +2,7 @@
 title: Embedding CSS Animation Demos in Hugo Articles
 description: Use custom shortcodes to run live CSS animations directly in Hugo blog posts — no CodePen account needed.
 date: 2026-05-04
+glyph: embedded-demo
 updated: 2026-07-30
 lead: 'Hugo shortcodes make it easy to embed live code demos. Here are three ways:'
 tags:

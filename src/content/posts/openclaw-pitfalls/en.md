@@ -2,6 +2,7 @@
 title: 'OpenClaw in Production: When the Most Advanced Memory System Meets the Quietest Failure'
 description: 'A full-chain production battle log: from startup failures and Feishu message silent drops to production stability — compaction safeguard, five-layer debugging, model-harness fit, and memory system comparison.'
 date: 2026-05-27
+glyph: compactor
 updated: 2026-07-30
 tags:
 - OpenClaw

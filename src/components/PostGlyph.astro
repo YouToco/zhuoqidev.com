@@ -1,0 +1,11 @@
+---
+import type { GlyphName } from "../data/glyphs";
+import { sketch } from "../lib/glyphs";
+
+interface Props {
+  name: GlyphName;
+}
+const { name } = Astro.props;
+---
+
+<Fragment set:html={sketch(name)} />

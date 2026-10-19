@@ -3,6 +3,7 @@ title: OpenClaw 记忆实战：从「向量搜索挂了也能用」到用 NVIDIA
 short: "OpenClaw 记忆实战：向量搜索挂了也能用"
 description: OpenClaw 记忆系统的向量检索默认不可用——但 BM25 文本搜索兜底让系统照常运转。当你发现「不配 embedding 也能跑」，到底要不要修？怎么用 NVIDIA 免费 embedding API 零成本补上？这是一篇生产环境的真实记录。
 date: 2026-06-20
+glyph: last-piece
 updated: 2026-07-30
 tags:
 - OpenClaw

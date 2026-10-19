@@ -3,6 +3,7 @@ title: 让 Agent 替你管十几个海外社媒号——2026 年 10 月约 60 �
 short: 社媒发帖与收件箱 API 横评
 description: 想让 Claude Code 这类 Agent 一键把内容发到 X、LinkedIn、YouTube、Instagram 等多个账号，还能看评论、回私信，能做到哪一步先由平台官方 API 决定，工具只是把这些官方能力搬进一个接口。X 从 2026-02 起只许程序回复 @ 了你的人，LinkedIn 个人号的评论和私信谁都读不到，Facebook 只能发主页，Threads 和 YouTube 没有私信接口。在这个上限之内，我把约 60 家统一 API、社媒管理套件、开源项目和会话型接口按「平台 × 发帖 / 评论 / @ / 私信」逐格核对 2026-10-09 的官方文档，按对接完善度打分排序，价格只放第二列，并写清哪些实测过、哪些只读了文档。
 date: 2026-10-09
+glyph: hand-truck
 updated: 2026-10-09
 lead: 按对接完善度，面向开发者的统一 API 里 Zernio 以 35.3 分（满分 38）领先，SocialAPI.ai、Ayrshare 各约 29 分；老牌社媒管理套件里能用一个 MCP 同时发帖、读收件箱、回复的只有 Vista Social 和 Eclincher；能多拿到 LinkedIn 个人私信的，只有要你交出 cookie 的会话型接口，而这正是平台明文禁止的。**先查平台给了什么，再比工具搬了多少。**
 tags:

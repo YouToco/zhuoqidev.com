@@ -3,6 +3,7 @@ title: 生产环境 Agent 实践：为什么我们从 Celery 迁移到 Temporal
 short: "为什么我们从 Celery 迁移到 Temporal"
 description: Agent 流水线不是普通的异步任务——它有状态、会卡住、需要重放排障、单条失败不能拖垮整批。Celery 每一条都踩坑后才明白 Temporal 不是"另一个任务队列"，而是在解决不同层级的问题。
 date: 2026-05-16
+glyph: event-history
 updated: 2026-07-30
 lead: 2026 年 4 月，我们把 seo-project 的任务队列从 Celery 全面迁移到了 Temporal。删除的依赖只有一个（`celery`），新增的核心代码有 11 个文件（`src/infrastructure/temporal/`），容器从 `api/worker/beat` 变成了 `api/temporal_worker_blue/green`（蓝绿部署）。
 tags:

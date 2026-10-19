@@ -1,6 +1,7 @@
 ---
 import { type Lang, url } from "../i18n";
 import { type Post, postUrl, shortTitle, slugOf, termSlug, ymd } from "../lib/content";
+import PostGlyph from "./PostGlyph.astro";
 
 interface Props {
   lang: Lang;
@@ -25,9 +26,12 @@ const groups = byYear
       {g.posts.map((p) => (
         <li>
           <article class="post-item card">
-            <time class="d" datetime={ymd(p.data.date)}>
-              {ymd(p.data.date)}
-            </time>
+            <div class="post-rail">
+              <time class="d" datetime={ymd(p.data.date)}>
+                {ymd(p.data.date)}
+              </time>
+              {p.data.glyph && <PostGlyph name={p.data.glyph} />}
+            </div>
             <div>
               <H>
                 <a href={postUrl(lang, slugOf(p))} class="stretch" data-vt>

@@ -2,6 +2,7 @@
 title: OpenClaw 生产踩坑：当最先进的记忆系统遇到最静默的失败
 description: 从部署到排障，记录 OpenClaw 从启动失败、飞书消息静默吞回复到 production 稳定的全链路实战经验——compaction safeguard、五层排查法、model-harness-fit 与记忆系统对比。
 date: 2026-05-27
+glyph: compactor
 updated: 2026-07-30
 tags:
 - OpenClaw
