@@ -212,7 +212,6 @@
       const $ = (id) => document.getElementById(id);
       const shape = $("shape");
       const eyes = [$("eye-l"), $("eye-r")];
-      const body = $("body");
       const mascot = $("mascot");
       const sw = $("switch");
       const still = matchMedia("(prefers-reduced-motion: reduce)");
@@ -223,6 +222,7 @@
       let anim = null; // { from, to, start, ms }
       const look = { x: 0, y: 0, tx: 0, ty: 0 };
       let blink = 0;
+      let swing = 0; // degrees of lean from moving the eyes, decays to 0 at rest
       let nextBlink = performance.now() + 2500;
 
       const draw = () => {
@@ -232,23 +232,28 @@
         $("skin-bottom").setAttribute("stop-color", mixRgb(skin.awake[1], skin.asleep[1], k));
         const e = eyeAt(k);
         const awake = 1 - k;
-        // Looking aside the pills slide over and lean towards that side (top first), as if the face turned.
-        const lx = look.x * 30 * awake;
-        const ly = look.y * 22 * awake;
-        const lean = -look.x * 28 * awake;
-        const h = e.h * (1 - blink * 0.85);
+        // Looking aside is a head turn, not a tilt: the pills stay nearly upright and slide over, the eye on
+        // the side it turns to gets smaller (it is further round the face) and the other a touch larger, and
+        // the two move closer together. They only lean while moving (swing, below) and by a few degrees at rest.
+        const lx = look.x * 38 * awake;
+        const ly = look.y * (look.y > 0 ? 32 : 24) * awake; // the eyes rest high, so looking down travels further
+        const turn = Math.abs(look.x) * awake;
+        const lean = (-look.x * 6 + swing) * awake;
         eyes.forEach((el, i) => {
-          const cx = (i ? e.gap : -e.gap) * (1 - Math.abs(look.x) * 0.12 * awake) + lx;
+          const side = i ? 1 : -1; // -1 left eye, +1 right eye
+          const near = Math.sign(look.x) === side ? 1 : -1; // +1 for the eye on the side being looked at
+          const size = 1 - turn * (near > 0 ? 0.13 : -0.04);
+          const w = e.w * (1 - turn * (near > 0 ? 0.18 : -0.03));
+          const h = e.h * size * (1 - blink * 0.85);
+          const cx = side * e.gap * (1 - turn * 0.18) + lx;
           const cy = e.y * scale + ly + e.drop[i];
-          el.setAttribute("x", (cx - e.w / 2).toFixed(2));
+          el.setAttribute("x", (cx - w / 2).toFixed(2));
           el.setAttribute("y", (cy - h / 2).toFixed(2));
-          el.setAttribute("width", e.w.toFixed(2));
+          el.setAttribute("width", w.toFixed(2));
           el.setAttribute("height", h.toFixed(2));
-          el.setAttribute("rx", (Math.min(e.w, h) / 2).toFixed(2));
+          el.setAttribute("rx", (Math.min(w, h) / 2).toFixed(2));
           el.setAttribute("transform", `rotate(${(lean + e.tilt[i]).toFixed(2)} ${cx.toFixed(2)} ${cy.toFixed(2)})`);
         });
-        // the whole body drifts a little towards what it looks at
-        body.setAttribute("transform", `translate(${(look.x * 4 * awake).toFixed(2)} ${(look.y * 3 * awake).toFixed(2)})`);
       };
 
       const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
@@ -273,8 +278,12 @@
           }
         }
         // eyes ease towards where the pointer is; blink now and then while awake
+        const before = look.x;
         look.x += (look.tx - look.x) * 0.16;
         look.y += (look.ty - look.y) * 0.16;
+        // Swing: a quick glance sideways makes the pills trail (lean against the motion) and settle upright.
+        const v = look.x - before;
+        swing += (clamp(-v * 260, -22, 22) - swing) * 0.25;
         if (now > nextBlink && k === 0 && !still.matches) {
           const b = (now - nextBlink) / 160;
           blink = b < 1 ? Math.sin(b * Math.PI) : 0;
