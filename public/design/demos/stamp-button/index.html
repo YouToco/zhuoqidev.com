@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>印章按钮</title>
+    <style>
+      :root {
+        --paper: #fbf8f1;
+        --card: #fffdf8;
+        --ink: #1c2230;
+        --ink-2: #4a5163;
+        --ink-3: #636877;
+        --line: #e6dfd0;
+        --dot: #d8d0bf;
+        --seal: #c0391f;
+        --on-seal: #fff8ef;
+        --blue: #2f5bd3;
+        /* A damped spring sampled into linear(): overshoots about 16%, then settles. */
+        --spring: linear(0, 0.062, 0.215, 0.411, 0.615, 0.799, 0.95, 1.059, 1.126, 1.158, 1.161, 1.145, 1.116, 1.083, 1.051, 1.023, 1.001, 0.986, 0.977, 0.974, 0.974, 0.978, 0.983, 0.988, 0.994, 0.998, 1.001, 1.003, 1.004, 1.004, 1);
+        --f-sans: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+        --f-seal: "Songti SC", STSong, "Noto Serif CJK SC", "Source Han Serif SC", SimSun, serif;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #14161b;
+          --card: #1e2129;
+          --ink: #ece7dc;
+          --ink-2: #bab6ac;
+          --ink-3: #959aa8;
+          --line: #31353f;
+          --dot: #2c3039;
+          --seal: #f0694e;
+          --on-seal: #1b0e0b;
+          --blue: #8eaaff;
+          color-scheme: dark;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 32px 16px;
+        background: var(--paper) radial-gradient(var(--dot) 1px, transparent 1.2px) 0 0 / 22px 22px;
+        color: var(--ink);
+        font: 16px/1.7 var(--f-sans);
+      }
+      .sheet {
+        position: relative;
+        width: min(520px, 100%);
+        padding: 28px 28px 32px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        box-shadow: 0 10px 28px -14px rgba(28, 34, 48, 0.28);
+        overflow: hidden; /* imprints that land near the edge stay on the paper */
+      }
+      .sheet h1 { margin: 0 0 4px; font: 700 20px/1.4 var(--f-seal); }
+      .sheet p { margin: 0 0 22px; color: var(--ink-2); font-size: 14px; }
+      .row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+
+      /* ---------- the stamp button ---------- */
+      .stamp {
+        position: relative;
+        z-index: 1;
+        padding: 11px 22px;
+        border: 0;
+        border-radius: 6px;
+        background: var(--seal);
+        color: var(--on-seal);
+        font: 700 16px/1 var(--f-seal);
+        letter-spacing: 0.18em;
+        cursor: pointer;
+        /* The inner ring is the carved border of a seal. */
+        box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--on-seal) 55%, transparent), 0 3px 0 color-mix(in srgb, var(--seal) 55%, #000);
+        transition: translate 0.5s var(--spring), rotate 0.5s var(--spring), box-shadow 0.15s;
+      }
+      .stamp:hover { rotate: -1.5deg; }
+      /* Pressed: pushed down onto the paper, its shadow gone, a slight twist like a real hand. */
+      .stamp:active {
+        translate: 0 3px;
+        rotate: 1deg;
+        transition-duration: 0.06s;
+        box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--on-seal) 55%, transparent), 0 0 0 color-mix(in srgb, var(--seal) 55%, #000);
+      }
+      .stamp:focus-visible { outline: 2px solid var(--blue); outline-offset: 4px; }
+      .stamp.ghost {
+        background: transparent;
+        color: var(--seal);
+        box-shadow: inset 0 0 0 2px var(--seal), 0 3px 0 color-mix(in srgb, var(--seal) 30%, transparent);
+      }
+      .stamp.ghost:active { box-shadow: inset 0 0 0 2px var(--seal), 0 0 0 transparent; }
+      .stamp.round {
+        width: 64px;
+        height: 64px;
+        padding: 0;
+        border-radius: 50%;
+        letter-spacing: 0;
+        font-size: 15px;
+        line-height: 1.1;
+      }
+
+      /* ---------- the imprint left on the paper ---------- */
+      .imprint {
+        position: absolute;
+        z-index: 0;
+        pointer-events: none;
+        display: grid;
+        place-items: center;
+        border: 2px solid var(--seal);
+        color: var(--seal);
+        font: 700 16px/1 var(--f-seal);
+        letter-spacing: 0.18em;
+        /* Uneven ink: an SVG noise mask eats random specks out of the print. */
+        -webkit-mask: var(--grain) center / 120px 120px;
+        mask: var(--grain) center / 120px 120px;
+        animation: ink 1.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+      .imprint.round { border-radius: 50%; letter-spacing: 0; font-size: 15px; line-height: 1.1; text-align: center; }
+      @keyframes ink {
+        0% { opacity: 0; scale: 1.08; }
+        8% { opacity: 0.9; scale: 1; }
+        60% { opacity: 0.75; }
+        100% { opacity: 0; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .stamp, .stamp:active { transition: none; translate: none; rotate: none; }
+        .imprint { animation-duration: 0.01s; }
+      }
+      .hint { margin-top: 64px; font-size: 12px; color: var(--ink-3); }
+    </style>
+  </head>
+  <body>
+    <main class="sheet" id="sheet">
+      <h1>确认无误，盖个章</h1>
+      <p>按下去像真的印章：往下一压、轻轻一拧，松手后纸上留下一枚会慢慢淡掉的印。</p>
+      <div class="row">
+        <button class="stamp" type="button">提交</button>
+        <button class="stamp ghost" type="button">存草稿</button>
+        <button class="stamp round" type="button">已<br />阅</button>
+      </div>
+      <p class="hint">每次落印的角度、位置都有一点随机，像手盖的。</p>
+    </main>
+
+    <script>
+      // A noise texture for the uneven ink, built once as an SVG data URL (white = ink stays).
+      const grain = `url("data:image/svg+xml,${encodeURIComponent(
+        `<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='7'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 -2.2 1.6'/></filter><rect width='120' height='120' filter='url(%23n)'/></svg>`,
+      )}")`;
+      document.documentElement.style.setProperty("--grain", grain);
+
+      const sheet = document.getElementById("sheet");
+      const still = matchMedia("(prefers-reduced-motion: reduce)");
+      for (const btn of document.querySelectorAll(".stamp")) {
+        btn.addEventListener("click", () => {
+          if (still.matches) return;
+          // The print lands where the button is, a little off and a little turned.
+          const s = sheet.getBoundingClientRect();
+          const b = btn.getBoundingClientRect();
+          const mark = document.createElement("span");
+          mark.className = "imprint" + (btn.classList.contains("round") ? " round" : "");
+          mark.innerHTML = btn.innerHTML;
+          Object.assign(mark.style, {
+            left: `${b.left - s.left + (Math.random() - 0.5) * 10}px`,
+            top: `${b.top - s.top + b.height * 0.9 + Math.random() * 18}px`,
+            width: `${b.width}px`,
+            height: `${b.height}px`,
+            rotate: `${(Math.random() - 0.5) * 14}deg`,
+          });
+          sheet.append(mark);
+          mark.addEventListener("animationend", () => mark.remove());
+        });
+      }
+    </script>
+  </body>
+</html>

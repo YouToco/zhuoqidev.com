@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>磁吸按钮</title>
+    <style>
+      :root {
+        --paper: #fbf8f1;
+        --card: #fffdf8;
+        --ink: #1c2230;
+        --ink-2: #4a5163;
+        --ink-3: #636877;
+        --line: #e6dfd0;
+        --dot: #d8d0bf;
+        --blue: #2f5bd3;
+        --on-blue: #fff;
+        --spring: linear(0, 0.062, 0.215, 0.411, 0.615, 0.799, 0.95, 1.059, 1.126, 1.158, 1.161, 1.145, 1.116, 1.083, 1.051, 1.023, 1.001, 0.986, 0.977, 0.974, 0.974, 0.978, 0.983, 0.988, 0.994, 0.998, 1.001, 1.003, 1.004, 1.004, 1);
+        --f-sans: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+        --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #14161b;
+          --card: #1e2129;
+          --ink: #ece7dc;
+          --ink-2: #bab6ac;
+          --ink-3: #959aa8;
+          --line: #31353f;
+          --dot: #2c3039;
+          --blue: #8eaaff;
+          --on-blue: #14161b;
+          color-scheme: dark;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        align-content: center;
+        gap: 18px;
+        padding: 32px 16px;
+        background: var(--paper) radial-gradient(var(--dot) 1px, transparent 1.2px) 0 0 / 22px 22px;
+        color: var(--ink);
+        font: 16px/1.7 var(--f-sans);
+        text-align: center;
+      }
+      .row { display: flex; flex-wrap: wrap; gap: 48px; justify-content: center; align-items: center; padding: 40px 0; }
+
+      /* ---------- the button ----------
+         JS only writes two numbers, --x and --y (how far the pointer is from the centre, -1..1).
+         The body follows a little, the label follows more: that difference reads as depth. While
+         the pointer moves the transition is short (it tracks); on leave it is a long spring. */
+      .mag {
+        --x: 0;
+        --y: 0;
+        --pull: 14px;
+        position: relative;
+        padding: 16px 30px;
+        border: 0;
+        border-radius: 999px;
+        background: var(--blue);
+        color: var(--on-blue);
+        font: 600 16px/1 var(--f-sans);
+        cursor: pointer;
+        translate: calc(var(--x) * var(--pull)) calc(var(--y) * var(--pull));
+        transition: translate 0.9s var(--spring), scale 0.45s var(--spring), box-shadow 0.3s;
+        box-shadow: 0 10px 24px -10px color-mix(in srgb, var(--blue) 70%, transparent);
+      }
+      .mag .t {
+        display: inline-block;
+        translate: calc(var(--x) * var(--pull) * 0.6) calc(var(--y) * var(--pull) * 0.6);
+        transition: translate 0.9s var(--spring);
+      }
+      .mag.near,
+      .mag.near .t { transition-duration: 0.18s; transition-timing-function: ease-out; }
+      .mag.near { box-shadow: 0 16px 30px -12px color-mix(in srgb, var(--blue) 80%, transparent); }
+      .mag:active { scale: 0.94; }
+      .mag:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+      .mag.ghost { background: var(--card); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); --pull: 10px; }
+      .mag.round { width: 96px; height: 96px; padding: 0; border-radius: 50%; --pull: 22px; }
+
+      .hint { margin: 0; font-size: 13px; color: var(--ink-3); }
+      .hint code { font: 12px var(--f-mono); }
+      @media (prefers-reduced-motion: reduce) {
+        .mag, .mag .t { translate: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="row">
+      <button class="mag" type="button" data-mag><span class="t">开始使用 →</span></button>
+      <button class="mag ghost" type="button" data-mag><span class="t">看看源码</span></button>
+      <button class="mag round" type="button" data-mag><span class="t">↗</span></button>
+    </div>
+    <p class="hint">鼠标靠近，按钮会被「吸」过去，里面的字跟得更多一点；移开时弹回原位。</p>
+    <p class="hint">触屏和「减少动态效果」下不动：<code>(hover: hover) and (pointer: fine)</code></p>
+
+    <script>
+      // The pull starts this many pixels outside the button and grows towards its centre.
+      const REACH = 60;
+      const fine = matchMedia("(hover: hover) and (pointer: fine)");
+      const still = matchMedia("(prefers-reduced-motion: reduce)");
+      const buttons = [...document.querySelectorAll("[data-mag]")];
+      let frame = 0;
+      let last = null;
+      const update = () => {
+        frame = 0;
+        if (!last) return;
+        for (const b of buttons) {
+          // The layout box, not the moved one: translate does not change offsetLeft/Top.
+          const r = b.getBoundingClientRect();
+          const cx = r.left + r.width / 2 - (parseFloat(b.dataset.dx) || 0);
+          const cy = r.top + r.height / 2 - (parseFloat(b.dataset.dy) || 0);
+          const dx = last.clientX - cx;
+          const dy = last.clientY - cy;
+          const near = Math.abs(dx) < r.width / 2 + REACH && Math.abs(dy) < r.height / 2 + REACH;
+          const x = near ? Math.max(-1, Math.min(1, dx / (r.width / 2 + REACH))) : 0;
+          const y = near ? Math.max(-1, Math.min(1, dy / (r.height / 2 + REACH))) : 0;
+          const pull = parseFloat(getComputedStyle(b).getPropertyValue("--pull")) || 0;
+          b.dataset.dx = String(x * pull);
+          b.dataset.dy = String(y * pull);
+          b.classList.toggle("near", near);
+          b.style.setProperty("--x", x.toFixed(3));
+          b.style.setProperty("--y", y.toFixed(3));
+        }
+      };
+      addEventListener(
+        "pointermove",
+        (e) => {
+          if (!fine.matches || still.matches || e.pointerType !== "mouse") return;
+          last = e;
+          frame ||= requestAnimationFrame(update);
+        },
+        { passive: true },
+      );
+      // Leaving the window lets every button spring home.
+      document.documentElement.addEventListener("pointerleave", () => {
+        last = { clientX: -1e4, clientY: -1e4 };
+        frame ||= requestAnimationFrame(update);
+      });
+    </script>
+  </body>
+</html>

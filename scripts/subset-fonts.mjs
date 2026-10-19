@@ -90,8 +90,10 @@ async function htmlFiles(dir) {
   const out = [];
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name);
-    if (entry.isDirectory()) out.push(...(await htmlFiles(path)));
-    else if (entry.name.endsWith(".html")) out.push(path);
+    // Design library demos are standalone pages with their own system fonts (public/design/demos/).
+    if (entry.isDirectory()) {
+      if (path !== join(DIST, "design", "demos")) out.push(...(await htmlFiles(path)));
+    } else if (entry.name.endsWith(".html")) out.push(path);
   }
   return out;
 }

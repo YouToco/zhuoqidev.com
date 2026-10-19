@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>一键复制按钮</title>
+    <style>
+      :root {
+        --paper: #fbf8f1;
+        --card: #fffdf8;
+        --ink: #1c2230;
+        --ink-2: #4a5163;
+        --ink-3: #636877;
+        --line: #e6dfd0;
+        --dot: #d8d0bf;
+        --blue: #2f5bd3;
+        --green: #277a4b;
+        --seal: #c0391f;
+        --term: #161a22;
+        --term-ink: #d7dce6;
+        --yellow: #ffe066;
+        --spring: linear(0, 0.062, 0.215, 0.411, 0.615, 0.799, 0.95, 1.059, 1.126, 1.158, 1.161, 1.145, 1.116, 1.083, 1.051, 1.023, 1.001, 0.986, 0.977, 0.974, 0.974, 0.978, 0.983, 0.988, 0.994, 0.998, 1.001, 1.003, 1.004, 1.004, 1);
+        --f-sans: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+        --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #14161b;
+          --card: #1e2129;
+          --ink: #ece7dc;
+          --ink-2: #bab6ac;
+          --ink-3: #959aa8;
+          --line: #31353f;
+          --dot: #2c3039;
+          --blue: #8eaaff;
+          --green: #5cc189;
+          --seal: #f0694e;
+          --term: #0d0f13;
+          color-scheme: dark;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 32px 16px;
+        background: var(--paper) radial-gradient(var(--dot) 1px, transparent 1.2px) 0 0 / 22px 22px;
+        color: var(--ink);
+        font: 16px/1.7 var(--f-sans);
+      }
+      .stack { width: min(560px, 100%); display: grid; gap: 22px; }
+
+      /* ---------- the button ----------
+         Two states drawn in one SVG: the "two sheets" icon and a check mark. The check is a path
+         whose stroke is hidden with stroke-dashoffset and drawn in on success; the sheets fold
+         away at the same time. The label is two lines in a one-line window that slides up. */
+      .copy {
+        --c: var(--ink-2);
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        height: 34px;
+        padding: 0 12px 0 10px;
+        border: 1px dashed var(--ink-3);
+        border-radius: 10px;
+        background: var(--card);
+        color: var(--c);
+        font: 500 13px/1 var(--f-sans);
+        cursor: pointer;
+        transition: color 0.2s, border-color 0.2s, background-color 0.2s, scale 0.45s var(--spring);
+      }
+      .copy:hover { border-style: solid; color: var(--ink); }
+      .copy:active { scale: 0.92; }
+      .copy:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+      .copy svg { width: 16px; height: 16px; overflow: visible; }
+      .copy .sheets { transform-origin: 50% 50%; transition: scale 0.25s, opacity 0.2s; }
+      .copy .check { stroke-dasharray: 16; stroke-dashoffset: 16; transition: stroke-dashoffset 0.35s 0.08s cubic-bezier(0.65, 0, 0.35, 1); }
+      .copy .say { display: grid; height: 1em; overflow: hidden; line-height: 1; }
+      .copy .say span { transition: translate 0.45s var(--spring); }
+      .copy .say span:nth-child(2) { color: var(--ok, var(--green)); }
+
+      .copy.done { --c: var(--green); border-style: solid; border-color: var(--green); }
+      .copy.done .sheets { scale: 0.4; opacity: 0; }
+      .copy.done .check { stroke-dashoffset: 0; }
+      .copy.done .say span { translate: 0 -100%; }
+
+      .copy.fail { --c: var(--seal); --ok: var(--seal); border-color: var(--seal); animation: shake 0.4s; }
+      .copy.fail .say span { translate: 0 -100%; }
+      @keyframes shake {
+        20%, 60% { translate: -3px 0; }
+        40%, 80% { translate: 3px 0; }
+      }
+
+      /* ---------- where it usually lives: a code block bar ---------- */
+      .code { border-radius: 12px; overflow: hidden; background: var(--term); box-shadow: 0 10px 28px -14px rgba(28, 34, 48, 0.4); }
+      .bar { display: flex; align-items: center; justify-content: space-between; padding: 6px 6px 6px 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); font: 12px/1 var(--f-mono); color: var(--term-ink); opacity: 0.9; }
+      .code .copy { --c: var(--term-ink); background: transparent; border-color: rgba(255, 255, 255, 0.25); height: 30px; }
+      .code .copy:hover { color: var(--yellow); border-color: var(--yellow); }
+      .code .copy.done { --c: #5fd38a; --ok: #5fd38a; border-color: #5fd38a; }
+      pre { margin: 0; padding: 14px 16px; color: var(--term-ink); font: 13px/1.7 var(--f-mono); overflow-x: auto; }
+      .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+      .key { padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); font: 13px/1 var(--f-mono); color: var(--ink-2); }
+      .hint { margin: 0; font-size: 12px; color: var(--ink-3); }
+
+      @media (prefers-reduced-motion: reduce) {
+        .copy, .copy * { transition: none !important; animation: none !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="stack">
+      <div class="code">
+        <div class="bar">
+          <span>bash · install.sh</span>
+          <button class="copy" type="button" data-copy="pre">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <g class="sheets"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5" /><path d="M10.5 3.5v-.5a1.5 1.5 0 0 0-1.5-1.5H4a1.5 1.5 0 0 0-1.5 1.5v5A1.5 1.5 0 0 0 4 10.5h.5" /></g>
+              <path class="check" d="M3 8.5 6.5 12 13 4.5" />
+            </svg>
+            <span class="say"><span>复制</span><span>已复制</span></span>
+          </button>
+        </div>
+        <pre>npm create astro@latest -- --template minimal
+cd my-site &amp;&amp; npm run dev</pre>
+      </div>
+
+      <div class="row">
+        <span class="key">sk-demo-••••••••3f9a</span>
+        <button class="copy" type="button" data-copy-text="sk-demo-not-a-real-key">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <g class="sheets"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5" /><path d="M10.5 3.5v-.5a1.5 1.5 0 0 0-1.5-1.5H4a1.5 1.5 0 0 0-1.5 1.5v5A1.5 1.5 0 0 0 4 10.5h.5" /></g>
+            <path class="check" d="M3 8.5 6.5 12 13 4.5" />
+          </svg>
+          <span class="say"><span>复制</span><span>已复制</span></span>
+        </button>
+        <button class="copy" type="button" data-fail>
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <g class="sheets"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5" /><path d="M10.5 3.5v-.5a1.5 1.5 0 0 0-1.5-1.5H4a1.5 1.5 0 0 0-1.5 1.5v5A1.5 1.5 0 0 0 4 10.5h.5" /></g>
+            <path class="check" d="M3 8.5 6.5 12 13 4.5" />
+          </svg>
+          <span class="say"><span>失败的样子</span><span>没复制上</span></span>
+        </button>
+      </div>
+      <p class="hint">成功：两张纸收起、画出对勾、文字往上换一行；失败：变红、左右抖一下。1.6 秒后自己恢复。</p>
+      <p class="hint" aria-live="polite" id="live"></p>
+    </main>
+
+    <script>
+      const live = document.getElementById("live");
+      const settle = (btn, cls) => {
+        btn.classList.remove("done", "fail");
+        void btn.offsetWidth; // restart the animation when clicked again quickly
+        btn.classList.add(cls);
+        // Screen readers hear the result; the visual label alone would be missed.
+        live.textContent = cls === "done" ? "已复制到剪贴板" : "复制失败";
+        clearTimeout(btn._t);
+        btn._t = setTimeout(() => btn.classList.remove(cls), 1600);
+      };
+      for (const btn of document.querySelectorAll(".copy")) {
+        btn.addEventListener("click", async () => {
+          if (btn.hasAttribute("data-fail")) return settle(btn, "fail");
+          // textContent, not innerText: works on folded or hidden blocks too.
+          const text = btn.dataset.copyText ?? btn.closest(".code")?.querySelector("pre")?.textContent ?? "";
+          try {
+            await navigator.clipboard.writeText(text);
+            settle(btn, "done");
+          } catch {
+            settle(btn, "fail");
+          }
+        });
+      }
+    </script>
+  </body>
+</html>

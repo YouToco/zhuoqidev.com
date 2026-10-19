@@ -1,0 +1,844 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>地图 + 筛选侧栏</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <style>
+      :root {
+        --paper: #fbf8f1;
+        --paper-2: #f3eee2;
+        --card: #fffdf8;
+        --ink: #1c2230;
+        --ink-2: #4a5163;
+        --ink-3: #636877;
+        --line: #e6dfd0;
+        --dot: #d8d0bf;
+        --blue: #2f5bd3;
+        --blue-bg: #e8edfb;
+        --on-blue: #fff;
+        --seal: #c0391f;
+        --hi: #ffe066;
+        /* one color per café type; markers, chips and legend all use these */
+        --k-hand: #2f5bd3;
+        --k-bake: #c8661c;
+        --k-chain: #1f8a70;
+        --k-tea: #8a5bb0;
+        --map-bg: #ece6d8;
+        --tiles: grayscale(0.7) sepia(0.12) brightness(1.03) contrast(0.92);
+        --f-sans: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+        --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #14161b;
+          --paper-2: #1c1f26;
+          --card: #1e2129;
+          --ink: #ece7dc;
+          --ink-2: #bab6ac;
+          --ink-3: #959aa8;
+          --line: #31353f;
+          --dot: #2c3039;
+          --blue: #8eaaff;
+          --blue-bg: #1f2840;
+          --on-blue: #14161b;
+          --seal: #f0694e;
+          --hi: #7d6416;
+          --k-hand: #8eaaff;
+          --k-bake: #ec9550;
+          --k-chain: #4cc3a0;
+          --k-tea: #bd96e0;
+          --map-bg: #1a1d23;
+          /* Dark tiles without a dark tile server: invert, then turn the hues back. */
+          --tiles: invert(1) hue-rotate(180deg) grayscale(0.55) brightness(0.88) contrast(0.9);
+          color-scheme: dark;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        background: var(--paper);
+        color: var(--ink);
+        font: 13px/1.55 var(--f-sans);
+      }
+      button,
+      input,
+      select {
+        font: inherit;
+        color: inherit;
+      }
+      #app {
+        display: flex;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      /* ---------- the filter panel ---------- */
+      #panel {
+        display: flex;
+        flex-direction: column;
+        flex: none;
+        width: 340px;
+        height: 100%;
+        overflow-y: auto;
+        background: var(--paper) radial-gradient(var(--dot) 1px, transparent 1.2px) 0 0 / 22px 22px;
+        border-right: 1px solid var(--line);
+        z-index: 1000;
+      }
+      .head {
+        position: relative;
+        padding: 14px 16px 10px;
+        border-bottom: 1px solid var(--line);
+      }
+      .head h1 {
+        margin: 0;
+        font-size: 17px;
+        letter-spacing: 0.02em;
+      }
+      .head .sub {
+        margin: 2px 0 0;
+        color: var(--ink-2);
+        font-size: 12px;
+      }
+      .stamp {
+        display: inline-block;
+        margin-right: 6px;
+        padding: 0 5px;
+        border: 1.5px solid var(--seal);
+        border-radius: 4px;
+        color: var(--seal);
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .icon-btn {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        display: none;
+        width: 32px;
+        height: 32px;
+        border: 0;
+        border-radius: 8px;
+        background: none;
+        color: var(--ink-3);
+        font-size: 20px;
+        cursor: pointer;
+      }
+      .block {
+        padding: 10px 16px 12px;
+        border-bottom: 1px solid var(--line);
+      }
+      .block h2 {
+        margin: 0 0 6px;
+        color: var(--ink-2);
+        font-size: 12px;
+        font-weight: 650;
+        letter-spacing: 0.04em;
+      }
+      .hint {
+        margin: 4px 0 0;
+        color: var(--ink-3);
+        font-size: 12px;
+      }
+      input[type="search"],
+      select {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--card);
+        padding: 5px 8px;
+      }
+      input[type="search"] {
+        width: 100%;
+        padding: 7px 10px;
+      }
+      input[type="range"] {
+        width: 100%;
+        margin: 2px 0;
+        accent-color: var(--blue);
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .row:first-of-type {
+        margin-top: 0;
+      }
+      .val {
+        font-family: var(--f-mono);
+        color: var(--ink-2);
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 10px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--card);
+        font-size: 12px;
+        cursor: pointer;
+        transition:
+          background 0.2s,
+          border-color 0.2s;
+      }
+      .chip:hover {
+        border-color: var(--blue);
+      }
+      .chip[aria-pressed="true"] {
+        background: var(--blue-bg);
+        border-color: var(--blue);
+      }
+      .chip[aria-pressed="false"] {
+        color: var(--ink-3);
+      }
+      .chip[aria-pressed="false"] .sw {
+        opacity: 0.35;
+      }
+      .sw {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        flex: none;
+      }
+      .checks {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0 8px;
+      }
+      label.check {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 2px 0;
+        cursor: pointer;
+      }
+      label.check input {
+        accent-color: var(--blue);
+      }
+
+      /* ---------- result list (synced with the map) ---------- */
+      .results {
+        flex: 1;
+      }
+      #list {
+        margin: 6px 0 0;
+        padding: 0;
+        list-style: none;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--card);
+        overflow: hidden;
+      }
+      #list li + li {
+        border-top: 1px solid var(--line);
+      }
+      #list button {
+        display: grid;
+        grid-template-columns: 22px 1fr auto;
+        gap: 2px 8px;
+        width: 100%;
+        padding: 7px 10px;
+        border: 0;
+        background: none;
+        text-align: left;
+        cursor: pointer;
+      }
+      #list button:hover,
+      #list button:focus-visible {
+        background: var(--paper-2);
+        outline: none;
+      }
+      #list button[aria-current="true"] {
+        background: var(--blue-bg);
+        box-shadow: inset 3px 0 0 var(--blue);
+      }
+      #list .rank {
+        grid-row: span 2;
+        font: 12px/1.9 var(--f-mono);
+        color: var(--ink-3);
+        text-align: right;
+      }
+      #list .nm {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        font-weight: 600;
+      }
+      #list .nm span:last-child {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      #list .score {
+        font-family: var(--f-mono);
+        color: var(--ink-2);
+      }
+      #list .meta {
+        grid-column: 2 / 4;
+        color: var(--ink-3);
+        font-size: 12px;
+      }
+      #list .empty {
+        padding: 14px 12px;
+        color: var(--ink-3);
+      }
+      .linkbtn {
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--blue);
+        cursor: pointer;
+      }
+      .foot {
+        padding: 10px 16px 18px;
+        color: var(--ink-3);
+        font-size: 11px;
+      }
+
+      /* ---------- the map ---------- */
+      #map-wrap {
+        position: relative;
+        flex: 1;
+        min-width: 0;
+      }
+      #map {
+        position: absolute;
+        inset: 0;
+        /* shows while tiles load (or if they are blocked): a calm grid instead of flat grey */
+        background:
+          linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 48px 48px,
+          linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 48px 48px,
+          var(--map-bg);
+        font: inherit;
+      }
+      .leaflet-tile-pane {
+        filter: var(--tiles);
+      }
+      .pin {
+        display: block;
+        width: 16px;
+        height: 16px;
+        border: 2.5px solid var(--card);
+        border-radius: 50%;
+        background: var(--k);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+        transition: scale 0.2s;
+      }
+      .pin.dim {
+        background: var(--ink-3);
+        opacity: 0.45;
+        box-shadow: none;
+      }
+      .pin.hot {
+        scale: 1.5;
+        outline: 3px solid var(--hi);
+      }
+      .leaflet-marker-icon:focus-visible .pin {
+        outline: 3px solid var(--blue);
+      }
+      .cl {
+        display: grid;
+        place-items: center;
+        width: 36px;
+        height: 36px;
+        border: 2px solid var(--card);
+        border-radius: 50%;
+        background: var(--ink);
+        color: var(--paper);
+        font: 600 13px/1 var(--f-mono);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        transition: scale 0.2s;
+      }
+      .cl.dim {
+        background: var(--ink-3);
+        opacity: 0.5;
+      }
+      .cl.big {
+        width: 44px;
+        height: 44px;
+      }
+      .cl.hot {
+        scale: 1.2;
+        outline: 3px solid var(--hi);
+      }
+      .start {
+        display: grid;
+        place-items: center;
+        width: 26px;
+        height: 26px;
+        border: 2px solid var(--card);
+        border-radius: 50%;
+        background: var(--seal);
+        color: #fff;
+        font-size: 12px;
+        font-weight: 700;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+      }
+      /* popups and controls follow the page theme */
+      .leaflet-popup-content-wrapper,
+      .leaflet-popup-tip {
+        background: var(--card);
+        color: var(--ink);
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+      }
+      .leaflet-popup-content-wrapper {
+        border-radius: 12px;
+      }
+      .leaflet-popup-content {
+        margin: 12px 14px;
+        font: 13px/1.55 var(--f-sans);
+      }
+      .leaflet-container a.leaflet-popup-close-button {
+        color: var(--ink-3);
+      }
+      .pop h3 {
+        margin: 0 22px 2px 0;
+        font-size: 15px;
+      }
+      .pop p {
+        margin: 6px 0 0;
+        color: var(--ink-2);
+      }
+      .pop .tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-top: 6px;
+      }
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 0 6px;
+        border-radius: 4px;
+        background: var(--paper-2);
+        color: var(--ink-2);
+        font-size: 11px;
+        white-space: nowrap;
+      }
+      .leaflet-bar a,
+      .leaflet-container .leaflet-control-attribution {
+        background: var(--card);
+        color: var(--ink-2);
+        border-color: var(--line);
+      }
+      .leaflet-control-attribution a {
+        color: var(--blue);
+      }
+      .legend {
+        position: absolute;
+        right: 10px;
+        bottom: 26px;
+        z-index: 900;
+        display: grid;
+        gap: 2px;
+        padding: 8px 10px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: color-mix(in srgb, var(--card) 90%, transparent);
+        font-size: 12px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+      }
+      .legend span {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .legend .n {
+        display: grid;
+        place-items: center;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--ink);
+        color: var(--paper);
+        font: 600 8px/1 var(--f-mono);
+      }
+      .floating {
+        position: absolute;
+        top: 10px;
+        left: 56px;
+        z-index: 900;
+        display: none;
+        padding: 6px 12px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--card);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        cursor: pointer;
+      }
+
+      /* ---------- narrow screens: the panel becomes a drawer over the map ---------- */
+      @media (max-width: 760px) {
+        #panel {
+          position: absolute;
+          inset: 0 auto 0 0;
+          width: min(88vw, 340px);
+          box-shadow: 4px 0 18px rgba(0, 0, 0, 0.18);
+          transform: translateX(-104%);
+          transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        #app.open #panel {
+          transform: none;
+        }
+        .icon-btn,
+        .floating {
+          display: block;
+        }
+        .legend {
+          bottom: 22px;
+          right: 8px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #panel,
+        .pin,
+        .cl,
+        .chip {
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <aside id="panel" aria-label="筛选">
+        <header class="head">
+          <h1>湖边咖啡馆地图</h1>
+          <p class="sub"><span class="stamp">示例数据</span><span id="stats"></span></p>
+          <button id="panel-close" class="icon-btn" type="button" aria-label="收起筛选">×</button>
+        </header>
+
+        <div class="block">
+          <input id="q" type="search" placeholder="搜店名…" autocomplete="off" aria-label="搜店名" />
+        </div>
+
+        <div class="block">
+          <h2>类型</h2>
+          <div id="kinds" class="chips"></div>
+        </div>
+
+        <div class="block">
+          <label class="row" for="rating">评分下限 <span id="rating-val" class="val"></span></label>
+          <input id="rating" type="range" min="3.5" max="4.8" step="0.1" value="4" />
+          <label class="row"
+            >营业到
+            <select id="close">
+              <option value="0">不限</option>
+              <option value="20">20 点以后</option>
+              <option value="22">22 点以后</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="block">
+          <h2>要有</h2>
+          <div id="feats" class="checks"></div>
+        </div>
+
+        <div class="block">
+          <label class="row"
+            >排序
+            <select id="sort">
+              <option value="rating">评分最高</option>
+              <option value="dist">离起点最近</option>
+              <option value="name">按店名</option>
+            </select>
+          </label>
+          <label class="row"
+            >不符合的
+            <select id="mode">
+              <option value="dim">在地图上变灰</option>
+              <option value="hide">从地图上隐藏</option>
+            </select>
+          </label>
+          <p class="hint" id="start-hint">点地图任意位置设为起点，列表会显示距离。</p>
+        </div>
+
+        <div class="block results">
+          <h2 id="count"></h2>
+          <ol id="list"></ol>
+        </div>
+
+        <p class="foot">店名、位置、评分都是虚构的示例数据。底图 © OpenStreetMap contributors。</p>
+      </aside>
+
+      <main id="map-wrap">
+        <div id="map"></div>
+        <button id="panel-open" class="floating" type="button" aria-label="展开筛选">☰ 筛选</button>
+        <div class="legend" id="legend" aria-hidden="true"></div>
+      </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="data.js"></script>
+    <script>
+      (function () {
+        const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const KINDS = { hand: "手冲", bake: "烘焙", chain: "连锁", tea: "茶咖" };
+        const FEATS = { socket: "有插座", wifi: "Wi-Fi", pet: "可带宠物", outdoor: "户外座位", quiet: "安静" };
+        const $ = (s) => document.querySelector(s);
+        const esc = (s) =>
+          String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+        const cafes = window.CAFES || [];
+
+        // ---------- filter state: the single source of truth for list + map ----------
+        const state = {
+          q: "",
+          kinds: new Set(Object.keys(KINDS)),
+          rating: 4,
+          close: 0,
+          feats: new Set(),
+          sort: "rating",
+          mode: "dim",
+          start: null,
+          sel: null,
+        };
+
+        const pass = (c) =>
+          state.kinds.has(c.kind) &&
+          c.rating >= state.rating - 1e-9 &&
+          c.close >= state.close &&
+          [...state.feats].every((f) => c.feats.includes(f)) &&
+          (!state.q || c.name.includes(state.q));
+
+        // ---------- map ----------
+        const map = L.map("map", {
+          zoomSnap: 0.5,
+          zoomAnimation: !reduce,
+          fadeAnimation: !reduce,
+          markerZoomAnimation: !reduce,
+        }).setView([30.265, 120.168], 14);
+        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19,
+          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        }).addTo(map);
+
+        const cluster = L.markerClusterGroup({
+          maxClusterRadius: 44,
+          showCoverageOnHover: false,
+          spiderfyOnMaxZoom: true,
+          disableClusteringAtZoom: 17,
+          animate: !reduce,
+          // Cluster bubbles count only the cafés that pass the filters, so the numbers match the list.
+          iconCreateFunction: (cl) => {
+            const kids = cl.getAllChildMarkers();
+            const n = kids.filter((m) => pass(m.cafe)).length;
+            const big = kids.length >= 10 ? " big" : "";
+            return L.divIcon({
+              className: "",
+              iconSize: null,
+              html: `<span class="cl${big}${n ? "" : " dim"}">${n || "·"}</span>`,
+            });
+          },
+        });
+        map.addLayer(cluster);
+
+        const pinIcon = (c, hot) =>
+          L.divIcon({
+            className: "",
+            iconSize: [16, 16],
+            iconAnchor: [8, 8],
+            popupAnchor: [0, -8],
+            html: `<span class="pin${pass(c) ? "" : " dim"}${hot ? " hot" : ""}" style="--k: var(--k-${c.kind})"></span>`,
+          });
+
+        const markers = new Map();
+        for (const c of cafes) {
+          const m = L.marker([c.lat, c.lng], { title: c.name, icon: pinIcon(c) });
+          m.cafe = c;
+          m.bindPopup(() => popupHtml(c), { maxWidth: 260, autoPanPadding: [24, 24] });
+          m.on("popupopen", () => select(c.id, { fromMap: true }));
+          m.on("popupclose", () => state.sel === c.id && select(null, { fromMap: true }));
+          markers.set(c.id, m);
+        }
+
+        let startMarker = null;
+        map.on("click", (e) => {
+          state.start = e.latlng;
+          if (!startMarker) {
+            startMarker = L.marker(e.latlng, {
+              icon: L.divIcon({ className: "", iconSize: [26, 26], html: '<span class="start">起</span>' }),
+              keyboard: false,
+              zIndexOffset: 1000,
+            }).addTo(map);
+          } else startMarker.setLatLng(e.latlng);
+          $("#start-hint").innerHTML = '已设起点。<button class="linkbtn" id="clear-start" type="button">清除</button>';
+          $("#sort").value = state.sort = "dist";
+          render();
+        });
+        $("#start-hint").addEventListener("click", (e) => {
+          if (e.target.id !== "clear-start") return;
+          state.start = null;
+          startMarker.remove();
+          startMarker = null;
+          $("#start-hint").textContent = "点地图任意位置设为起点，列表会显示距离。";
+          if (state.sort === "dist") $("#sort").value = state.sort = "rating";
+          render();
+        });
+
+        const distOf = (c) => (state.start ? map.distance(state.start, [c.lat, c.lng]) : null);
+        const fmtDist = (d) =>
+          d == null ? "" : d < 1000 ? Math.round(d / 10) * 10 + " m" : (d / 1000).toFixed(1) + " km";
+
+        function popupHtml(c) {
+          const d = distOf(c);
+          return `<div class="pop">
+            <h3>${esc(c.name)}</h3>
+            <div class="tags"><span class="tag"><i class="sw" style="background: var(--k-${c.kind})"></i>${KINDS[c.kind]}</span>
+            <span class="tag">★ ${c.rating.toFixed(1)}</span><span class="tag">营业到 ${c.close}:00</span><span class="tag">${c.seats} 座</span></div>
+            <div class="tags">${c.feats.map((f) => `<span class="tag">${FEATS[f]}</span>`).join("")}</div>
+            <p>${esc(c.note)}${d != null ? `<br />离起点 ${fmtDist(d)}` : ""}</p>
+          </div>`;
+        }
+
+        // ---------- panel controls ----------
+        $("#kinds").innerHTML = Object.entries(KINDS)
+          .map(
+            ([k, label]) =>
+              `<button class="chip" type="button" data-k="${k}" aria-pressed="true"><i class="sw" style="background: var(--k-${k})"></i>${label}</button>`,
+          )
+          .join("");
+        $("#kinds").addEventListener("click", (e) => {
+          const b = e.target.closest("[data-k]");
+          if (!b) return;
+          const k = b.dataset.k;
+          state.kinds.has(k) ? state.kinds.delete(k) : state.kinds.add(k);
+          b.setAttribute("aria-pressed", String(state.kinds.has(k)));
+          render();
+        });
+        $("#feats").innerHTML = Object.entries(FEATS)
+          .map(([f, label]) => `<label class="check"><input type="checkbox" value="${f}" />${label}</label>`)
+          .join("");
+        $("#feats").addEventListener("change", (e) => {
+          e.target.checked ? state.feats.add(e.target.value) : state.feats.delete(e.target.value);
+          render();
+        });
+        $("#q").addEventListener("input", (e) => {
+          state.q = e.target.value.trim();
+          render();
+        });
+        $("#rating").addEventListener("input", (e) => {
+          state.rating = +e.target.value;
+          render();
+        });
+        $("#close").addEventListener("change", (e) => {
+          state.close = +e.target.value;
+          render();
+        });
+        $("#sort").addEventListener("change", (e) => {
+          state.sort = e.target.value;
+          if (state.sort === "dist" && !state.start)
+            $("#start-hint").textContent = "先点地图设一个起点，才能按距离排。";
+          render();
+        });
+        $("#mode").addEventListener("change", (e) => {
+          state.mode = e.target.value;
+          render();
+        });
+        $("#legend").innerHTML =
+          Object.entries(KINDS)
+            .map(([k, l]) => `<span><i class="sw" style="background: var(--k-${k})"></i>${l}</span>`)
+            .join("") + '<span><i class="n">3</i>这一片符合的店数</span>';
+
+        // ---------- render: list + markers from the same filtered set ----------
+        function render() {
+          const hits = cafes.filter(pass);
+          const sorters = {
+            rating: (a, b) => b.rating - a.rating,
+            name: (a, b) => a.name.localeCompare(b.name, "zh-CN"),
+            dist: (a, b) => (distOf(a) ?? 0) - (distOf(b) ?? 0) || b.rating - a.rating,
+          };
+          hits.sort(sorters[state.sort] || sorters.rating);
+
+          $("#rating-val").textContent = state.rating <= 3.5 ? "不限" : "≥ " + state.rating.toFixed(1);
+          $("#stats").textContent = `共 ${cafes.length} 家，符合 ${hits.length} 家`;
+          $("#count").textContent = `结果 ${hits.length}`;
+          $("#panel-open").textContent = `☰ 筛选 · ${hits.length}`;
+
+          $("#list").innerHTML = hits.length
+            ? hits
+                .map((c, i) => {
+                  const d = fmtDist(distOf(c));
+                  const feats = c.feats.map((f) => FEATS[f]).join(" · ");
+                  return `<li><button type="button" data-id="${c.id}" aria-current="${state.sel === c.id}">
+                    <span class="rank">${i + 1}</span>
+                    <span class="nm"><i class="sw" style="background: var(--k-${c.kind})"></i><span>${esc(c.name)}</span></span>
+                    <span class="score">★ ${c.rating.toFixed(1)}</span>
+                    <span class="meta">${KINDS[c.kind]} · 到 ${c.close}:00${feats ? " · " + feats : ""}${d ? " · " + d : ""}</span>
+                  </button></li>`;
+                })
+                .join("")
+            : '<li class="empty">没有符合的店，放宽一个条件试试。</li>';
+
+          // Markers: either show everything with misses greyed out, or only the hits.
+          const want = state.mode === "hide" ? hits.map((c) => markers.get(c.id)) : [...markers.values()];
+          cluster.clearLayers();
+          for (const m of want) m.setIcon(pinIcon(m.cafe, false));
+          cluster.addLayers(want);
+          if (state.sel != null && !want.includes(markers.get(state.sel))) select(null);
+        }
+
+        // ---------- selection + hover sync between list and map ----------
+        function select(id, { fromMap = false } = {}) {
+          state.sel = id;
+          for (const b of document.querySelectorAll("#list button")) {
+            const on = +b.dataset.id === id;
+            b.setAttribute("aria-current", String(on));
+            if (on && fromMap) b.scrollIntoView({ block: "nearest", behavior: reduce ? "auto" : "smooth" });
+          }
+          if (id == null || fromMap) return;
+          const m = markers.get(id);
+          if (!cluster.hasLayer(m)) return;
+          // Zooms into the cluster that hides this marker (or spiderfies it), then opens its popup.
+          cluster.zoomToShowLayer(m, () => m.openPopup());
+          if (matchMedia("(max-width: 760px)").matches) $("#app").classList.remove("open");
+        }
+        function hover(id, on) {
+          const m = markers.get(id);
+          if (!m || !cluster.hasLayer(m)) return;
+          const parent = cluster.getVisibleParent(m);
+          if (parent === m) m.setIcon(pinIcon(m.cafe, on));
+          else parent?.getElement()?.firstElementChild?.classList.toggle("hot", on);
+        }
+        $("#list").addEventListener("click", (e) => {
+          const b = e.target.closest("[data-id]");
+          if (b) select(+b.dataset.id);
+        });
+        $("#list").addEventListener("mouseover", (e) => {
+          const b = e.target.closest("[data-id]");
+          if (b) hover(+b.dataset.id, true);
+        });
+        $("#list").addEventListener("mouseout", (e) => {
+          const b = e.target.closest("[data-id]");
+          if (b) hover(+b.dataset.id, false);
+        });
+
+        // ---------- drawer on narrow screens ----------
+        $("#panel-open").addEventListener("click", () => $("#app").classList.add("open"));
+        $("#panel-close").addEventListener("click", () => $("#app").classList.remove("open"));
+
+        render();
+      })();
+    </script>
+  </body>
+</html>

@@ -19,13 +19,13 @@ export const ymd = (d: Date) => d.toISOString().slice(0, 10);
  * The content layer logs Markdown render errors (e.g. an invalid Mermaid diagram) and carries on
  * with an empty body. Turn that into a build failure.
  */
-function assertRendered(entries: { id: string; rendered?: { html: string } | undefined }[], kind: string) {
+export function assertRendered(entries: { id: string; rendered?: { html: string } | undefined }[], kind: string) {
   const empty = entries.filter((e) => !e.rendered?.html.trim()).map((e) => `${kind}/${e.id}`);
   if (empty.length) throw new Error(`Markdown failed to render (see the error above): ${empty.join(", ")}`);
 }
 
 /** Fail the build when an article exists in only one language. */
-function assertPaired(entries: Entry[], kind: string) {
+export function assertPaired(entries: Entry[], kind: string) {
   const seen = new Map<string, Set<Lang>>();
   for (const e of entries) {
     const s = seen.get(slugOf(e)) ?? new Set<Lang>();

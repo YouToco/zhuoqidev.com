@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>像素溶解下拉框</title>
+    <style>
+      :root {
+        --paper: #fbf8f1;
+        --card: #fffdf8;
+        --ink: #1c2230;
+        --ink-2: #4a5163;
+        --ink-3: #636877;
+        --line: #e6dfd0;
+        --dot: #d8d0bf;
+        --blue: #2f5bd3;
+        --shadow: 0 1px 0 rgba(28, 34, 48, 0.04), 0 10px 28px -14px rgba(28, 34, 48, 0.28);
+        --f-sans: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+        --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #14161b;
+          --card: #1e2129;
+          --ink: #ece7dc;
+          --ink-2: #bab6ac;
+          --ink-3: #959aa8;
+          --line: #31353f;
+          --dot: #2c3039;
+          --blue: #8eaaff;
+          --shadow: 0 1px 0 rgba(0, 0, 0, 0.25), 0 10px 28px -14px rgba(0, 0, 0, 0.8);
+          color-scheme: dark;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 14px;
+        padding: 64px 16px 32px;
+        background: var(--paper) radial-gradient(var(--dot) 1px, transparent 1.2px) 0 0 / 22px 22px;
+        color: var(--ink);
+        font: 16px/1.7 var(--f-sans);
+      }
+      .hint { margin: 0; max-width: 420px; text-align: center; font-size: 13px; color: var(--ink-3); }
+      .stage { min-height: 300px; }
+
+      /* ---------- the picker (uses the page tokens --card, --line, --ink*, --blue, --shadow, --f-*) ---------- */
+      .pick {
+        position: relative;
+        display: inline-block;
+      }
+      /* Stacking inside .pick: menu (5) < pixel cloud canvas (6) < trigger (7), so the cloud that
+         flows out of the trigger and is pulled back into it passes behind the trigger. */
+      .pick-btn {
+        position: relative;
+        z-index: 7;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 260px;
+        padding: 9px 14px 9px 18px;
+        border: 1px solid var(--line);
+        border-radius: 99px;
+        background: var(--card);
+        color: var(--ink);
+        box-shadow: var(--shadow);
+        font: 400 14px/1.3 var(--f-sans);
+      }
+      .pick-btn:focus-visible,
+      .pick-menu:focus-visible {
+        outline: 2px solid var(--blue);
+        outline-offset: 2px;
+      }
+      .pick-btn .k {
+        color: var(--ink-3);
+      }
+      .pick-btn .v {
+        flex: 1;
+        text-align: left;
+        font: 500 14px/1.3 var(--f-mono);
+      }
+      .pick-btn svg {
+        transition: transform 0.2s;
+      }
+      .pick-btn[aria-expanded="true"] svg {
+        transform: rotate(180deg);
+      }
+      /* The padding keeps the menu's shadow inside the masked box while it animates. */
+      .pick-pop {
+        position: absolute;
+        z-index: 5;
+        top: 100%;
+        left: -12px;
+        padding: 4px 12px 16px;
+      }
+      .pick-fx {
+        position: absolute;
+        z-index: 6;
+        pointer-events: none;
+      }
+      .pick-pop[hidden] {
+        display: none;
+      }
+      .pick-menu {
+        list-style: none;
+        margin: 0;
+        padding: 6px;
+        min-width: 260px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        box-shadow: var(--shadow);
+      }
+      .pick-menu li {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        border-radius: 10px;
+        font: 14px/1.3 var(--f-mono);
+        color: var(--ink-2);
+        cursor: pointer;
+      }
+      .pick-menu li.active {
+        background: color-mix(in srgb, var(--ink) 7%, transparent);
+      }
+      .pick-menu li[aria-selected="true"] {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .pick-menu .sw {
+        width: 8px;
+        height: 8px;
+        background: var(--vibe);
+      }
+      .pick-menu li span:nth-child(2) {
+        flex: 1;
+      }
+      .pick-menu li svg {
+        visibility: hidden;
+      }
+      .pick-menu li[aria-selected="true"] svg {
+        visibility: visible;
+      }
+    </style>
+  </head>
+  <body>
+    <p class="hint">点开菜单：像素从按钮里往下「倒」出来；选一个新颜色：菜单碎成那种颜色的像素，被吸回按钮后面，名字也碎一下再拼起来。</p>
+    <div class="stage"><div class="pick" id="pick"></div></div>
+
+    <script>
+      // A select with a pixel menu. Each option has a colour ("vibe"). Opening pours the menu out of the trigger as a curtain
+      // of pixels in the current colour that fades into the card; closing crumbles it bottom-up into a
+      // cloud of the new colour that is pulled back up behind the trigger while the name re-forms.
+      // Exposes window.pixelPick = { mount, swapText, vibe }.
+      (() => {
+        // id → [colour on light paper, colour on dark paper]
+        const VIBES = {
+          "Tidecaller": ["#2f5bd3", "#8eaaff"],
+          "Verdant Sigil": ["#2f8a3e", "#7ed38f"],
+          "Obsidian Omen": ["#1c2230", "#ece7dc"],
+          "Ember Hymn": ["#e8590c", "#ffa94d"],
+          "Rose Cipher": ["#c2255c", "#f783ac"],
+        };
+        const darkScheme = matchMedia("(prefers-color-scheme: dark)");
+        const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+        const vibe = (id, onDark = darkScheme.matches) => {
+          const hit = VIBES[id] ?? ["#636877", "#959aa8"];
+          return onDark ? hit[1] : hit[0];
+        };
+
+        const CELL = 5;
+        // 4×4 Bayer matrix: the order in which cells of an area flip, so partial areas read as dither.
+        const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
+        const bayer = (c, r) => BAYER[(r & 3) * 4 + (c & 3)];
+        const clamp = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
+        const ease = (t) => t * t * (3 - 2 * t);
+        const easeOut = (t) => 1 - (1 - t) ** 3;
+        const easeIn = (t) => t * t * t;
+        const probe = document.createElement("canvas").getContext("2d");
+        const rgb = (css) => {
+          probe.fillStyle = "#000";
+          probe.fillStyle = css;
+          const s = probe.fillStyle;
+          if (s.startsWith("#")) return [1, 3, 5].map((i) => parseInt(s.slice(i, i + 2), 16));
+          return s
+            .match(/[\d.]+/g)
+            .slice(0, 3)
+            .map(Number);
+        };
+        const mix = (a, b, t) => `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(",")})`;
+        const still = () => reduceMotion.matches || document.hidden;
+        // Whether (x, y) lies on the menu card `M` (a DOMRect) with its rounded corners.
+        const onCard =
+          (M, radius = 16) =>
+          (x, y) => {
+            if (x < M.left || x > M.right || y < M.top || y > M.bottom) return false;
+            const dx = Math.max(M.left + radius - x, x - (M.right - radius), 0);
+            const dy = Math.max(M.top + radius - y, y - (M.bottom - radius), 0);
+            return dx * dx + dy * dy <= radius * radius;
+          };
+
+        // A canvas over `rect` (page coordinates): inside `host` (absolute, so it stacks with the
+        // picker's parts) or fixed on the page. Returns its 2D context in CSS pixels of that rect.
+        const layer = (rect, host) => {
+          const fx = document.createElement("canvas");
+          fx.className = "pick-fx";
+          const dpr = devicePixelRatio || 1;
+          const origin = host ? host.getBoundingClientRect() : { left: 0, top: 0 };
+          Object.assign(fx.style, {
+            position: host ? "absolute" : "fixed",
+            left: `${rect.left - origin.left}px`,
+            top: `${rect.top - origin.top}px`,
+            width: `${rect.width}px`,
+            height: `${rect.height}px`,
+            zIndex: host ? "" : "60",
+          });
+          fx.width = Math.ceil(rect.width * dpr);
+          fx.height = Math.ceil(rect.height * dpr);
+          const ctx = fx.getContext("2d");
+          ctx.scale(dpr, dpr);
+          (host ?? document.body).append(fx);
+          return ctx;
+        };
+
+        // Shows `el` only where cells have been painted on a mask canvas of its size.
+        const masker = (el) => {
+          const box = el.getBoundingClientRect();
+          const c = document.createElement("canvas");
+          c.width = Math.ceil(box.width);
+          c.height = Math.ceil(box.height);
+          const ctx = c.getContext("2d");
+          el.style.maskSize = el.style.webkitMaskSize = `${c.width}px ${c.height}px`;
+          el.style.maskRepeat = el.style.webkitMaskRepeat = "no-repeat";
+          return {
+            box,
+            ctx,
+            apply: () => (el.style.maskImage = el.style.webkitMaskImage = `url(${c.toDataURL()})`),
+            clear: () => (el.style.maskImage = el.style.webkitMaskImage = ""),
+          };
+        };
+
+        // Runs `step(t)` for t in 0..1 over `ms` on animation frames. `token.stop()` ends it early
+        // (the caller cleans up). Resolves true when it ran to the end.
+        const play = (ms, step, token) =>
+          new Promise((resolve) => {
+            const start = performance.now();
+            const frame = (now) => {
+              if (token.stopped) return resolve(false);
+              const t = clamp((now - start) / ms);
+              step(t);
+              if (t < 1) requestAnimationFrame(frame);
+              else resolve(true);
+            };
+            requestAnimationFrame(frame);
+          });
+
+        // Opening: the menu pours out of the trigger. A front with a sagging, ragged edge runs down;
+        // right behind it pixels are the accent colour, further back they dither into the card colour,
+        // and then the real menu shows through, top row first. The pour starts wider than the menu and
+        // narrows onto it.
+        const pourOpen = (root, btn, pop, menu, accent, token) => {
+          const R = root.getBoundingClientRect();
+          const B = btn.getBoundingClientRect();
+          const M = menu.getBoundingClientRect();
+          const mask = masker(pop);
+          const card = rgb(getComputedStyle(menu).backgroundColor);
+          const acc = rgb(accent);
+          const extra = Math.round(M.width * 0.16);
+          const left = M.left - extra;
+          const top = B.bottom - 6;
+          const width = M.width + extra * 2;
+          const height = M.bottom + 10 - top;
+          const ctx = layer({ left, top, width, height }, root);
+          const cols = Math.ceil(width / CELL);
+          const rows = Math.ceil(height / CELL);
+          const rnd = Float32Array.from({ length: cols * rows }, Math.random);
+          const phase = [Math.random() * 6, Math.random() * 6];
+          const jag = Float32Array.from(
+            { length: cols },
+            (_, c) => Math.sin(c * 0.45 + phase[0]) * 5 + Math.sin(c * 1.3 + phase[1]) * 3,
+          );
+          const inCard = onCard(M);
+          const cardCss = mix(card, card, 0);
+          // Band depths follow the reference recording: the cloud covers most of the menu, the text only
+          // shows once the front has nearly reached the bottom.
+          const sag = height * 0.32; // the front is a deep V: the middle leads, the sides lag
+          const lead = height * 0.16; // accent band right behind the front
+          const fade = height * 0.42; // accent dithers into the card colour
+          const settle = height * 0.32; // the real menu shows through
+          const travel = height + sag + lead + fade + settle;
+          const cx = left + width / 2;
+          mask.apply();
+          return play(
+            720,
+            (t) => {
+              const front = (t * 0.7 + easeOut(t) * 0.3) * travel;
+              const half = width / 2 - extra * ease(clamp((t - 0.2) / 0.55));
+              ctx.clearRect(0, 0, width, height);
+              mask.ctx.clearRect(0, 0, mask.box.width, mask.box.height);
+              for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                  const x = left + c * CELL + CELL / 2;
+                  const y = top + r * CELL + CELL / 2;
+                  const u = (x - cx) / (width / 2);
+                  const d = front - sag * u * u + jag[c] - (y - top);
+                  if (d <= 0) continue;
+                  const card_ = inCard(x, y);
+                  if (!card_ && Math.abs(x - cx) > half) continue;
+                  const n = rnd[r * cols + c];
+                  const th = bayer(c, r) * 0.35 + n * 0.65;
+                  // Ragged sides: off the card, pixels thin out towards the edge of the pour.
+                  if (!card_ && th < (Math.abs(x - cx) / half - 0.7) * 3.3) continue;
+                  const px = c * CELL;
+                  const py = r * CELL;
+                  if (d < lead) {
+                    if (th > (d / lead) * 1.6) continue;
+                    ctx.fillStyle = mix(acc, card, n * 0.25);
+                  } else if (d < lead + fade) {
+                    const k = (d - lead) / fade;
+                    if (th < k) {
+                      if (!card_) continue;
+                      ctx.fillStyle = cardCss;
+                    } else ctx.fillStyle = mix(acc, card, k * 0.7 + n * 0.15);
+                  } else if (card_) {
+                    const k = (d - lead - fade) / settle;
+                    if (k > th) {
+                      mask.ctx.fillRect(px + left - mask.box.left, py + top - mask.box.top, CELL, CELL);
+                      continue;
+                    }
+                    ctx.fillStyle = cardCss;
+                  } else continue;
+                  // Loose pixels keep a hairline gap; on the card they close up into a solid surface.
+                  const size = card_ ? CELL : CELL - 1;
+                  ctx.fillRect(px, py, size, size);
+                }
+              }
+              mask.apply();
+            },
+            token,
+          ).then((done) => {
+            ctx.canvas.remove();
+            mask.clear();
+            return done;
+          });
+        };
+
+        // Closing: the menu turns into pixels of the new colour from the bottom up, the cloud swells a
+        // little sideways, then every pixel is pulled up behind the trigger (which stacks above the
+        // cloud) and thins out on the way.
+        const collapseClose = (root, btn, pop, menu, accent, token) => {
+          const B = btn.getBoundingClientRect();
+          const M = menu.getBoundingClientRect();
+          const mask = masker(pop);
+          const card = rgb(getComputedStyle(menu).backgroundColor);
+          const acc = rgb(accent);
+          const pad = Math.round(M.width * 0.25);
+          const left = M.left - pad;
+          const top = B.top - 40;
+          const width = M.width + pad * 2;
+          const height = M.bottom + 30 - top;
+          const ctx = layer({ left, top, width, height }, root);
+          const cols = Math.ceil(M.width / CELL);
+          const rows = Math.ceil(M.height / CELL);
+          const cx = M.left + M.width / 2;
+          const inCard = onCard(M);
+          const ps = [];
+          for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+              const x = M.left + c * CELL;
+              const y = M.top + r * CELL;
+              if (!inCard(x + CELL / 2, y + CELL / 2)) continue;
+              const up = 1 - r / rows;
+              ps.push({
+                c,
+                r,
+                x,
+                y,
+                tc: up * 0.24 + Math.random() * 0.06,
+                ts: 0.28 + up * 0.1 + Math.random() * 0.1,
+                dur: 0.36 + Math.random() * 0.1,
+                sx: (x - cx) * (0.08 + Math.random() * 0.14) + (Math.random() - 0.5) * 6,
+                sy: (Math.random() - 0.5) * 8,
+                // The cloud keeps most of its width on the way up and converges on the trigger.
+                tx: B.left + B.width / 2 + (x - cx) * (B.width / M.width) * 0.8 + (Math.random() - 0.5) * 10,
+                // Passes behind the trigger and fades out just above it.
+                ty: B.top + B.height * (0.5 - Math.random() * 1.4),
+                shade: Math.random(),
+                drop: Math.random(),
+              });
+            }
+          }
+          return play(
+            480,
+            (t) => {
+              ctx.clearRect(0, 0, width, height);
+              mask.ctx.clearRect(0, 0, mask.box.width, mask.box.height);
+              for (const p of ps) {
+                if (t < p.tc) {
+                  mask.ctx.fillRect(p.x - mask.box.left, p.y - mask.box.top, CELL, CELL);
+                  continue;
+                }
+                let x;
+                let y;
+                let alpha = 1;
+                if (t < p.ts) {
+                  const e = ease((t - p.tc) / (p.ts - p.tc));
+                  x = p.x + p.sx * e;
+                  y = p.y + p.sy * e;
+                } else {
+                  const q = clamp((t - p.ts) / p.dur);
+                  if (q >= 1 || p.drop < q * 0.35) continue;
+                  const e = easeIn(q) * 0.75 + q * 0.25;
+                  const x0 = p.x + p.sx;
+                  const y0 = p.y + p.sy;
+                  x = x0 + (p.tx - x0) * e;
+                  y = y0 + (p.ty - y0) * e;
+                  alpha = q < 0.65 ? 1 : 1 - (q - 0.65) / 0.35;
+                }
+                const warm = clamp((t - p.tc) / 0.08);
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = mix(card, acc, warm * (0.75 + p.shade * 0.25));
+                ctx.fillRect(x - left, y - top, CELL, CELL);
+              }
+              mask.apply();
+            },
+            token,
+          ).then((done) => {
+            ctx.canvas.remove();
+            mask.clear();
+            return done;
+          });
+        };
+
+        // Name change: the old text crumbles into specks of ink and accent, the new one assembles in
+        // dithered steps with a little pixel dust trailing under it. `delay` lets it meet the cloud.
+        const swapText = async (el, text, color, { delay = 0, token = {} } = {}) => {
+          if (still()) {
+            el.textContent = text;
+            return;
+          }
+          const ink = rgb(getComputedStyle(el).color);
+          const acc = rgb(color);
+          const run = (dir, ms) => {
+            const mask = masker(el);
+            const box = mask.box;
+            const padX = 6;
+            const padY = 10;
+            const ctx = layer(
+              { left: box.left - padX, top: box.top - padY, width: box.width + padX * 2, height: box.height + padY * 2 },
+              null,
+            );
+            const cols = Math.ceil(box.width / CELL);
+            const rows = Math.ceil(box.height / CELL);
+            const rnd = Float32Array.from({ length: cols * rows * 2 }, Math.random);
+            mask.apply();
+            return play(
+              ms,
+              (t) => {
+                ctx.clearRect(0, 0, box.width + padX * 2, box.height + padY * 2);
+                mask.ctx.clearRect(0, 0, box.width, box.height);
+                for (let r = 0; r < rows; r++) {
+                  for (let c = 0; c < cols; c++) {
+                    const i = r * cols + c;
+                    const th = bayer(c, r) * 0.55 + rnd[i * 2] * 0.45;
+                    const k = (dir === "out" ? 1 - t : t) * 1.25 - 0.12;
+                    const shown = k > th;
+                    if (shown) mask.ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
+                    const near = Math.abs(k - th);
+                    if (near > 0.16 || rnd[i * 2 + 1] > 0.55) continue;
+                    const j = rnd[i * 2 + 1];
+                    const dy = dir === "out" ? (j - 0.5) * 6 : 2 + j * 7;
+                    ctx.globalAlpha = 1 - near / 0.16;
+                    ctx.fillStyle = mix(ink, acc, j < 0.18 ? 1 : 0);
+                    ctx.fillRect(padX + c * CELL + (j - 0.5) * 4, padY + r * CELL + dy, 2, 2);
+                  }
+                }
+                mask.apply();
+              },
+              token,
+            ).then((done) => {
+              ctx.canvas.remove();
+              if (dir === "in" || !done) mask.clear();
+              return done;
+            });
+          };
+          // Cut short, it still ends on the new name.
+          if (delay) await new Promise((r) => setTimeout(r, delay));
+          if (token.stopped) {
+            el.textContent = text;
+            return;
+          }
+          const crumbled = await run("out", 170);
+          el.textContent = text;
+          if (crumbled) await run("in", 230);
+        };
+
+        const CHEVRON =
+          '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
+        const CHECK =
+          '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.5 4.8 9 10 3" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
+        let mounted = 0;
+
+        // Builds the picker inside `root` (a `.pick` element). Fill it with setItems([{ id }]);
+        // `onChange(id)` runs after the user picks a different option.
+        const mount = (root, { value, label = "Vibe", onChange = () => {} }) => {
+          const uid = `pick${++mounted}`;
+          root.innerHTML = `<button type="button" class="pick-btn" aria-haspopup="listbox" aria-expanded="false" aria-controls="${uid}-menu"><span class="k"></span><span class="v"></span>${CHEVRON}</button><div class="pick-pop" hidden><ul class="pick-menu" id="${uid}-menu" role="listbox" tabindex="-1"></ul></div>`;
+          const btn = root.querySelector(".pick-btn");
+          const valueEl = root.querySelector(".v");
+          const pop = root.querySelector(".pick-pop");
+          const menu = root.querySelector(".pick-menu");
+          root.querySelector(".k").textContent = label;
+          menu.setAttribute("aria-label", label);
+          valueEl.textContent = value;
+          let chosen = value;
+          let open = false;
+          let token = { stopped: true };
+          // Only one animation per picker: a new one cuts the old one off and leaves things tidy.
+          const restart = () => {
+            token.stopped = true;
+            root.querySelectorAll(".pick-fx").forEach((c) => c.remove());
+            pop.style.maskImage = pop.style.webkitMaskImage = "";
+            token = { stopped: false };
+            return token;
+          };
+          const options = () => [...menu.children];
+          const setActive = (li) => {
+            options().forEach((o) => o.classList.toggle("active", o === li));
+            if (li) menu.setAttribute("aria-activedescendant", li.id);
+          };
+          const showMenu = () => {
+            if (open || !menu.children.length) return;
+            open = true;
+            const tk = restart();
+            btn.setAttribute("aria-expanded", "true");
+            pop.hidden = false;
+            setActive(options().find((o) => o.dataset.id === chosen));
+            menu.focus();
+            if (!still()) pourOpen(root, btn, pop, menu, vibe(chosen), tk);
+          };
+          const hideMenu = (refocus) => {
+            if (!open) return null;
+            open = false;
+            const tk = restart();
+            btn.setAttribute("aria-expanded", "false");
+            if (refocus) btn.focus();
+            if (still()) {
+              pop.hidden = true;
+              return tk;
+            }
+            collapseClose(root, btn, pop, menu, vibe(chosen), tk).then(() => {
+              if (!open) pop.hidden = true;
+            });
+            return tk;
+          };
+          const choose = (id) => {
+            const changed = id !== chosen;
+            chosen = id;
+            const tk = hideMenu(true) ?? restart();
+            if (!changed) return;
+            options().forEach((o) => o.setAttribute("aria-selected", String(o.dataset.id === id)));
+            // The old name starts crumbling as the cloud lifts and the new one forms as it arrives.
+            swapText(valueEl, id, vibe(id), { delay: 170, token: tk });
+            onChange(id);
+          };
+          const setItems = (items) => {
+            menu.replaceChildren(
+              ...items.map((m, i) => {
+                const li = document.createElement("li");
+                li.id = `${uid}-${i}`;
+                li.setAttribute("role", "option");
+                li.dataset.id = m.id;
+                li.setAttribute("aria-selected", String(m.id === chosen));
+                li.style.setProperty("--vibe", vibe(m.id));
+                const name = document.createElement("span");
+                name.textContent = m.id;
+                li.append(Object.assign(document.createElement("span"), { className: "sw" }), name);
+                li.insertAdjacentHTML("beforeend", CHECK);
+                return li;
+              }),
+            );
+          };
+          darkScheme.addEventListener("change", () =>
+            options().forEach((li) => li.style.setProperty("--vibe", vibe(li.dataset.id))),
+          );
+          btn.addEventListener("click", () => (open ? hideMenu(true) : showMenu()));
+          btn.addEventListener("keydown", (event) => {
+            if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+              event.preventDefault();
+              showMenu();
+            }
+          });
+          menu.addEventListener("keydown", (event) => {
+            const list = options();
+            const at = list.findIndex((o) => o.classList.contains("active"));
+            const moves = { ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: list.length - 1 };
+            if (event.key in moves) {
+              event.preventDefault();
+              const li = list[Math.max(0, Math.min(list.length - 1, moves[event.key]))];
+              setActive(li);
+              li.scrollIntoView({ block: "nearest" });
+            } else if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              if (list[at]) choose(list[at].dataset.id);
+            } else if (event.key === "Escape" || event.key === "Tab") {
+              if (event.key === "Escape") event.preventDefault();
+              hideMenu(event.key === "Escape");
+            }
+          });
+          menu.addEventListener("pointermove", (event) => {
+            const li = event.target.closest("li");
+            if (li) setActive(li);
+          });
+          menu.addEventListener("click", (event) => {
+            const li = event.target.closest("li");
+            if (li) choose(li.dataset.id);
+          });
+          document.addEventListener("pointerdown", (event) => {
+            if (open && !root.contains(event.target)) hideMenu(false);
+          });
+          return {
+            setItems,
+            get value() {
+              return chosen;
+            },
+          };
+        };
+
+        window.pixelPick = { mount, swapText, vibe };
+      })();
+    </script>
+    <script>
+      const picker = pixelPick.mount(document.getElementById("pick"), { value: "Obsidian Omen", label: "Vibe" });
+      picker.setItems(["Tidecaller", "Verdant Sigil", "Obsidian Omen", "Ember Hymn", "Rose Cipher"].map((id) => ({ id })));
+    </script>
+  </body>
+</html>

@@ -1,0 +1,907 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>编辑风结论报告页</title>
+    <style>
+      /* Layout: one editorial column; wide tables scroll inside their own box; numbers are monospaced. */
+      :root {
+        --paper: #fbf8f1;
+        --paper-2: #f3eee2;
+        --card: #fffdf8;
+        --ink: #1c2230;
+        --ink-2: #4a5163;
+        --ink-3: #636877;
+        --line: #e6dfd0;
+        --line-2: #d3cab6;
+        --dot: #e2dacb;
+        --blue: #2f5bd3;
+        --blue-bg: #e8edfb;
+        --seal: #c0391f;
+        --hi: #ffe066;
+        --good: #1f7a4d;
+        --good-bg: #e2f2e8;
+        --warn: #8f5a00;
+        --warn-bg: #fbefd6;
+        --bad: #b2321b;
+        --bad-bg: #f9e4de;
+        /* One color per series; the charts read these too. */
+        --s1: #2f5bd3;
+        --s2: #1f8a70;
+        --s3: #c8661c;
+        --s4: #8a5bb0;
+        --f-display: "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", "STSong", serif;
+        --f-body: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+        --f-num: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #14161b;
+          --paper-2: #1c1f26;
+          --card: #1b1e25;
+          --ink: #ece7dc;
+          --ink-2: #bab6ac;
+          --ink-3: #959aa8;
+          --line: #2d313b;
+          --line-2: #3d424e;
+          --dot: #252932;
+          --blue: #8eaaff;
+          --blue-bg: #1f2840;
+          --seal: #f0694e;
+          --hi: #7d6416;
+          --good: #63c495;
+          --good-bg: #16291f;
+          --warn: #e2a64a;
+          --warn-bg: #2d2414;
+          --bad: #f08a76;
+          --bad-bg: #321b17;
+          --s1: #8eaaff;
+          --s2: #4cc3a0;
+          --s3: #ec9550;
+          --s4: #bd96e0;
+          color-scheme: dark;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--paper) radial-gradient(var(--dot) 1px, transparent 1.2px) 0 0 / 22px 22px;
+        color: var(--ink);
+        font: 15px/1.7 var(--f-body);
+      }
+      .wrap {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 28px 16px 64px;
+      }
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        line-height: 1.3;
+        text-wrap: balance;
+      }
+      h1,
+      h2 {
+        font-family: var(--f-display);
+        font-weight: 700;
+      }
+      h1 {
+        font-size: clamp(28px, 4.4vw, 40px);
+        letter-spacing: 0.01em;
+      }
+      h2 {
+        font-size: 22px;
+      }
+      h3 {
+        font-size: 15px;
+      }
+      p {
+        margin: 0;
+        max-width: 68ch;
+      }
+      .muted {
+        color: var(--ink-2);
+      }
+      .small {
+        font-size: 13px;
+      }
+      .tiny {
+        font-size: 12px;
+        color: var(--ink-3);
+      }
+      .est {
+        color: var(--ink-3);
+      }
+      .num,
+      td.n,
+      th.n {
+        font-family: var(--f-num);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      td.n,
+      th.n {
+        text-align: right;
+      }
+
+      /* ---------- header: eyebrow, serif title, lede ---------- */
+      header {
+        display: grid;
+        gap: 10px;
+        padding-bottom: 22px;
+      }
+      .eyebrow {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 14px;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        color: var(--ink-3);
+      }
+      .eyebrow .stamp {
+        color: var(--seal);
+        border: 1.5px solid currentColor;
+        border-radius: 4px;
+        padding: 0 6px;
+        letter-spacing: 0.04em;
+        font-weight: 600;
+      }
+      h1 mark {
+        background: linear-gradient(transparent 62%, var(--hi) 62%);
+        color: inherit;
+      }
+
+      /* ---------- sections are separated by hairlines, not boxes ---------- */
+      section {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+        padding-block: 26px;
+        border-top: 1px solid var(--line);
+      }
+      .panel,
+      .card,
+      .tbl,
+      .tl {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
+      .panel {
+        display: grid;
+        gap: 10px;
+        padding: 16px 18px;
+        min-width: 0;
+      }
+
+      /* ---------- conclusion first: one big pick + small cards, chart beside on wide screens ---------- */
+      .lead {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+        align-items: start;
+      }
+      @media (min-width: 880px) {
+        .lead {
+          grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+        }
+      }
+      .lead-left {
+        display: grid;
+        gap: 12px;
+        min-width: 0;
+      }
+      .pick {
+        border: 2px solid var(--blue);
+      }
+      .pick .big {
+        font: 500 30px/1.1 var(--f-num);
+        color: var(--blue);
+      }
+      .pick-grid {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+      }
+      .card {
+        display: grid;
+        gap: 4px;
+        align-content: start;
+        padding: 12px 14px;
+      }
+      .card .figure {
+        font: 600 19px/1.3 var(--f-body);
+        font-variant-numeric: tabular-nums;
+      }
+      .card .who {
+        font-size: 12px;
+        color: var(--ink-3);
+      }
+
+      .tag {
+        display: inline-block;
+        justify-self: start;
+        padding: 1px 7px;
+        border: 1px solid var(--line-2);
+        border-radius: 999px;
+        font: 11.5px/1.6 var(--f-body);
+        color: var(--ink-2);
+        white-space: nowrap;
+      }
+      .tag.good {
+        background: var(--good-bg);
+        color: var(--good);
+        border-color: transparent;
+      }
+      .tag.warn {
+        background: var(--warn-bg);
+        color: var(--warn);
+        border-color: transparent;
+      }
+      .tag.bad {
+        background: var(--bad-bg);
+        color: var(--bad);
+        border-color: transparent;
+      }
+      .tag.acc {
+        background: var(--blue-bg);
+        color: var(--blue);
+        border-color: transparent;
+      }
+
+      /* ---------- charts + clickable legend ---------- */
+      .chart {
+        position: relative;
+        height: 340px;
+      }
+      .chart.short {
+        height: 280px;
+      }
+      @media (max-width: 520px) {
+        .chart {
+          height: 300px;
+        }
+      }
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 6px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .legend button {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 2px 8px;
+        border: 1px solid transparent;
+        border-radius: 999px;
+        background: none;
+        font: 12.5px/1.6 var(--f-body);
+        color: var(--ink-2);
+        cursor: pointer;
+        transition: opacity 0.2s;
+      }
+      .legend button:hover {
+        border-color: var(--line-2);
+      }
+      .legend button[aria-pressed="false"] {
+        opacity: 0.4;
+        text-decoration: line-through;
+      }
+      .legend i {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+      }
+      .legend i.dash {
+        height: 0;
+        width: 16px;
+        border-top: 2px dashed var(--ink-3);
+        border-radius: 0;
+      }
+
+      /* ---------- timeline list ---------- */
+      .tl {
+        overflow: hidden;
+      }
+      .tl div {
+        display: grid;
+        grid-template-columns: 96px 1fr;
+        gap: 12px;
+        padding: 8px 16px;
+        border-bottom: 1px solid var(--line);
+        font-size: 13.5px;
+      }
+      .tl div:last-child {
+        border-bottom: 0;
+      }
+      .tl b {
+        font: 500 13px/1.7 var(--f-num);
+        color: var(--blue);
+      }
+      .tl .future b {
+        color: var(--warn);
+      }
+      @media (max-width: 520px) {
+        .tl div {
+          grid-template-columns: 1fr;
+          gap: 0;
+        }
+      }
+
+      /* ---------- tables: each one scrolls on its own, never the page ---------- */
+      .grid2 {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+      }
+      .tbl {
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13.5px;
+      }
+      th,
+      td {
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: var(--paper-2);
+        color: var(--ink-2);
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      tr:last-child td {
+        border-bottom: 0;
+      }
+      tr.grp td {
+        background: var(--blue-bg);
+        color: var(--blue);
+        font-weight: 500;
+        font-size: 12.5px;
+        letter-spacing: 0.04em;
+      }
+      ul {
+        display: grid;
+        gap: 6px;
+        max-width: 72ch;
+        margin: 0;
+        padding-left: 1.2em;
+      }
+      a {
+        color: var(--blue);
+      }
+      .src {
+        columns: 2 280px;
+        font-size: 12.5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <div class="eyebrow">
+          <span class="stamp">示例数据</span><span>选购参考 · 结论先行</span><span>品牌、型号、数字均为虚构</span>
+        </div>
+        <h1>二手相机<mark>保值率</mark>对照</h1>
+        <p class="muted">
+          入门机、中端机、旗舰机和卡片机四类：按机龄算的保值率、配件能收回多少、持有一年大概掉几个百分点。保值率 =
+          二手成交 ÷ 首发（都折成指数，首发 = 100），<span class="est">灰字 = 推算</span>。
+        </p>
+      </header>
+
+      <section>
+        <h2>先看结论</h2>
+        <div class="lead">
+          <div class="lead-left">
+            <div class="panel pick">
+              <div class="tiny">大多数日常拍摄</div>
+              <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px">
+                <span class="big">86%</span>
+                <span>中端机北辰 X7，一年后还剩这么多</span>
+              </div>
+              <p class="small muted">
+                同代里掉得最慢的可换镜头机型。套机镜头单独卖还能再收回一半以上，入手前先想好要不要套机。
+              </p>
+            </div>
+            <div class="pick-grid">
+              <div class="card">
+                <span class="tag good">最稳</span>
+                <h3>二手青岚 A3</h3>
+                <span class="figure">一年 −6 点</span>
+                <span class="who">只想先玩起来</span>
+              </div>
+              <div class="card">
+                <span class="tag acc">要画质</span>
+                <h3>青岚 M3</h3>
+                <span class="figure">≈ 81%</span>
+                <span class="who">风光、人像都拍</span>
+              </div>
+              <div class="card">
+                <span class="tag warn">先等</span>
+                <h3>卡片机远山 P3</h3>
+                <span class="figure">121%</span>
+                <span class="who">高于首发，靠的是断货</span>
+              </div>
+              <div class="card">
+                <span class="tag bad">掉得最快</span>
+                <h3>入门机北辰 C10</h3>
+                <span class="figure">4 年剩 38%</span>
+                <span class="who">只想先入门、换得勤的人</span>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <h3>保值率 × 机龄</h3>
+            <ul class="legend" data-chart="cRetention"></ul>
+            <div class="chart">
+              <canvas id="cRetention" role="img" aria-label="四类相机保值率随机龄变化的散点图">
+                卡片机 1–3 年保值 88–121%；旗舰机 1.4 年 104–128%；中端机 2.8 年约 61%；入门机 5.5 年约 31%。
+              </canvas>
+            </div>
+            <p class="tiny">点位取区间中值，悬停看型号；虚线是往年平均折旧。点按图例可以隐藏一类。</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>这一年市场发生了什么</h2>
+        <p class="muted small">
+          卡片机停产叠加街拍热潮，二手成交一度高过首发；新一代发布后溢价回落，但仍在往年规律之上。
+        </p>
+        <div class="tl">
+          <div><b>1 月</b><span>远山 P2 停产公告，二手挂牌量一个月少了一半</span></div>
+          <div><b>3 月</b><span>短视频带起「街拍卡片机」热潮，P2 成交指数第一次超过 100</span></div>
+          <div><b>6 月</b><span>同档新机统一上调，二手跟涨约 10 个点</span></div>
+          <div><b>8 月</b><span>远山 P3 发布；从发布到开卖，P2 二手回落 6 个点</span></div>
+          <div><b>10 月</b><span>P3 到货，P2 成交指数回到 101</span></div>
+          <div class="future"><b>年末</b><span>年货节促销：估计新机到手指数 95–100，二手还会再松几个点</span></div>
+        </div>
+        <div class="panel">
+          <h3>远山 P2：二手成交 vs 同档新机（指数，首发 = 100）</h3>
+          <ul class="legend" data-chart="cTimeline"></ul>
+          <div class="chart short">
+            <canvas id="cTimeline" role="img" aria-label="远山 P2 二手成交指数与新机指数时间线">
+              二手从 1 月的 86 涨到 7 月的 118，11 月回到 101；同档新机从 100 调到 115，再降到 108。
+            </canvas>
+          </div>
+          <p class="tiny">二手点位取当月成交帖的中间值；6 月起旧款停售，「同档新机」指当时最接近的那一款。</p>
+        </div>
+      </section>
+
+      <section>
+        <h2>保值率：按类型看</h2>
+        <p class="muted small">「样本」是这一档凑到的成交条数，少于 5 条的整行按推算处理。</p>
+        <div class="tbl">
+          <table>
+            <thead>
+              <tr>
+                <th>型号</th>
+                <th class="n">机龄</th>
+                <th class="n">样本</th>
+                <th class="n">保值率</th>
+                <th>备注</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="grp">
+                <td colspan="5">入门机</td>
+              </tr>
+              <tr>
+                <td>青岚 A1</td>
+                <td class="n">5.5 年</td>
+                <td class="n est">3</td>
+                <td class="n est">28–34%</td>
+                <td class="tiny">推算</td>
+              </tr>
+              <tr>
+                <td>北辰 C10</td>
+                <td class="n">4.2 年</td>
+                <td class="n">12</td>
+                <td class="n"><span class="tag bad">35–41%</span></td>
+                <td class="tiny">挂牌多、成交慢</td>
+              </tr>
+              <tr>
+                <td><b>青岚 A3</b></td>
+                <td class="n">1.9 年</td>
+                <td class="n">31</td>
+                <td class="n">69–75%</td>
+                <td class="tiny">单机身</td>
+              </tr>
+              <tr class="grp">
+                <td colspan="5">中端机</td>
+              </tr>
+              <tr>
+                <td>北辰 X5</td>
+                <td class="n">4.6 年</td>
+                <td class="n">9</td>
+                <td class="n">45–51%</td>
+                <td class="tiny"></td>
+              </tr>
+              <tr>
+                <td><b>北辰 X7</b></td>
+                <td class="n">1.1 年</td>
+                <td class="n">24</td>
+                <td class="n"><span class="tag good">83–89%</span></td>
+                <td class="tiny">快门次数低于 1 万的占多数</td>
+              </tr>
+              <tr>
+                <td>青岚 M3</td>
+                <td class="n">1.6 年</td>
+                <td class="n">17</td>
+                <td class="n">78–84%</td>
+                <td class="tiny"></td>
+              </tr>
+              <tr class="grp">
+                <td colspan="5">旗舰机 / 卡片机</td>
+              </tr>
+              <tr>
+                <td>青岚 Z1 限定色</td>
+                <td class="n">1.4 年</td>
+                <td class="n est">4</td>
+                <td class="n est"><span class="tag good">≈128%</span></td>
+                <td class="tiny">推算，限量款</td>
+              </tr>
+              <tr>
+                <td>远山 P3</td>
+                <td class="n">1.0 年</td>
+                <td class="n">22</td>
+                <td class="n"><span class="tag warn">115–127%</span></td>
+                <td class="tiny">断货溢价，30 天 −7 点</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="grid2">
+          <div class="tbl">
+            <table>
+              <thead>
+                <tr>
+                  <th>加配 / 配件</th>
+                  <th class="n">卖时能收回</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>限定配色</td>
+                  <td class="n"><span class="tag good">120–140%</span></td>
+                </tr>
+                <tr>
+                  <td>套机镜头</td>
+                  <td class="n">55–70%</td>
+                </tr>
+                <tr>
+                  <td>原装第二块电池</td>
+                  <td class="n">≈40%</td>
+                </tr>
+                <tr>
+                  <td>原厂肩带 / 相机包</td>
+                  <td class="n">15–25%</td>
+                </tr>
+                <tr>
+                  <td>屏幕贴膜、清洁套装</td>
+                  <td class="n"><span class="tag bad">≈0%</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="panel">
+            <h3>配件为什么收不回来</h3>
+            <p class="small muted">
+              买家只为「拿到就能用」的东西多付钱：镜头和电池算，包和贴膜不算。限定配色能卖过首发，前提是这一批已经买不到。
+            </p>
+            <p class="tiny">回收率 = 带配件多卖的部分 ÷ 配件首发，示例数据。</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>持有一年大概掉多少</h2>
+        <p class="muted small">
+          区间下沿假设现在的热度持续，上沿假设回到往年规律。单位是保值率的百分点，这是推算，不是承诺。
+        </p>
+        <div class="panel">
+          <h3>一年后保值率会掉几个百分点（区间）</h3>
+          <div class="chart">
+            <canvas id="cLoss" role="img" aria-label="各型号一年持有后保值率下降区间">
+              二手青岚 A3 掉 3–6 点；远山 P3 0–8；青岚 Z1 4–18；北辰 X7 8–16；青岚 M3 9–15；北辰 C20 12–20；北辰 X9 Max
+              10–26。
+            </canvas>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>保值规律，按影响大小排</h2>
+        <ul>
+          <li><b>断货排第一。</b>停产又正赶上热潮的型号能卖过首发，但新一代一到货，溢价一个月就回吐一半。</li>
+          <li><b>卡片机比同代入门机多保值 20–40 个点。</b>体积小、不用配镜头，二手买家多，换代也慢。</li>
+          <li><b>旗舰机前两年稳，第三年开始加速掉。</b>换代时新功能差距最明显，老旗舰会集中出货。</li>
+          <li><b>配件收不回钱，镜头例外。</b>想以后好卖，就保留包装和原装电池，别的不用留。</li>
+          <li><b>快门次数比外观更影响成交。</b>同一型号，1 万次以内和 5 万次以上能差 10 个点。</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>数据怎么来的</h2>
+        <ul class="small muted">
+          <li>本页所有品牌、型号、数字都是为了演示排版编出来的，不对应任何真实产品。</li>
+          <li>真实报告里，这里写每类数据的来源、抓取日期和可信度，推算的数字用灰字标出来。</li>
+        </ul>
+        <div class="src">
+          <a href="https://example.com/source-a">示例来源 A：二手平台成交帖</a><br />
+          <a href="https://example.com/source-b">示例来源 B：二手行情追踪站</a><br />
+          <a href="https://example.com/source-c">示例来源 C：厂商发布会稿</a><br />
+          <a href="https://example.com/source-d">示例来源 D：折旧规律文章</a>
+        </div>
+      </section>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+    <script>
+      (function () {
+        if (!window.Chart) return; // Offline: the canvases fall back to their text description.
+        const charts = {};
+        const reduce = matchMedia("(prefers-reduced-motion: reduce)");
+        const dark = matchMedia("(prefers-color-scheme: dark)");
+
+        // Fictional sample data. P(x = age in years, y = retention %, l = model name).
+        const P = (x, y, l) => ({ x, y, l });
+        const retention = [
+          {
+            label: "入门机",
+            c: "--s1",
+            s: "circle",
+            d: [
+              P(5.5, 31, "青岚 A1"),
+              P(3.8, 46, "青岚 A2"),
+              P(4.2, 38, "北辰 C10"),
+              P(1.9, 72, "青岚 A3"),
+              P(1.9, 66, "青岚 A3 双镜头套机"),
+              P(1.2, 78, "北辰 C20"),
+            ],
+          },
+          {
+            label: "中端机",
+            c: "--s2",
+            s: "rect",
+            d: [
+              P(4.6, 48, "北辰 X5"),
+              P(2.8, 61, "北辰 X6"),
+              P(3.3, 55, "青岚 M2"),
+              P(1.6, 81, "青岚 M3"),
+              P(1.1, 86, "北辰 X7"),
+            ],
+          },
+          {
+            label: "旗舰机",
+            c: "--s3",
+            s: "triangle",
+            d: [
+              P(4.8, 57, "北辰 X9"),
+              P(2.4, 79, "北辰 X9 II"),
+              P(1.4, 104, "青岚 Z1"),
+              P(1.4, 128, "青岚 Z1 限定色"),
+              P(0.8, 112, "北辰 X9 Max"),
+            ],
+          },
+          {
+            label: "卡片机",
+            c: "--s4",
+            s: "rectRot",
+            d: [P(5.0, 62, "远山 P1"), P(3.0, 88, "远山 P2"), P(2.2, 70, "星野 Q7"), P(1.0, 121, "远山 P3")],
+          },
+        ];
+        const timeline = {
+          labels: ["1 月", "3 月", "5 月", "7 月", "9 月", "11 月"],
+          used: [86, 92, 104, 118, 112, 101],
+          list: [100, 100, 100, 115, 115, 108],
+          lowest: [92, 95, null, null, 108, 99],
+        };
+        const loss = [
+          ["二手青岚 A3", 3, 6],
+          ["远山 P3", 0, 8],
+          ["青岚 Z1", 4, 18],
+          ["北辰 X7", 8, 16],
+          ["青岚 M3", 9, 15],
+          ["北辰 C20", 12, 20],
+          ["北辰 X9 Max", 10, 26],
+        ];
+
+        function build() {
+          const css = getComputedStyle(document.documentElement);
+          const v = (n) => css.getPropertyValue(n).trim();
+          const ink2 = v("--ink-2");
+          const ink3 = v("--ink-3");
+          const line = v("--line");
+          Chart.defaults.font.family = v("--f-body");
+          Chart.defaults.color = ink2;
+          Chart.defaults.animation = reduce.matches ? false : { duration: 600 };
+          const pct = (x) => x + "%";
+
+          const ds = retention.map((r) => ({
+            type: "scatter",
+            label: r.label,
+            data: r.d,
+            backgroundColor: v(r.c),
+            borderColor: v(r.c),
+            pointStyle: r.s,
+            pointRadius: 6,
+            pointHoverRadius: 8,
+          }));
+          ds.push({
+            type: "line",
+            label: "往年规律",
+            dash: true,
+            data: [P(0, 100), P(0.5, 84), P(1, 70), P(2, 55), P(3, 44), P(5, 30)],
+            borderColor: ink3,
+            borderDash: [6, 5],
+            borderWidth: 2,
+            pointRadius: 0,
+            tension: 0.3,
+          });
+          charts.cRetention = new Chart(document.getElementById("cRetention"), {
+            data: { datasets: ds },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              layout: { padding: { top: 8, right: 8 } },
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: { label: (c) => (c.raw.l ? c.raw.l + "：" : "") + c.raw.y + "%（" + c.raw.x + " 年）" },
+                },
+              },
+              scales: {
+                x: {
+                  type: "linear",
+                  min: 0,
+                  max: 6,
+                  title: { display: true, text: "机龄（年）", color: ink3 },
+                  grid: { color: line },
+                  ticks: { color: ink3 },
+                },
+                y: {
+                  min: 0,
+                  max: 140,
+                  title: { display: true, text: "二手成交 ÷ 首发", color: ink3 },
+                  // The 100% line (sold for what it cost new) is drawn darker than the rest of the grid.
+                  grid: { color: (c) => (c.tick.value === 100 ? ink3 : line) },
+                  ticks: { color: ink3, callback: pct, stepSize: 20 },
+                },
+              },
+            },
+          });
+
+          charts.cTimeline = new Chart(document.getElementById("cTimeline"), {
+            type: "line",
+            data: {
+              labels: timeline.labels,
+              datasets: [
+                {
+                  label: "二手成交",
+                  data: timeline.used,
+                  borderColor: v("--s1"),
+                  backgroundColor: v("--s1"),
+                  borderWidth: 2,
+                  pointRadius: 4,
+                  tension: 0.25,
+                },
+                {
+                  label: "同档新机",
+                  dash: true,
+                  data: timeline.list,
+                  borderColor: ink3,
+                  backgroundColor: ink3,
+                  borderWidth: 2,
+                  borderDash: [5, 4],
+                  pointRadius: 3,
+                  stepped: true,
+                },
+                {
+                  label: "最低到手新机",
+                  data: timeline.lowest,
+                  borderColor: v("--s2"),
+                  backgroundColor: v("--s2"),
+                  borderWidth: 2,
+                  borderDash: [2, 3],
+                  pointRadius: 4,
+                  spanGaps: true,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { mode: "index", intersect: false },
+              plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: (c) => c.dataset.label + "：" + c.raw } },
+              },
+              scales: {
+                y: { min: 80, max: 125, grid: { color: line }, ticks: { color: ink3 } },
+                x: { grid: { display: false }, ticks: { color: ink3, maxRotation: 0 } },
+              },
+            },
+          });
+
+          charts.cLoss = new Chart(document.getElementById("cLoss"), {
+            type: "bar",
+            data: {
+              labels: loss.map((r) => r[0]),
+              datasets: [
+                {
+                  label: "一年掉的百分点",
+                  data: loss.map((r) => [r[1], r[2]]), // floating bars: [low, high]
+                  backgroundColor: v("--s1"),
+                  borderRadius: 4,
+                  barThickness: 14,
+                  borderSkipped: false,
+                },
+              ],
+            },
+            options: {
+              indexAxis: "y",
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: (c) => c.raw[0] + " – " + c.raw[1] + " 个点" } },
+              },
+              scales: {
+                x: { min: 0, max: 30, grid: { color: line }, ticks: { color: ink3, callback: (x) => x + " 点" } },
+                y: { grid: { display: false }, ticks: { color: ink2 } },
+              },
+            },
+          });
+
+          // HTML legends: buttons that toggle a dataset, so they are keyboard- and screen-reader-friendly.
+          for (const ul of document.querySelectorAll(".legend[data-chart]")) {
+            const chart = charts[ul.dataset.chart];
+            ul.replaceChildren(
+              ...chart.data.datasets.map((d, i) => {
+                const li = document.createElement("li");
+                const b = document.createElement("button");
+                b.type = "button";
+                b.setAttribute("aria-pressed", String(chart.isDatasetVisible(i)));
+                const sw = document.createElement("i");
+                if (d.dash) sw.className = "dash";
+                else sw.style.background = d.backgroundColor;
+                b.append(sw, d.label);
+                b.addEventListener("click", () => {
+                  const on = !chart.isDatasetVisible(i);
+                  chart.setDatasetVisibility(i, on);
+                  b.setAttribute("aria-pressed", String(on));
+                  chart.update();
+                });
+                li.append(b);
+                return li;
+              }),
+            );
+          }
+        }
+
+        build();
+        // Colors come from CSS variables, so rebuild the charts when the theme flips.
+        dark.addEventListener("change", () => {
+          Object.values(charts).forEach((c) => c.destroy());
+          build();
+        });
+      })();
+    </script>
+  </body>
+</html>

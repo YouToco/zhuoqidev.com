@@ -1,6 +1,7 @@
 import { type Lang, url } from "../i18n";
 import { SITE_URL, site } from "../site";
 import { getPosts, getProjects, postUrl, slugOf, ymd } from "./content";
+import { categoryLabel, designUrl, getDesigns } from "./design";
 import { postMarkdown } from "./markdown-export";
 
 const abs = (path: string) => new URL(path, SITE_URL).href;
@@ -15,6 +16,7 @@ export async function llmsTxt(lang: Lang) {
   const s = site[lang];
   const posts = await getPosts(lang);
   const projects = await getProjects(lang);
+  const designs = await getDesigns(lang);
   const lines = [
     `# ${s.title}`,
     "",
@@ -32,6 +34,17 @@ export async function llmsTxt(lang: Lang) {
     lang === "zh" ? "## 作品" : "## Projects",
     "",
     ...projects.map((p) => `- [${p.data.title}](${abs(url(lang, `/projects/${slugOf(p)}/`))}): ${p.data.description}`),
+    "",
+    lang === "zh" ? "## 设计灵感库" : "## Design library",
+    "",
+    lang === "zh"
+      ? `能单独打开的网页 UI 演示，每条的 index.md 带说明和完整源码，照着就能复现。目录：${abs(url(lang, "/design/index.md"))}`
+      : `Self-contained web UI demos; each entry's index.md has the notes and the full source to recreate it. Catalogue: ${abs(url(lang, "/design/index.md"))}`,
+    "",
+    ...designs.map(
+      (d) =>
+        `- [${d.data.title}](${abs(designUrl(lang, slugOf(d)))}index.md) — ${categoryLabel[lang][d.data.category]} · ${d.data.summary}`,
+    ),
     "",
     "## Optional",
     "",

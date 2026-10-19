@@ -1,0 +1,191 @@
+---
+import { designLinks } from "../../../data/design-links";
+import { type Lang, langParams, t, url } from "../../../i18n";
+import designCss from "../../../styles/design.css?raw";
+import Base from "../../../layouts/Base.astro";
+import { slugOf } from "../../../lib/content";
+import { CATEGORIES, categoryLabel, demoPath, designUrl, getDesigns, originLabel } from "../../../lib/design";
+
+export const getStaticPaths = langParams;
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const L = t[lang];
+const D = L.ds;
+const entries = await getDesigns(lang);
+const cats = CATEGORIES.filter((c) => entries.some((e) => e.data.category === c));
+const tagCount = new Map<string, number>();
+for (const tag of entries.flatMap((e) => e.data.tags)) tagCount.set(tag, (tagCount.get(tag) ?? 0) + 1);
+const tags = [...tagCount]
+  .filter(([, n]) => n >= 2)
+  .sort((a, b) => b[1] - a[1])
+  .map(([tag]) => tag);
+const recreated = entries.filter((e) => e.data.origin === "recreated").length;
+---
+
+<Base
+  lang={lang}
+  title={D.title}
+  description={D.description}
+  path="/design/"
+  section="design"
+  bodyClass="dotgrid"
+  markdown={url(lang, "/design/index.md")}
+>
+  <style slot="head" is:inline set:html={designCss}></style>
+  <main class="shelf ds-shelf" id="main">
+    <header class="shelf-head">
+      <div class="crumb">
+        ~/design/ <b>ls</b>
+      </div>
+      <h1>✦ {D.title}</h1>
+      <p>{D.intro}</p>
+      <p class="ds-agent">
+        <b>$</b> {D.forAgents}{" "}
+        <a href={url(lang, "/design/index.md")} type="text/markdown">
+          index.md
+        </a>
+        {lang === "zh" ? `（${D.catalogue}）` : ` (${D.catalogue})`}
+      </p>
+    </header>
+
+    <div class="ds-filters" data-ds-filters hidden>
+      <div class="ds-row" role="group" aria-label={D.category}>
+        <button type="button" class="ds-chip" aria-pressed="true" data-cat="">
+          {D.all} <small>{entries.length}</small>
+        </button>
+        {cats.map((c) => (
+          <button type="button" class="ds-chip" aria-pressed="false" data-cat={c}>
+            {categoryLabel[lang][c]} <small>{entries.filter((e) => e.data.category === c).length}</small>
+          </button>
+        ))}
+      </div>
+      <div class="ds-row ds-sub">
+        <span class="ds-seg" role="group" aria-label={D.origin}>
+          <button type="button" aria-pressed="true" data-origin="">
+            {D.originAll}
+          </button>
+          <button type="button" aria-pressed="false" data-origin="original">
+            {originLabel[lang].original}
+          </button>
+          <button type="button" aria-pressed="false" data-origin="recreated">
+            {originLabel[lang].recreated} <small>{recreated}</small>
+          </button>
+        </span>
+        <span class="ds-tags" role="group" aria-label={D.tags}>
+          {tags.map((tag) => (
+            <button type="button" class="ds-tag" aria-pressed="false" data-tag={tag}>
+              #{tag}
+            </button>
+          ))}
+        </span>
+      </div>
+    </div>
+
+    <ul class="ds-grid">
+      {entries.map((e) => {
+        const slug = slugOf(e);
+        return (
+          <li data-cat={e.data.category} data-origin={e.data.origin} data-tags={e.data.tags.join("|")}>
+            <a class="card ds-card" href={designUrl(lang, slug)} data-vt>
+              <span class="ds-shot">
+                <img
+                  src={demoPath(slug, "cover.webp")}
+                  alt=""
+                  width="640"
+                  height="400"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </span>
+              <span class="ds-meta">
+                <span class="ds-kind">{categoryLabel[lang][e.data.category]}</span>
+                {e.data.origin === "recreated" && <span class="tag red">{originLabel[lang].recreated}</span>}
+              </span>
+              <b class="ds-name">{e.data.title}</b>
+              <span class="ds-sum">{e.data.summary}</span>
+              <span class="ds-stack">{e.data.stack.join(" · ")}</span>
+            </a>
+          </li>
+        );
+      })}
+    </ul>
+    <p class="ds-empty" hidden>
+      {D.empty}
+    </p>
+
+    <section class="ds-links" aria-labelledby="ds-links">
+      <h2 id="ds-links">{D.linksTitle}</h2>
+      <p class="ds-links-note">{D.linksNote}</p>
+      {designLinks.map((g) => (
+        <div class="ds-link-group">
+          <h3>{g.group[lang]}</h3>
+          <ul>
+            {g.items.map((it) => (
+              <li>
+                <a href={it.url} rel="noopener">
+                  {it.name}
+                </a>
+                {it.license && <span class="ds-lic">{it.license}</span>}
+                <span>{it.note[lang]}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </section>
+  </main>
+</Base>
+
+<script>
+  // Filters combine: an entry shows when it matches the type, the origin and every picked tag.
+  // The choice lives in the query string (?c=button&o=recreated&t=动效) so a filtered view can be shared.
+  const box = document.querySelector<HTMLElement>("[data-ds-filters]");
+  if (box) {
+    box.hidden = false;
+    const items = [...document.querySelectorAll<HTMLLIElement>(".ds-grid > li")];
+    const empty = document.querySelector<HTMLElement>(".ds-empty");
+    const q = new URLSearchParams(location.search);
+    let cat = q.get("c") ?? "";
+    let origin = q.get("o") ?? "";
+    const picked = new Set(q.getAll("t"));
+    const press = (sel: string, on: (b: HTMLButtonElement) => boolean) =>
+      box.querySelectorAll<HTMLButtonElement>(sel).forEach((b) => b.setAttribute("aria-pressed", String(on(b))));
+    const apply = () => {
+      press("[data-cat]", (b) => b.dataset["cat"] === cat);
+      press("[data-origin]", (b) => b.dataset["origin"] === origin);
+      press("[data-tag]", (b) => picked.has(b.dataset["tag"] ?? ""));
+      let shown = 0;
+      for (const li of items) {
+        const tags = (li.dataset["tags"] ?? "").split("|");
+        const ok =
+          (!cat || li.dataset["cat"] === cat) &&
+          (!origin || li.dataset["origin"] === origin) &&
+          [...picked].every((t) => tags.includes(t));
+        li.hidden = !ok;
+        if (ok) shown++;
+      }
+      if (empty) empty.hidden = shown > 0;
+      const p = new URLSearchParams();
+      if (cat) p.set("c", cat);
+      if (origin) p.set("o", origin);
+      for (const t of picked) p.append("t", t);
+      const qs = p.toString();
+      history.replaceState(history.state, "", qs ? `?${qs}` : location.pathname);
+    };
+    box.addEventListener("click", (event) => {
+      const b = (event.target as HTMLElement).closest<HTMLButtonElement>("button");
+      if (!b) return;
+      if (b.dataset["cat"] !== undefined) cat = b.dataset["cat"];
+      else if (b.dataset["origin"] !== undefined) origin = b.dataset["origin"];
+      else if (b.dataset["tag"]) {
+        const t = b.dataset["tag"];
+        if (picked.has(t)) picked.delete(t);
+        else picked.add(t);
+      }
+      apply();
+    });
+    apply();
+  }
+</script>
