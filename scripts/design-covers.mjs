@@ -30,6 +30,7 @@ const CLOSE_UP = new Set([
   "copy-button",
   "magnetic-button",
   "pixel-dissolve-select",
+  "agent-sleep-toggle",
 ]);
 
 /** @type {Record<string, (page: import("playwright").Page) => Promise<void>>} */
@@ -53,6 +54,11 @@ const POSES = {
     const box = await page.locator(".mag").first().boundingBox();
     if (box) await page.mouse.move(box.x + box.width + 30, box.y - 20, { steps: 8 });
     await page.waitForTimeout(500);
+  },
+  // Asleep, z's in the air.
+  "agent-sleep-toggle": async (page) => {
+    await page.click("#switch");
+    await page.waitForTimeout(1500);
   },
   // Mid-genie: the menu bent into a funnel on its way into the name.
   "pixel-dissolve-select": async (page) => {
