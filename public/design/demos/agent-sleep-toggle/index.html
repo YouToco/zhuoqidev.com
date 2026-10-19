@@ -258,24 +258,58 @@
 
       const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
       // A damped spring for the wake-up pop: overshoots to about 1.07 and settles.
-      const pop = (t) => 1 + 0.09 * Math.exp(-5 * t) * Math.sin(t * 9);
+      // Both transitions are keyframed on the reference (time in s, scale), joined with smoothstep so each
+      // leg starts and ends gently. Falling asleep the body shrinks past its final size to 95% in 0.19 s,
+      // slowly swells back to 101% by 0.45 s and settles at 0.6 s. Waking it is a hexagon again by 0.13 s,
+      // pops to 103% at 0.19 s and settles by 0.4 s.
+      const SLEEP = [
+        [0, 1],
+        [0.19, 0.95],
+        [0.45, 1.01],
+        [0.6, 1],
+      ];
+      const WAKE = (s0) => [
+        [0, s0],
+        [0.13, 0.99],
+        [0.19, 1.03],
+        [0.3, 0.995],
+        [0.4, 1],
+      ];
+      const keyed = (frames, sec) => {
+        for (let i = 1; i < frames.length; i++) {
+          const [t1, v1] = frames[i];
+          const [t0, v0] = frames[i - 1];
+          if (sec <= t1) {
+            const q = (sec - t0) / (t1 - t0);
+            return v0 + (v1 - v0) * q * q * (3 - 2 * q);
+          }
+        }
+        return frames[frames.length - 1][1];
+      };
+      // Asleep it breathes: down to 95% and back, about 4.4 s a breath (the reference shrinks 5% in ~2 s).
+      const BREATH = 4400;
+      let asleepSince = 0;
 
       const frame = (now) => {
         if (anim) {
           const t = clamp((now - anim.start) / anim.ms);
+          const sec = (now - anim.start) / 1000;
           if (anim.to === 1) {
-            k = easeInOut(t);
-            scale = 1;
+            k = easeInOut(clamp(sec / 0.19));
+            scale = keyed(SLEEP, sec);
           } else {
-            // wake: the shape is back within the first 45%, the rest is the springy settle
-            k = 1 - easeInOut(clamp(t / 0.45));
-            scale = pop(t);
+            // starts from wherever the breath left it, so there is no jump
+            k = 1 - easeInOut(clamp(sec / 0.13));
+            scale = keyed(WAKE(anim.s0), sec);
           }
           if (t >= 1) {
             k = anim.to;
             scale = 1;
+            if (anim.to === 1) asleepSince = now;
             anim = null;
           }
+        } else if (k === 1 && !still.matches) {
+          scale = 1 - 0.025 * (1 - Math.cos(((now - asleepSince) / BREATH) * Math.PI * 2));
         }
         // eyes ease towards where the pointer is; blink now and then while awake
         const before = look.x;
@@ -324,7 +358,7 @@
           anim = null;
           return;
         }
-        anim = { from: k, to: on ? 0 : 1, start: performance.now(), ms: on ? 420 : 160 };
+        anim = { from: k, to: on ? 0 : 1, start: performance.now(), ms: on ? 400 : 600, s0: scale };
       };
       sw.addEventListener("click", () => set(sw.getAttribute("aria-checked") !== "true"));
       // The <label> around it makes the whole pill the hit area: clicking "Active" clicks the switch.
