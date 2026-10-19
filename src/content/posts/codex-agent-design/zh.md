@@ -3,6 +3,7 @@ title: 读完 Codex 源码后，我认为最值得企业 Agent 借鉴的是这 5
 short: "读完 Codex 源码，最值得借鉴的 5 个设计"
 description: 基于 openai/codex 源码，拆解选择性并行、Unified Exec、ExecCell、Skills 渐进上下文、Goal 自动续跑，以及如何通过 App Server 嵌入同一套 Runtime。
 date: 2026-08-02
+glyph: queue-ticket
 updated: 2026-08-03
 lead: 可以把 Codex 想成一支小型施工队：模型像会判断下一步的现场负责人，Agent Harness 则是围绕他的派工台、门禁、档案柜和进度看板。源码真正展示的，不只是“负责人会下命令”，而是整套系统如何让工作安全开工、暂停后接着做，并让用户始终知道事情进行到了哪里。
 tags:

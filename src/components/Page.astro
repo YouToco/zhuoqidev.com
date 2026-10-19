@@ -1,6 +1,8 @@
 ---
+import type { GlyphName } from "../data/glyphs";
 import type { Lang } from "../i18n";
 import { splitTitle, ymd } from "../lib/content";
+import PostSticker from "./PostSticker.astro";
 
 interface Props {
   lang: Lang;
@@ -8,8 +10,9 @@ interface Props {
   crumb: string;
   date?: Date | undefined;
   searchable?: boolean | undefined;
+  glyph?: GlyphName | undefined;
 }
-const { title, crumb, date, searchable } = Astro.props;
+const { title, crumb, date, searchable, glyph } = Astro.props;
 const { main, sub } = splitTitle(title);
 ---
 
@@ -19,6 +22,7 @@ const { main, sub } = splitTitle(title);
     <div class="crumb" data-pagefind-ignore>
       {crumb}
     </div>
+    {glyph && <PostSticker name={glyph} />}
     {date && (
       <div class="meta-row">
         <span class="m">

@@ -2,6 +2,7 @@
 title: Vane — A Production-Grade AI Personalized Feed System
 description: 'A self-built AI Agent system: multi-source ingestion → LLM personalized scoring → Feishu push, with a user-profile feedback loop. Go + Temporal + A2A protocol + React, full-stack.'
 date: 2026-07-19
+glyph: vane-scores
 ---
 
 **Vane** is an AI-powered personalized feed system I designed and built solo. It continuously ingests content from multiple sources, scores and filters it with an LLM against your profile, then pushes what's worth reading via Feishu — learning from your feedback to keep refining that profile. From product design and system architecture to production ops, one person end to end.

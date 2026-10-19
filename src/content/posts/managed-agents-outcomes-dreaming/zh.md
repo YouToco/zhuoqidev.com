@@ -2,6 +2,7 @@
 title: 让 Agent 自己验收、自己整理记忆——Outcomes 与 Dreaming 的文档拆解，附 Claude Code /goal 实测
 description: Outcomes 让一个看不到写手思路的独立评审按评分标准逐条验收，不合格就返工；Dreaming 在会话之间读旧记忆和历史会话，另外生成一份整理好的记忆库，原库不动。这两个都是 Claude 开发者平台 Managed Agents 的接口，Claude Code 里没有。本文按官方文档讲清它们为什么必要、怎样工作，再找出 Claude Code 里的近亲（/goal 和没放开的 auto-dream），用同一个任务把 /goal 实测了 12 次，最后把设计翻译成能搬到任何 Agent 技术栈的两份契约。
 date: 2026-10-06
+glyph: rubric-loop
 updated: 2026-10-09
 lead: Agent 很擅长交出「看起来做完了」的东西，也很擅长把记忆越记越乱。Anthropic 在 Claude Managed Agents 里给这两个问题各配了一个机制：Outcomes 在一次会话里请一位独立评审逐条验收，Dreaming 在两次会话之间把记忆重新整理一遍。但在平时用的 Claude Code 里，你看不到这两个名字。本文先按文档拆开这两个机制，再讲 Claude Code 里实际能用到什么、实测效果如何，以及怎样在自己的 Agent 里复刻。
 tags:

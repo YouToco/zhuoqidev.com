@@ -1,0 +1,14 @@
+---
+import type { GlyphName } from "../data/glyphs";
+import { tile } from "../lib/glyphs";
+
+interface Props {
+  name: GlyphName;
+}
+const { name } = Astro.props;
+---
+
+<div class="post-sticker" aria-hidden="true" data-pagefind-ignore>
+  <span class="tape"></span>
+  <Fragment set:html={tile(name)} />
+</div>

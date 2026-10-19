@@ -2,6 +2,7 @@
 import { getCollection, render } from "astro:content";
 import { type Lang, LANGS, other, t, url } from "../../../../i18n";
 import Base from "../../../../layouts/Base.astro";
+import PostSticker from "../../../../components/PostSticker.astro";
 import { numberedByAuthor } from "../../../../lib/markdown/numbering";
 import {
   getPosts,
@@ -135,6 +136,7 @@ const jsonLd = {
       <div class="crumb" data-pagefind-ignore>
         ~/posts/<b>{slug}</b>.md
       </div>
+      {post.data.glyph && <PostSticker name={post.data.glyph} />}
       <div class="meta-row">
         {post.data.series && (
           <a class="tag" href={url(lang, `/series/${termSlug(post.data.series)}/`)}>

@@ -2,6 +2,7 @@
 title: 'How Agents Remember You: Human Memory Science and a Code Audit of Six Open-Source Systems'
 description: 'From Ebbinghaus, H.M., working memory, and engrams to Mem0, Letta, Graphiti, LangMem, Cognee, and MemoryOS: a history of memory paradigms and a code-level comparison of what open-source agent memory systems actually implement.'
 date: 2026-07-30
+glyph: forgetting-curve
 updated: 2026-07-30
 tags:
 - AI Agent

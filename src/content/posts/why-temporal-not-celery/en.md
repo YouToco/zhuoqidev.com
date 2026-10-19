@@ -3,6 +3,7 @@ title: Why We Moved from Celery to Temporal for Production Agent Pipelines
 short: "Why We Moved from Celery to Temporal"
 description: Agent pipelines are not ordinary async tasks — they have state, they get stuck, they need replay debugging, and one failure must not sink the entire batch. We hit every one of these walls with Celery before understanding that Temporal solves a fundamentally different problem.
 date: 2026-05-16
+glyph: event-history
 updated: 2026-07-30
 lead: In April 2026, we migrated seo-project's task queue from Celery to Temporal. We dropped exactly one dependency (`celery`), wrote 11 new files (`src/infrastructure/temporal/`), and renamed our containers from `api/worker/beat` to `api/temporal_worker_blue/green` with blue-green deployment.
 tags:

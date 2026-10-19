@@ -2,6 +2,7 @@
 title: 'Why Codex Does Not Give the Model Every Tool: tool_search, BM25, and Model Replacement'
 description: A plain-language, source-grounded explanation of why Codex loads tools on demand, how BM25 ranks the best few, and how the same design transfers to Python, Go, and other models.
 date: 2026-08-08
+glyph: small-desk
 updated: 2026-08-09
 lead: Think of the model as an engineer with a small desk. If hundreds of tool manuals cover it, every request becomes expensive and the right manual is harder to find. Codex instead provides a short catalog and retrieves only the most relevant manuals. This article explains that design, BM25 ranking, reuse in Python or Go, and model replacement.
 tags:

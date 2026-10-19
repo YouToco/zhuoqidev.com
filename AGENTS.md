@@ -74,6 +74,14 @@
   (big word → device rises → headline → readouts) when half of it is on screen; without the script or
   with reduced motion the reader sees the last frame. `index.md` gets the headline and the readouts as
   a quote. Use at most one per article, at the top, for the single claim the article proves.
+- Glyphs: every article and project names one drawn object in its front matter (`glyph: mac-mini`,
+  the same in both editions). The objects are plain shapes on a 100 x 100 grid in `src/data/glyphs.ts`;
+  `src/lib/glyphs.ts` draws each one twice at build time with no script: a rough pen sketch
+  (rough.js with fixed seeds, two frames that take turns while the card is hovered) under the
+  date in the post and project lists, and the same shapes inked bold on a pastel tile taped to the
+  top right of the article or project page. Pick an object the article is actually about, not a generic icon; mark shapes
+  that sit on an inked area `onInk` so the tile can draw them in paper color. A new article
+  without a glyph simply shows none.
 - Readers pick the article width (narrow / default / wide / full) in the rail; it is
   stored as `zq-width` and applied by the head script in `Base.astro`. Charts, tables
   and diagrams must work from a 640 px column up to a full-width one.

@@ -3,6 +3,7 @@ title: 什么时候用 RAG，什么时候用 LLM Wiki，什么时候用纯文本
 short: "RAG、LLM Wiki 还是纯文本记忆"
 description: RAG、结构化知识库、纯文本上下文记忆——三种 Agent 长期记忆方案的成本、延迟、精度和可维护性对比，附决策树。
 date: 2026-05-11
+glyph: signpost
 updated: 2026-07-30
 lead: 做 Agent 系统的人迟早会撞上这个选择题：**用户的数据往哪放，下次对话怎么记住？**
 tags:

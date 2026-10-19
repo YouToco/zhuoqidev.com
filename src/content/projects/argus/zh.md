@@ -2,6 +2,7 @@
 title: Argus — 纯前端长视频理解 Agent Harness
 description: 开源的浏览器本地长视频理解 agent harness：视频文件不出本地，多 provider LLM（Vercel AI SDK）+ 切帧/记忆/子代理工具，自带双线 CDN 发布。Vite + React + TypeScript。
 date: 2026-08-30
+glyph: argus-eye
 scene: argus
 ---
 

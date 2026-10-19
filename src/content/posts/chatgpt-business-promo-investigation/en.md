@@ -2,6 +2,7 @@
 title: Where Do ChatGPT Business Promo Codes Come From? An OSINT Correction
 description: 'A source-by-source recheck of OpenAI, partner, Stripe, and linux.do evidence: public links, screened email codes, and partner-funded rebates still coexist.'
 date: 2026-05-14
+glyph: evidence-ladder
 updated: 2026-07-30
 lead: In May 2026, a batch of company-branded ChatGPT Business promo codes spread through linux.do and other communities. The original article tried to identify their source but presented several plausible inferences as facts.
 tags:

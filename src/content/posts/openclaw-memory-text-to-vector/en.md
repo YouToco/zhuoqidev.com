@@ -2,6 +2,7 @@
 title: 'OpenClaw Memory in Practice: From ''Vector Search Is Down But Everything Still Works'' to Zero-Cost NVIDIA Embeddings'
 description: OpenClaw's vector retrieval silently failed — but BM25 text search kept the memory system running for two weeks unnoticed. When you discover 'it works without embeddings,' should you even bother fixing it? Here's how I used NVIDIA's free embedding API to complete the picture, and what I learned about when vector search actually matters.
 date: 2026-06-20
+glyph: last-piece
 updated: 2026-07-30
 tags:
 - OpenClaw

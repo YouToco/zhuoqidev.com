@@ -1,6 +1,7 @@
 import { defineCollection } from "astro:content";
 import { glob } from "astro/loaders";
 import { z } from "astro/zod";
+import { GLYPH_NAMES } from "./data/glyphs";
 
 // Every entry is a folder holding both editions: <slug>/zh.md and <slug>/en.md.
 // The id keeps that shape ("<slug>/<lang>") so pairing needs no lookup table.
@@ -22,6 +23,8 @@ const posts = defineCollection({
     series: z.string().optional(),
     seriesOrder: z.number().int().optional(),
     aliases: z.array(z.string()).optional(),
+    /** The object drawn beside the post in lists and on its header (src/data/glyphs.ts). */
+    glyph: z.enum(GLYPH_NAMES).optional(),
     draft: z.boolean().default(false),
   }),
 });
@@ -34,6 +37,8 @@ const projects = defineCollection({
     date: z.coerce.date().optional(),
     /** An interactive scene shown above the write-up (src/components/ArgusStory.astro). */
     scene: z.enum(["argus"]).optional(),
+    /** The object drawn beside the project in the list and on its page (src/data/glyphs.ts). */
+    glyph: z.enum(GLYPH_NAMES).optional(),
   }),
 });
 

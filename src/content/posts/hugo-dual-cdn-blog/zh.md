@@ -2,6 +2,7 @@
 title: 用 Hugo 和双栈 CDN 搭建个人网站
 description: 记录如何用 Hugo + Blowfish，通过阿里云 OSS/CDN（国内）+ Cloudflare Pages（国际）实现双栈加速，备案、DNS 分线路解析一次走通。
 date: 2026-05-04
+glyph: dual-line
 updated: 2026-08-03
 lead: 同一份 Hugo 静态产物，同时发布到阿里云 OSS/CDN 与 Cloudflare Pages，再由 DNS 分线路把国内外访问导向不同边缘网络。
 tags:

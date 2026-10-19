@@ -2,6 +2,7 @@
 title: 在 Hugo 文章里内嵌 CSS 动画 Demo
 description: 用自定义 shortcode 在 Hugo 博客里直接运行 CSS 动画，无需 CodePen 账号，文章即 demo。
 date: 2026-05-04
+glyph: embedded-demo
 updated: 2026-07-30
 lead: Hugo 用 shortcode 可以很优雅地内嵌代码演示。这里展示三种方式：
 tags:

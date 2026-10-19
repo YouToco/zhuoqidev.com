@@ -2,6 +2,7 @@
 title: ChatGPT Business 优惠码究竟从哪来？一次溯源与更正
 description: 重新核对 OpenAI、合作伙伴、Stripe 与 linux.do 的一手资料：优惠并未被统一取消，公开链接、资格审核后邮件发码等机制仍在并存。
 date: 2026-05-14
+glyph: evidence-ladder
 updated: 2026-07-30
 lead: 2026 年 5 月，一批带有公司名称的 ChatGPT Business 优惠码在 linux.do 等社区传播。初版文章试图回答“这些码从哪里来”，但把若干合理猜测写成了事实。
 tags:
