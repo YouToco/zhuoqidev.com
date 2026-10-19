@@ -55,6 +55,11 @@ const POSES = {
     if (box) await page.mouse.move(box.x + box.width + 30, box.y - 20, { steps: 8 });
     await page.waitForTimeout(500);
   },
+  // A different group picked, so the dot, the shifted text and the page are all on show.
+  "sidebar-active-dot": async (page) => {
+    await page.click("text=嵌套圆角");
+    await page.waitForTimeout(900);
+  },
   // Asleep, z's in the air.
   "agent-sleep-toggle": async (page) => {
     await page.click("#switch");
