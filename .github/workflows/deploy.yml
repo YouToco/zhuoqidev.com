@@ -30,7 +30,8 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
-      # No dependency cache here: the publishing job never restores state written by PR runs.
+      # No dependency cache here: the publishing job never restores state written by PR runs
+      # (the build caches below are main's own; see "Restore build caches").
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -38,13 +39,32 @@ jobs:
 
       # Mermaid diagrams and social cards are laid out in headless Chrome at build time;
       # the runner image ships Chrome but no CJK fonts, which would shift every Chinese label.
-      - name: Install CJK fonts
+      # The download takes about 3 s, but fontconfig then indexes the four collections for about
+      # 15 s, so the install runs in the background during the checks; "Wait for CJK fonts" joins it.
+      - name: Start installing CJK fonts
         run: |
-          bash scripts/install-cjk-fonts.sh
-          google-chrome --version
+          nohup bash -c 'bash scripts/install-cjk-fonts.sh >"$RUNNER_TEMP/cjk-fonts.log" 2>&1
+            echo $? >"$RUNNER_TEMP/cjk-fonts.status.tmp"
+            mv "$RUNNER_TEMP/cjk-fonts.status.tmp" "$RUNNER_TEMP/cjk-fonts.status"' >/dev/null 2>&1 &
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # Image variants and Astro's web fonts (node_modules/.astro) and the CJK source fonts with
+      # their per-page subsets (node_modules/.cache/zq-fonts) took about 2 of the 2.5 build minutes
+      # when computed from scratch. Every entry is keyed by its own input (image hash and transform,
+      # font sha256 and character set), so a warm cache yields the same dist/ byte for byte.
+      # GitHub scopes caches by branch: a push to main restores only entries main itself wrote,
+      # so nothing a pull request run wrote can reach the published site.
+      - name: Restore build caches
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            node_modules/.astro/assets
+            node_modules/.astro/fonts
+            node_modules/.cache/zq-fonts
+          key: build-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: build-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
 
       - name: Validate shell syntax
         run: bash -n scripts/install-aliyun.sh scripts/install-cjk-fonts.sh scripts/renew-cert.sh scripts/deploy-local.sh
@@ -63,6 +83,19 @@ jobs:
 
       - name: Unit-test Pages Functions and scripts
         run: pnpm test
+
+      - name: Wait for CJK fonts
+        run: |
+          for _ in $(seq 1 300); do
+            [[ -f $RUNNER_TEMP/cjk-fonts.status ]] && break
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/cjk-fonts.log"
+          if [[ $(cat "$RUNNER_TEMP/cjk-fonts.status" 2>/dev/null) != 0 ]]; then
+            echo "CJK font install failed or did not finish within 5 minutes" >&2
+            exit 1
+          fi
+          google-chrome --version
 
       - name: Build site
         run: pnpm run build

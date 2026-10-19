@@ -12,6 +12,8 @@ SETUP_NODE_SHA = "949feb2413d6458794dcd2491c4babbbce0c15c1"
 SETUP_NODE_TAG = "v7.1.0"
 PNPM_SETUP_SHA = "ea17c68df8912ef543352723c149a84f56e3d413"
 PNPM_SETUP_TAG = "v6.1.0"
+CACHE_SHA = "55cc8345863c7cc4c66a329aec7e433d2d1c52a9"
+CACHE_TAG = "v6.1.0"
 
 
 class GitHubActionsVersionTests(unittest.TestCase):
@@ -41,6 +43,39 @@ class GitHubActionsVersionTests(unittest.TestCase):
 
         self.assertTrue(refs)
         self.assertEqual({(PNPM_SETUP_SHA, PNPM_SETUP_TAG)}, set(refs))
+
+    def test_cache_uses_verified_stable_immutable_release(self) -> None:
+        text = self.workflow_text()
+        refs = re.findall(r"actions/cache@([^\s#]+)(?:\s+#\s+([^\s]+))?", text)
+
+        self.assertTrue(refs)
+        self.assertEqual({(CACHE_SHA, CACHE_TAG)}, set(refs))
+
+    def test_site_workflows_cache_only_build_outputs(self) -> None:
+        # Image variants and font subsets are keyed by their inputs; the key carries the lockfile so
+        # a dependency bump starts cold. Deploy may restore them because a push to main only sees
+        # caches main wrote, but it still never caches dependencies.
+        for name in ("ci.yml", "deploy.yml"):
+            text = (WORKFLOWS / name).read_text(encoding="utf-8")
+            with self.subTest(workflow=name):
+                block = text.split("name: Restore build caches", 1)[1].split("- name:", 1)[0]
+                paths = re.findall(r"^\s{12}(node_modules/\S+)$", block, flags=re.MULTILINE)
+                self.assertEqual(
+                    ["node_modules/.astro/assets", "node_modules/.astro/fonts", "node_modules/.cache/zq-fonts"],
+                    paths,
+                )
+                self.assertIn("hashFiles('pnpm-lock.yaml')", block)
+                self.assertLess(text.index("pnpm install --frozen-lockfile"), text.index("name: Restore build caches"))
+
+    def test_cjk_fonts_are_ready_before_the_build(self) -> None:
+        for name in ("ci.yml", "deploy.yml"):
+            text = (WORKFLOWS / name).read_text(encoding="utf-8")
+            with self.subTest(workflow=name):
+                start = text.index("bash scripts/install-cjk-fonts.sh")
+                wait = text.index("name: Wait for CJK fonts")
+                self.assertLess(start, wait)
+                self.assertLess(wait, text.index("run: pnpm run build"))
+                self.assertIn('!= 0 ]]; then', text[wait:])
 
     def test_runners_are_pinned(self) -> None:
         # A floating image changes tools under us; the build also lays out CJK text in the
