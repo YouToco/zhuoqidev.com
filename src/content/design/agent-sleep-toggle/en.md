@@ -23,7 +23,7 @@ A recreation of a 7.7-second recording by Michael Filipiuk on recent.design (vid
 - **Falling asleep is three things at once** (about 160 ms): the shape rounds and shrinks (radius about 0.76 of the hexagon), the colour goes from bright blue through grey-blue to grey, and the eyes go from upright pills to dots to two short dashes (interpolated in two stages, so the middle frame shows dots). The dashes sit one a little higher and both slightly tilted, which reads as drowsy.
 - **Waking has a spring**: in 420 ms the hexagon is back within the first 45%, the rest is a damped spring that overshoots to 1.07× and settles, a "pop" awake.
 - **Z's overhead**: three bold z's take turns drifting up and right from the top of the head, growing and fading (a CSS animation, a third of a cycle apart).
-- **Awake, it watches you**: the eyes follow the mouse; looking aside, the pills lean that way and move a little closer together, and the whole body shifts 3–4 px; it blinks every 2.6–5.2 s.
+- **Awake, it watches you, by turning rather than tilting**: the eyes follow the mouse; looking aside, the pills stay nearly upright and slide over, **the eye on that side gets about 13% shorter and 18% narrower** while the other grows a little, and they move 18% closer together, so the face reads as turned (the near eye has gone round the side). At rest they lean only about 6°; a quick glance makes them swing against the motion in proportion to its speed (up to 22°) and settle upright. Looking down travels further than looking up, since the eyes sit high. It blinks every 2.6–5.2 s.
 
 ## How to use it
 
