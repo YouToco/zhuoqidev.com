@@ -54,9 +54,12 @@ const POSES = {
     if (box) await page.mouse.move(box.x + box.width + 30, box.y - 20, { steps: 8 });
     await page.waitForTimeout(500);
   },
+  // Mid-genie: the menu bent into a funnel on its way into the name.
   "pixel-dissolve-select": async (page) => {
     await page.click(".pick-btn");
-    await page.waitForTimeout(1100);
+    await page.waitForTimeout(900);
+    await page.click(".pick-menu li:nth-child(2)");
+    await page.waitForTimeout(110);
   },
 };
 
