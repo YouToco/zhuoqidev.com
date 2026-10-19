@@ -40,6 +40,6 @@ added: 2026-10-20
 - `background-clip: text` 要配 `-webkit-text-fill-color: transparent`，只写 `color: transparent` 在 Safari 上不行。
 - 文字的平移和刷色要**等圆点顶到**：语义上的 `aria-current` 点击时就设，视觉上的 `.lit`（挤开 + 上色）等圆点落地、顶过之后约 0.1 秒才加；否则几件事同时发生，就看不出是圆点「挤开」了文字。
 - 速度曲线别用 `ease` 凑：按录屏逐帧量位置，直接写成 `linear(0, 0.065 9%, 0.13 18%, …)`，比任何三次贝塞尔都像。验证时 Playwright 的虚拟时钟管不了 CSS 过渡，要用 `document.getAnimations()` 暂停后手动拨 `currentTime` 再读。
-- 连续快速点：每次先清掉上一轮还没执行的定时器，再把圆点身上的动画 `commitStyles()` 写回内联样式后 `cancel()`，新的动画从当前位置开始。**播完、靠 `fill: forwards` 停着的动画也要先 commit**，只 commit「播放中」的会让圆点跳回旧位置。
+- 连续快速点：每次先清掉上一轮还没执行的定时器，再把圆点身上的动画 `commitStyles()` 写回内联样式后 `cancel()`，新的动画从当前位置开始。**播完、靠 `fill: forwards` 停着的动画也要先 commit**，只 commit「播放中」的会让圆点跳回旧位置。但**落地压扁那段只能取消、不能 commit**：正好在压扁的几十毫秒里再点一下，会把扁的形状永久写进样式（线上真出现过）。
 - 别用 `getBoundingClientRect()` 算圆点位置：列表滚动后它会变，点就跑偏；`offsetTop` 不受滚动影响。
 - `prefers-reduced-motion` 下所有过渡都关掉，圆点和颜色直接跳到位。
