@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>会睡觉的 Agent 卡片</title>
+    <style>
+      :root {
+        --paper: #f3f3f2;
+        --card: #fff;
+        --ink: #17191e;
+        --ink-2: #6b6f78;
+        --line: #e6e6e4;
+        --track-off: #dcdcdf;
+        --on: #2b7bf0;
+        --z: #9a9a9a;
+        --shadow: 0 1px 2px rgba(20, 22, 30, 0.05), 0 18px 40px -18px rgba(20, 22, 30, 0.25);
+        --spring: linear(0, 0.062, 0.215, 0.411, 0.615, 0.799, 0.95, 1.059, 1.126, 1.158, 1.161, 1.145, 1.116, 1.083, 1.051, 1.023, 1.001, 0.986, 0.977, 0.974, 0.974, 0.978, 0.983, 0.988, 0.994, 0.998, 1.001, 1.003, 1.004, 1.004, 1);
+        --f-sans: system-ui, -apple-system, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #121318;
+          --card: #1d1f26;
+          --ink: #eceae4;
+          --ink-2: #a3a6af;
+          --line: #30333c;
+          --track-off: #3a3d47;
+          --on: #5b9bff;
+          --z: #8c8f98;
+          --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 18px 40px -18px rgba(0, 0, 0, 0.8);
+          color-scheme: dark;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 32px 16px;
+        background: var(--paper);
+        color: var(--ink);
+        font: 15px/1.6 var(--f-sans);
+      }
+
+      /* ---------- the card ---------- */
+      .agent {
+        width: min(340px, 100%);
+        padding: 36px 28px 30px;
+        border-radius: 28px;
+        background: var(--card);
+        box-shadow: var(--shadow);
+        text-align: center;
+      }
+      .agent h2 { margin: 18px 0 4px; font-size: 22px; line-height: 1.3; font-weight: 650; letter-spacing: -0.01em; }
+      .agent p { margin: 0 auto; max-width: 250px; color: var(--ink-2); font-size: 15px; }
+
+      /* ---------- the mascot ----------
+         One SVG path whose outline is recomputed every frame (JS): a rounded hexagon and a circle are
+         both sampled as a radius per angle, so any mix of the two is a valid shape. The Z's are HTML. */
+      .mascot { position: relative; width: 184px; height: 184px; margin: -6px auto 0; }
+      .mascot svg { display: block; width: 100%; height: 100%; overflow: visible; }
+      .zs { position: absolute; left: 72%; top: 8%; width: 70px; height: 80px; pointer-events: none; }
+      .zs b {
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        font: 800 17px/1 var(--f-sans);
+        color: var(--z);
+        opacity: 0;
+      }
+      /* Each Z rises up and to the right, grows, and fades; three of them, a third of a cycle apart. */
+      .sleeping .zs b { animation: z-drift 2.4s linear infinite; }
+      .sleeping .zs b:nth-child(2) { animation-delay: -0.8s; }
+      .sleeping .zs b:nth-child(3) { animation-delay: -1.6s; }
+      @keyframes z-drift {
+        0% { opacity: 0; transform: translate(0, 0) scale(0.7) rotate(-8deg); }
+        12% { opacity: 1; }
+        72% { opacity: 0.85; }
+        100% { opacity: 0; transform: translate(30px, -62px) scale(1.7) rotate(6deg); }
+      }
+
+      /* ---------- the switch ---------- */
+      .state {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 22px;
+        padding: 7px 8px 7px 16px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        font-weight: 600;
+        cursor: pointer;
+        user-select: none;
+      }
+      .switch {
+        position: relative;
+        width: 44px;
+        height: 26px;
+        padding: 0;
+        border: 0;
+        border-radius: 99px;
+        background: var(--track-off);
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+      .switch::after {
+        content: "";
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+        transition: translate 0.45s var(--spring), scale 0.2s;
+      }
+      .switch[aria-checked="true"] { background: var(--on); }
+      .switch[aria-checked="true"]::after { translate: 18px 0; }
+      .switch:active::after { scale: 1.12 0.9; }
+      .switch:focus-visible { outline: 2px solid var(--on); outline-offset: 3px; }
+      .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+
+      @media (prefers-reduced-motion: reduce) {
+        .sleeping .zs b { animation: none; opacity: 0.8; }
+        .sleeping .zs b:nth-child(1) { transform: translate(4px, -8px); }
+        .sleeping .zs b:nth-child(2) { transform: translate(14px, -26px) scale(1.2); }
+        .sleeping .zs b:nth-child(3) { transform: translate(24px, -46px) scale(1.4); }
+        .switch::after { transition: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <article class="agent" aria-labelledby="agent-name">
+      <div class="mascot" id="mascot">
+        <svg viewBox="-100 -100 200 200" aria-hidden="true">
+          <defs>
+            <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" id="skin-top" />
+              <stop offset="1" id="skin-bottom" />
+            </linearGradient>
+          </defs>
+          <g id="body">
+            <path id="shape" fill="url(#skin)" />
+            <g fill="#fff"><rect id="eye-l" /><rect id="eye-r" /></g>
+          </g>
+        </svg>
+        <div class="zs" aria-hidden="true"><b>z</b><b>z</b><b>z</b></div>
+      </div>
+      <h2 id="agent-name">Scout</h2>
+      <p>盯着机票价格，跌进你的差旅预算就帮你订好。</p>
+      <label class="state">
+        <span>Active</span>
+        <button class="switch" type="button" role="switch" aria-checked="true" aria-labelledby="agent-name" id="switch"></button>
+      </label>
+      <span class="sr" aria-live="polite" id="said"></span>
+    </article>
+
+    <script>
+      // ---- shape: radius per angle ----
+      // Rounded hexagon (flat top and bottom): the hexagon is "every face normal n_i: x·n_i ≤ a"; swapping
+      // the max over faces for a p-norm rounds the corners. Along a ray u that gives r = a / ‖(u·n_i)₊‖_p.
+      const A = 72; // apothem: half the hexagon's height, in viewBox units
+      const R = 55; // the sleeping circle is smaller
+      const P = 16; // larger = sharper corners; the reference has straight edges and modest corners
+      const NORMALS = [90, 30, -30, -90, -150, 150].map((d) => [Math.cos((d * Math.PI) / 180), Math.sin((d * Math.PI) / 180)]);
+      const N = 120;
+      const hexR = Array.from({ length: N }, (_, i) => {
+        const t = (i / N) * Math.PI * 2;
+        const u = [Math.cos(t), Math.sin(t)];
+        const s = NORMALS.reduce((acc, n) => acc + Math.max(0, u[0] * n[0] + u[1] * n[1]) ** P, 0);
+        return A / s ** (1 / P);
+      });
+      const outline = (k, scale) =>
+        hexR
+          .map((h, i) => {
+            const t = (i / N) * Math.PI * 2;
+            const r = (h + (R - h) * k) * scale;
+            return `${i ? "L" : "M"}${(r * Math.cos(t)).toFixed(2)} ${(r * Math.sin(t)).toFixed(2)}`;
+          })
+          .join("") + "Z";
+
+      // ---- colours: awake blue → sleeping grey, through a dusty blue halfway ----
+      const dark = matchMedia("(prefers-color-scheme: dark)");
+      const SKIN = () =>
+        dark.matches
+          ? { awake: [[88, 166, 255], [42, 114, 222]], asleep: [[122, 124, 130], [88, 90, 96]] }
+          : { awake: [[78, 162, 255], [40, 118, 219]], asleep: [[196, 196, 196], [154, 154, 154]] };
+      const mixRgb = (a, b, k) => `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * k)).join(",")})`;
+
+      // ---- eyes: tall pills awake, dots halfway, short dashes asleep ----
+      const lerp = (a, b, k) => a + (b - a) * k;
+      const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
+      const eyeAt = (k) => {
+        // two stages so the halfway frame reads as "dots", like the reference
+        const a = clamp(k * 2);
+        const b = clamp(k * 2 - 1);
+        return {
+          w: lerp(lerp(13, 8.5, a), 12, b),
+          h: lerp(lerp(30, 8, a), 2.8, b),
+          y: lerp(lerp(-14, 14, a), 7, b),
+          gap: lerp(lerp(20.5, 18, a), 17, b),
+          // asleep the two dashes sit a little crooked, which reads as drowsy
+          tilt: [5 * b, -7 * b],
+          drop: [0, -1.5 * b],
+        };
+      };
+
+      const $ = (id) => document.getElementById(id);
+      const shape = $("shape");
+      const eyes = [$("eye-l"), $("eye-r")];
+      const body = $("body");
+      const mascot = $("mascot");
+      const sw = $("switch");
+      const still = matchMedia("(prefers-reduced-motion: reduce)");
+
+      // state
+      let k = 0; // 0 awake … 1 asleep
+      let scale = 1;
+      let anim = null; // { from, to, start, ms }
+      const look = { x: 0, y: 0, tx: 0, ty: 0 };
+      let blink = 0;
+      let nextBlink = performance.now() + 2500;
+
+      const draw = () => {
+        shape.setAttribute("d", outline(k, scale));
+        const skin = SKIN();
+        $("skin-top").setAttribute("stop-color", mixRgb(skin.awake[0], skin.asleep[0], k));
+        $("skin-bottom").setAttribute("stop-color", mixRgb(skin.awake[1], skin.asleep[1], k));
+        const e = eyeAt(k);
+        const awake = 1 - k;
+        // Looking aside the pills slide over and lean towards that side (top first), as if the face turned.
+        const lx = look.x * 30 * awake;
+        const ly = look.y * 22 * awake;
+        const lean = -look.x * 28 * awake;
+        const h = e.h * (1 - blink * 0.85);
+        eyes.forEach((el, i) => {
+          const cx = (i ? e.gap : -e.gap) * (1 - Math.abs(look.x) * 0.12 * awake) + lx;
+          const cy = e.y * scale + ly + e.drop[i];
+          el.setAttribute("x", (cx - e.w / 2).toFixed(2));
+          el.setAttribute("y", (cy - h / 2).toFixed(2));
+          el.setAttribute("width", e.w.toFixed(2));
+          el.setAttribute("height", h.toFixed(2));
+          el.setAttribute("rx", (Math.min(e.w, h) / 2).toFixed(2));
+          el.setAttribute("transform", `rotate(${(lean + e.tilt[i]).toFixed(2)} ${cx.toFixed(2)} ${cy.toFixed(2)})`);
+        });
+        // the whole body drifts a little towards what it looks at
+        body.setAttribute("transform", `translate(${(look.x * 4 * awake).toFixed(2)} ${(look.y * 3 * awake).toFixed(2)})`);
+      };
+
+      const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
+      // A damped spring for the wake-up pop: overshoots to about 1.07 and settles.
+      const pop = (t) => 1 + 0.09 * Math.exp(-5 * t) * Math.sin(t * 9);
+
+      const frame = (now) => {
+        if (anim) {
+          const t = clamp((now - anim.start) / anim.ms);
+          if (anim.to === 1) {
+            k = easeInOut(t);
+            scale = 1;
+          } else {
+            // wake: the shape is back within the first 45%, the rest is the springy settle
+            k = 1 - easeInOut(clamp(t / 0.45));
+            scale = pop(t);
+          }
+          if (t >= 1) {
+            k = anim.to;
+            scale = 1;
+            anim = null;
+          }
+        }
+        // eyes ease towards where the pointer is; blink now and then while awake
+        look.x += (look.tx - look.x) * 0.16;
+        look.y += (look.ty - look.y) * 0.16;
+        if (now > nextBlink && k === 0 && !still.matches) {
+          const b = (now - nextBlink) / 160;
+          blink = b < 1 ? Math.sin(b * Math.PI) : 0;
+          if (b >= 1) nextBlink = now + 2600 + Math.random() * 2600;
+        }
+        draw();
+        requestAnimationFrame(frame);
+      };
+
+      // ---- pointer: where to look ----
+      addEventListener(
+        "pointermove",
+        (e) => {
+          if (still.matches) return;
+          const r = mascot.getBoundingClientRect();
+          const dx = e.clientX - (r.left + r.width / 2);
+          const dy = e.clientY - (r.top + r.height / 2);
+          // full deflection about 260px away; nearer looks less far
+          const d = Math.hypot(dx, dy) || 1;
+          const m = Math.min(1, d / 260);
+          look.tx = (dx / d) * m;
+          look.ty = (dy / d) * m;
+        },
+        { passive: true },
+      );
+      document.documentElement.addEventListener("pointerleave", () => {
+        look.tx = 0;
+        look.ty = 0;
+      });
+
+      // ---- the switch ----
+      const set = (on) => {
+        sw.setAttribute("aria-checked", String(on));
+        mascot.classList.toggle("sleeping", !on);
+        $("said").textContent = on ? "Scout 已启用" : "Scout 已停用，正在睡觉";
+        if (still.matches) {
+          k = on ? 0 : 1;
+          anim = null;
+          return;
+        }
+        anim = { from: k, to: on ? 0 : 1, start: performance.now(), ms: on ? 420 : 160 };
+      };
+      sw.addEventListener("click", () => set(sw.getAttribute("aria-checked") !== "true"));
+      // The <label> around it makes the whole pill the hit area: clicking "Active" clicks the switch.
+
+      draw();
+      requestAnimationFrame(frame);
+    </script>
+  </body>
+</html>
