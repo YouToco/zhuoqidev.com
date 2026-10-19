@@ -165,8 +165,8 @@
 
     <script>
       // A select with a pixel menu. Each option has a colour ("vibe"). Opening pours the menu out of the trigger as a curtain
-      // of pixels in the current colour that fades into the card; closing crumbles it bottom-up into a
-      // cloud of the new colour that is pulled back up behind the trigger while the name re-forms.
+      // of pixels in the current colour that fades into the card; closing rewinds that pour in the new
+      // colour, drawing the curtain back up into the trigger while the name re-forms.
       // Three ways to open / close: genie (default), tide and pixel (below). Exposes window.pixelPick = { mount, swapText, rollText, vibe }.
       (() => {
         // id → [colour on light paper, colour on dark paper]
@@ -273,8 +273,9 @@
         // Opening: the menu pours out of the trigger. A front with a sagging, ragged edge runs down;
         // right behind it pixels are the accent colour, further back they dither into the card colour,
         // and then the real menu shows through, top row first. The pour starts wider than the menu and
-        // narrows onto it.
-        const pourOpen = (root, btn, pop, menu, accent, token) => {
+        // narrows onto it. Closing (dir "out") plays the very same pour backwards: the menu dithers back
+        // into pixels from the bottom up and the curtain is drawn up into the trigger.
+        const pour = (root, btn, pop, menu, accent, dir, token) => {
           const R = root.getBoundingClientRect();
           const B = btn.getBoundingClientRect();
           const M = menu.getBoundingClientRect();
@@ -307,8 +308,11 @@
           const cx = left + width / 2;
           mask.apply();
           return play(
-            720,
-            (t) => {
+            dir === "in" ? 720 : 560,
+            (time) => {
+              // Backwards it starts at 85%: the pour's last stretch only settles bands below the menu, and
+              // played first it would read as a pause after the click.
+              const t = dir === "in" ? time : (1 - time) * 0.85;
               const front = (t * 0.7 + easeOut(t) * 0.3) * travel;
               const half = width / 2 - extra * ease(clamp((t - 0.2) / 0.55));
               ctx.clearRect(0, 0, width, height);
@@ -355,100 +359,14 @@
             token,
           ).then((done) => {
             ctx.canvas.remove();
-            mask.clear();
-            return done;
-          });
-        };
-
-        // Closing: the menu turns into pixels of the new colour from the bottom up, the cloud swells a
-        // little sideways, then every pixel is pulled up behind the trigger (which stacks above the
-        // cloud) and thins out on the way.
-        const collapseClose = (root, btn, pop, menu, accent, token) => {
-          const B = btn.getBoundingClientRect();
-          const M = menu.getBoundingClientRect();
-          const mask = masker(pop);
-          const card = rgb(getComputedStyle(menu).backgroundColor);
-          const acc = rgb(accent);
-          const pad = Math.round(M.width * 0.25);
-          const left = M.left - pad;
-          const top = B.top - 40;
-          const width = M.width + pad * 2;
-          const height = M.bottom + 30 - top;
-          const ctx = layer({ left, top, width, height }, root);
-          const cols = Math.ceil(M.width / CELL);
-          const rows = Math.ceil(M.height / CELL);
-          const cx = M.left + M.width / 2;
-          const inCard = onCard(M);
-          const ps = [];
-          for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-              const x = M.left + c * CELL;
-              const y = M.top + r * CELL;
-              if (!inCard(x + CELL / 2, y + CELL / 2)) continue;
-              const up = 1 - r / rows;
-              ps.push({
-                c,
-                r,
-                x,
-                y,
-                tc: up * 0.24 + Math.random() * 0.06,
-                ts: 0.28 + up * 0.1 + Math.random() * 0.1,
-                dur: 0.36 + Math.random() * 0.1,
-                sx: (x - cx) * (0.08 + Math.random() * 0.14) + (Math.random() - 0.5) * 6,
-                sy: (Math.random() - 0.5) * 8,
-                // The cloud keeps most of its width on the way up and converges on the trigger.
-                tx: B.left + B.width / 2 + (x - cx) * (B.width / M.width) * 0.8 + (Math.random() - 0.5) * 10,
-                // Passes behind the trigger and fades out just above it.
-                ty: B.top + B.height * (0.5 - Math.random() * 1.4),
-                shade: Math.random(),
-                drop: Math.random(),
-              });
-            }
-          }
-          return play(
-            480,
-            (t) => {
-              ctx.clearRect(0, 0, width, height);
-              mask.ctx.clearRect(0, 0, mask.box.width, mask.box.height);
-              for (const p of ps) {
-                if (t < p.tc) {
-                  mask.ctx.fillRect(p.x - mask.box.left, p.y - mask.box.top, CELL, CELL);
-                  continue;
-                }
-                let x;
-                let y;
-                let alpha = 1;
-                if (t < p.ts) {
-                  const e = ease((t - p.tc) / (p.ts - p.tc));
-                  x = p.x + p.sx * e;
-                  y = p.y + p.sy * e;
-                } else {
-                  const q = clamp((t - p.ts) / p.dur);
-                  if (q >= 1 || p.drop < q * 0.35) continue;
-                  const e = easeIn(q) * 0.75 + q * 0.25;
-                  const x0 = p.x + p.sx;
-                  const y0 = p.y + p.sy;
-                  x = x0 + (p.tx - x0) * e;
-                  y = y0 + (p.ty - y0) * e;
-                  alpha = q < 0.65 ? 1 : 1 - (q - 0.65) / 0.35;
-                }
-                const warm = clamp((t - p.tc) / 0.08);
-                ctx.globalAlpha = alpha;
-                ctx.fillStyle = mix(card, acc, warm * (0.75 + p.shade * 0.25));
-                ctx.fillRect(x - left, y - top, CELL, CELL);
-              }
-              mask.apply();
-            },
-            token,
-          ).then((done) => {
-            ctx.canvas.remove();
-            mask.clear();
+            // Fully drawn back, the mask is empty: keep it until the caller hides the menu (restart() clears it).
+            if (dir === "in" || !done) mask.clear();
             return done;
           });
         };
 
         // Name change: the old text crumbles into specks of ink and accent, the new one assembles in
-        // dithered steps with a little pixel dust trailing under it. `delay` lets it meet the cloud.
+        // dithered steps with a little pixel dust trailing under it. `delay` lets it meet the pixels coming back.
         const swapText = async (el, text, color, { delay = 0, token = {} } = {}) => {
           if (still()) {
             el.textContent = text;
@@ -721,7 +639,7 @@
             if (still()) return;
             if (fx === "genie") genie(root, btn, pop, "in", tk);
             else if (fx === "tide") tide(root, pop, menu, vibe(chosen), "in", tk);
-            else pourOpen(root, btn, pop, menu, vibe(chosen), tk);
+            else pour(root, btn, pop, menu, vibe(chosen), "in", tk);
           };
           const hideMenu = (refocus) => {
             if (!open) return null;
@@ -738,10 +656,10 @@
                 ? genie(root, btn, pop, "out", tk)
                 : fx === "tide"
                   ? tide(root, pop, menu, vibe(chosen), "out", tk)
-                  : collapseClose(root, btn, pop, menu, vibe(chosen), tk);
+                  : pour(root, btn, pop, menu, vibe(chosen), "out", tk);
             run.then((done) => {
               if (!open) pop.hidden = true;
-              if (done && fx !== "pixel") gulp(btn);
+              if (done) gulp(btn);
             });
             return tk;
           };
@@ -752,7 +670,7 @@
             if (!changed) return;
             options().forEach((o) => o.setAttribute("aria-selected", String(o.dataset.id === id)));
             // The old name leaves as the menu goes and the new one arrives with it.
-            if (fx === "pixel") swapText(valueEl, id, vibe(id), { delay: 170, token: tk });
+            if (fx === "pixel") swapText(valueEl, id, vibe(id), { delay: 330, token: tk });
             else rollText(valueEl, id, vibe(id), { delay: fx === "genie" ? 330 : 380, token: tk });
             onChange(id);
           };
@@ -834,7 +752,7 @@
       const HINTS = {
         genie: "神灯：像 Mac 最小化窗口，菜单两侧弯成漏斗、一条条被吸进名字里，名字随即换新；打开时再从名字里「倒放」出来。",
         tide: "退潮：一道带浪花的波浪线从下往上把菜单冲走，浪尖是选中项的颜色；打开时浪从上往下退，露出菜单。",
-        pixel: "像素：菜单碎成新颜色的像素被吸回按钮后面，名字也碎一下再拼起来（复现 recent.design 的录屏）。",
+        pixel: "像素：打开时像素从按钮里往下「倒」出来；收起时整段倒放，菜单退回成新颜色的像素、被收回按钮里，名字碎一下再拼好（复现 recent.design 的录屏）。",
       };
       const hint = document.getElementById("fx-hint");
       const radios = [...document.querySelectorAll("[data-fx]")];

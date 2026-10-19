@@ -34,7 +34,8 @@ I saw an 8-second recording on recent.design (the author posted only the video, 
 
 ### Pixel (the original recreation)
 
-- **Opening and closing are different**: opening, pixels pour down from the trigger behind a deep V-shaped front; closing, the menu turns into pixels of the new colour from the bottom up, the cloud passes behind the trigger, and the name crumbles and re-forms.
+- **Closing = opening, rewound**: opening, pixels pour down from the trigger behind a deep V-shaped front, fade into the card colour and the real menu shows through from the top; closing plays the same animation backwards in the new option's colour, so the menu dithers back into pixels from the bottom up and is drawn back into the trigger like a curtain, while the name crumbles and re-forms.
+- **Trim the rewind**: the last stretch of the pour only settles bands below the menu; played first it would be a ~150ms pause after the click, so the rewind starts at 85%.
 - **Real DOM + pixel mask**: the menu is a real `<ul role="listbox">`; while it animates, each frame paints which 5px cells show on a small canvas and applies it as `mask-image: url(dataURL)`. Cells flip in 4×4 Bayer order plus noise, so partial areas read as dither.
 
 All three play over a real DOM menu: keyboard, screen readers and clicks work as usual; the animation is just a layer on top.
