@@ -106,25 +106,39 @@
         outline: none;
         cursor: pointer;
       }
+      /* Every curve below is sampled frame by frame (60 fps) from the reference recording and written as
+         linear(): none of these moves at a constant speed. */
+      :root {
+        /* the dot's trip: slow off the mark, fast in the middle, a long settle */
+        --travel: linear(0, 0.065 9%, 0.13 18%, 0.3 27%, 0.48 36%, 0.63 45%, 0.75 55%, 0.83 64%, 0.89 73%, 0.94 82%, 0.97 91%, 1);
+        /* the text pushed aside: 80% of the way in a tenth of a second, then it coasts */
+        --shove: linear(0, 0.18 11%, 0.45 22%, 0.64 33%, 0.73 44%, 0.82 56%, 0.91 67%, 0.95 83%, 1);
+        /* the colour sweep: a rush, a stall around three quarters, then a slow finish */
+        --sweep: linear(0, 0.07 8%, 0.21 17%, 0.33 25%, 0.39 33%, 0.53 42%, 0.67 50%, 0.75 58%, 0.77 67%, 0.85 75%, 0.91 83%, 0.97 92%, 1);
+        --push: 22px; /* how far the text is shoved */
+        --nudge: 7px; /* how far the dot itself moves right when it hits */
+      }
       .item .t {
         /* Text is painted with a two-colour gradient clipped to the glyphs: its right half is the plain
            colour, its left half the group's colour. Sliding the background from 100% to 0% sweeps the
            colour across the word from left to right. */
-        background: linear-gradient(90deg, var(--c) 50%, currentColor 50%) 100% 0 / 200% 100% no-repeat;
+        background: linear-gradient(90deg, var(--c) 49%, currentColor 51%) 100% 0 / 200% 100% no-repeat;
         -webkit-background-clip: text;
         background-clip: text;
         -webkit-text-fill-color: transparent;
-        transition: translate 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background-position 0s;
+        /* leaving: back to grey at once, slide home quickly */
+        transition: translate 0.14s cubic-bezier(0.2, 0.8, 0.3, 1), background-position 0s;
         white-space: nowrap;
       }
       .item:hover,
       .item:focus-visible { color: var(--ink); }
       .item:focus-visible .t { text-decoration: underline 1px var(--ink-3); text-underline-offset: 4px; }
-      /* Active: the text steps aside for the dot, then the colour sweeps in once the dot has landed. */
-      .item[aria-current="true"] .t {
-        translate: 15px 0;
+      /* .lit is added by the script the moment the dot bumps into the item (not on click): the text is
+         shoved right and the colour sweeps across it. aria-current is set on click, for meaning only. */
+      .item.lit .t {
+        translate: var(--push) 0;
         background-position: 0 0;
-        transition: translate 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s, background-position 0.26s cubic-bezier(0.45, 0, 0.2, 1) 0.14s;
+        transition: translate 0.15s var(--shove), background-position 0.2s var(--sweep) 16ms;
       }
       .badge {
         padding: 1px 7px;
@@ -133,26 +147,33 @@
         color: var(--new-ink);
         font-size: 11px;
         font-weight: 600;
-        transition: translate 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s;
+        transition: translate 0.14s cubic-bezier(0.2, 0.8, 0.3, 1);
       }
-      .item[aria-current="true"] .badge { translate: 15px 0; }
+      .item.lit .badge { translate: var(--push) 0; transition: translate 0.15s var(--shove); }
 
       /* ---------- the one dot ----------
-         A single element for the whole list: it travels from the old item to the new one (even across
-         groups), changing colour on the way, so the eye can follow what moved. */
+         A single element for the whole list. The outer box carries it up and down (time depends on the
+         distance), the inner one sideways: on its way it drifts back to rest against the text's edge,
+         and on arrival it nudges right, which is what shoves the text. */
       .dot {
         position: absolute;
-        left: 30px;
+        left: 22px;
         top: 0;
         width: 6px;
         height: 6px;
         margin-top: -3px;
+        pointer-events: none;
+        transition: translate var(--d, 0.19s) var(--travel);
+      }
+      .dot i {
+        display: block;
+        width: 100%;
+        height: 100%;
         border-radius: 50%;
         background: var(--dot, transparent);
-        pointer-events: none;
-        transition: translate 0.2s cubic-bezier(0.3, 0.9, 0.25, 1), background-color 0.2s, scale 0.3s var(--spring);
+        transition: translate var(--dx, 0.19s) var(--travel), background-color 0.1s;
       }
-      .dot.moving { scale: 0.7 1.35; }
+      .dot.hit i { translate: var(--nudge) 0; transition: translate 0.08s cubic-bezier(0.2, 0.8, 0.3, 1), background-color 0.1s; }
 
       /* ---------- the page beside it ---------- */
       .page { padding: 34px 32px; overflow: hidden; }
@@ -170,7 +191,7 @@
         .page h1 { font-size: 21px; }
       }
       @media (prefers-reduced-motion: reduce) {
-        .dot, .item .t, .item[aria-current="true"] .t, .badge, .page .swap { transition: none !important; }
+        .dot, .dot i, .item .t, .item.lit .t, .badge, .item.lit .badge, .page .swap { transition: none !important; }
       }
     </style>
   </head>
@@ -179,7 +200,7 @@
       <div class="art" aria-hidden="true"></div>
       <nav class="side" aria-label="设计规范目录">
         <div class="groups" id="groups">
-          <span class="dot" id="dot" aria-hidden="true"></span>
+          <span class="dot" id="dot" aria-hidden="true"><i></i></span>
         </div>
       </nav>
       <main class="page" id="page" aria-live="polite">
@@ -251,36 +272,49 @@
       }
 
       const swap = document.getElementById("swap");
+      const reduced = matchMedia("(prefers-reduced-motion: reduce)");
       let current = null;
-      let moveTimer = 0;
+      let timers = [];
+      const later = (ms, fn) => timers.push(setTimeout(fn, ms));
       const activate = (a, { instant = false } = {}) => {
         if (a === current) return;
-        if (current) current.removeAttribute("aria-current");
+        timers.forEach(clearTimeout);
+        timers = [];
+        // The old item lets go at once: grey again, sliding home.
+        if (current) {
+          current.removeAttribute("aria-current");
+          current.classList.remove("lit");
+        }
+        const from = current;
         current = a;
         a.setAttribute("aria-current", "true");
         // The dot lives in .groups, the items' offsetParent: offsetTop is layout-relative, so scrolling the
         // list never skews it, and nothing is read until the reader clicks (no layout work on load).
         const y = a.offsetTop + a.offsetHeight / 2;
-        if (instant) {
-          dot.style.transition = "none";
-          requestAnimationFrame(() => (dot.style.transition = ""));
-        } else {
-          // stretched while it travels, round again when it lands
-          dot.classList.add("moving");
-          clearTimeout(moveTimer);
-          moveTimer = setTimeout(() => dot.classList.remove("moving"), 120);
-        }
+        const colour = `var(--${a.dataset.group})`;
+        const quick = instant || reduced.matches;
+        // Travel time grows with distance, as in the reference: one row ≈ 0.16 s, five rows ≈ 0.2 s.
+        const dist = from ? Math.abs(y - (from.offsetTop + from.offsetHeight / 2)) : 0;
+        const d = quick ? 0 : Math.min(340, 140 + dist * 0.5);
+        dot.style.setProperty("--d", `${d}ms`);
+        dot.style.setProperty("--dx", `${quick ? 0 : d}ms`);
+        dot.classList.remove("hit"); // drift back to rest against the text edge while travelling
         dot.style.translate = `0 ${y}px`;
-        dot.style.setProperty("--dot", `var(--${a.dataset.group})`);
+        later(quick ? 0 : d * 0.45, () => dot.style.setProperty("--dot", colour));
+        // Landed: the dot nudges right and, a beat later, the text is shoved aside and coloured in.
+        // Landed: the dot nudges right and, a tenth of a second later, the text gives way: shoved aside
+        // and coloured in (the reference waits about that long between the bump and the shove).
+        later(quick ? 0 : d, () => dot.classList.add("hit"));
+        later(quick ? 0 : d + 100, () => a.classList.add("lit"));
         // the page on the right
         swap.classList.add("out");
-        setTimeout(() => {
+        later(quick ? 0 : 140, () => {
           document.getElementById("crumb").textContent = a.dataset.groupTitle;
-          document.getElementById("crumb").style.setProperty("--c", `var(--${a.dataset.group})`);
+          document.getElementById("crumb").style.setProperty("--c", colour);
           document.getElementById("title").textContent = a.querySelector(".t").textContent;
           document.getElementById("desc").textContent = a.dataset.note;
           swap.classList.remove("out");
-        }, instant ? 0 : 140);
+        });
       };
       groups.addEventListener("click", (e) => {
         const a = e.target.closest(".item");
