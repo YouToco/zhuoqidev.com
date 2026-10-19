@@ -31,6 +31,7 @@ const CLOSE_UP = new Set([
   "magnetic-button",
   "pixel-dissolve-select",
   "agent-sleep-toggle",
+  "status-icon-morph",
 ]);
 
 /** @type {Record<string, (page: import("playwright").Page) => Promise<void>>} */
@@ -59,6 +60,12 @@ const POSES = {
   "sidebar-active-dot": async (page) => {
     await page.click("text=嵌套圆角");
     await page.waitForTimeout(900);
+  },
+  // Mid-morph: the ring half drawn, the dots on their way round.
+  "status-icon-morph": async (page) => {
+    await page.goto(page.url() + "?t=1330");
+    await page.addStyleTag({ content: ".bar { display: none }" });
+    await page.waitForTimeout(300);
   },
   // Asleep, z's in the air.
   "agent-sleep-toggle": async (page) => {

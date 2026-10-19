@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>三合一状态图标变形</title>
+    <style>
+      :root {
+        --paper: #e4e4e4;
+        --ink: #000;
+        --ink-2: #5f5f63;
+        --chip: rgba(0, 0, 0, 0.06);
+        --chip-on: rgba(0, 0, 0, 0.12);
+        --f-sans: system-ui, -apple-system, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #161618;
+          --ink: #f4f4f4;
+          --ink-2: #a0a0a6;
+          --chip: rgba(255, 255, 255, 0.08);
+          --chip-on: rgba(255, 255, 255, 0.16);
+          color-scheme: dark;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        grid-template-rows: 1fr auto;
+        background: var(--paper);
+        color: var(--ink);
+        font: 14px/1.5 var(--f-sans);
+      }
+
+      /* ---------- the stage ----------
+         One SVG in the reference video's own pixels, origin at the centre of the final circle. */
+      .stage { display: grid; place-items: center; padding: 24px 16px 8px; cursor: pointer; }
+      .stage svg { display: block; width: min(720px, 100%); height: auto; overflow: visible; }
+      .stage svg * { fill: var(--ink); }
+      .stage #line { fill: none; stroke: var(--ink); stroke-width: 34; stroke-linecap: round; stroke-linejoin: round; }
+      .stage .arc { fill: none; stroke: var(--ink); stroke-linecap: round; }
+      .stage #wedge { stroke: var(--ink); stroke-width: 30; stroke-linejoin: round; }
+
+      /* ---------- controls ---------- */
+      .bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 10px; padding: 0 16px 28px; }
+      .bar button, .bar label {
+        font: inherit;
+        color: var(--ink);
+        background: var(--chip);
+        border: 0;
+        border-radius: 999px;
+        padding: 7px 14px;
+        cursor: pointer;
+      }
+      .bar button:hover, .bar label:hover { background: var(--chip-on); }
+      .bar button:focus-visible, .bar input:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+      .bar label { display: inline-flex; align-items: center; gap: 6px; user-select: none; }
+      .bar label input { margin: 0; accent-color: var(--ink); }
+      .scrub { display: flex; align-items: center; gap: 10px; width: min(420px, 100%); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+      .scrub input { flex: 1; min-width: 0; accent-color: var(--ink); }
+      .scrub output { min-width: 9.5em; font-size: 12px; text-align: right; }
+    </style>
+  </head>
+  <body>
+    <div class="stage" id="stage" title="点一下：合成 / 拆开">
+      <svg viewBox="-640 -330 1300 760" role="img" aria-labelledby="cap">
+        <title id="cap">信号、Wi-Fi、电池三个图标合成一个带圈的 Wi-Fi 图标</title>
+        <!-- Wi-Fi: two stroked arcs and a rounded wedge; it only slides and shrinks. -->
+        <g id="wifi">
+          <path class="arc" stroke-width="35" d="M -143.4 -31 A 158 158 0 0 1 76 -31" />
+          <path class="arc" stroke-width="36" d="M -96 13.5 A 100 100 0 0 1 28.8 13.5" />
+          <path id="wedge" d="M -55.3 60.4 L -33.7 82 L -12.1 60.4 A 47.9 47.9 0 0 0 -55.3 60.4 Z" />
+        </g>
+        <!-- Signal: four pills that sink into dots. -->
+        <rect class="sig" width="46.4" rx="23.2" />
+        <rect class="sig" width="46.4" rx="23.2" />
+        <rect class="sig" width="46.4" rx="23.2" />
+        <rect class="sig" width="46.4" rx="23.2" />
+        <!-- Battery: the nub slides in first, then the body narrows into the line. -->
+        <path id="nub" />
+        <path id="body" />
+        <path id="line" />
+      </svg>
+    </div>
+    <div class="bar">
+      <button type="button" id="play">拆开</button>
+      <label><input type="checkbox" id="slow" /> 慢放 ¼×</label>
+      <div class="scrub">
+        <input type="range" id="scrub" min="0" step="1" aria-label="时间轴" />
+        <output id="time" for="scrub"></output>
+      </div>
+    </div>
+    <script>
+      // Every track below was measured from the reference recording, frame by frame (57.14 fps file of a
+      // 30 fps capture, so a new position every ~33 ms): t is ms since the first thing moves, coordinates are
+      // the video's pixels with the origin at the centre of the final circle. Values in between are linear.
+      //   BODY [t, left, right, top, bottom]      battery body (a rounded rectangle, corner = min(66, w/2))
+      //   NUB  [t, right]                         the battery's little cap, hidden once inside the body
+      //   BARS [t, top1..top4]                    signal bars (bottom fixed at 100.2); each sinks ~66 ms after
+      //                                           the one to its right, never below a 46.4 px circle
+      //   WIFI [t, cx, cy, scale]                 the Wi-Fi's centre and size (it only translates and scales)
+      //   LINE [t, tail, head]                    where the battery's line is, as arc length along PATH
+      //   DOTS [t, x1, y1 … x4, y4]               the four dots once they leave the bars
+      //   RING [t, r, dx, dy]                     the circle is a few px wider (and its centre a little low) while
+      //                                           the line wraps round
+      //   LOOP                                    the measured path: the drop, the U-turn, the spiral in;
+      //                                           after it the path is the final circle (r 216.5), anticlockwise
+    const BODY = [[-33,204.1,557.1,-91.6,92.4],[0,204.1,553.5,-91.6,92.4],[33,204.1,541.8,-91.6,92.4],[67,204.1,522.5,-91.6,92.4],[100,203.9,494.5,-91.6,92],[133,203.7,459.8,-91.6,91.9],[167,203.7,422.7,-91.5,91.6],[200,203.6,386.3,-91.5,91.5],[233,203.5,352.7,-91.4,91.4],[267,203.5,323.7,-91.1,91.3],[300,203.3,299.6,-90.9,91.2],[333,203,279.7,-91.2,91.3],[367,202.7,264,-91,91],[400,202.4,252,-90.8,91.2],[433,202.3,243.3,-90.6,91.2],[467,201.6,237.3,-90.4,91.2],[500,201.4,234.2,-89.8,91.1],[533,201.3,233.2,-89.6,91.2],[567,200.6,233.2,-89.4,91.1],[600,200.3,233.2,-89.1,91]];
+    const NUB = [[-33,589.8],[0,582.7],[33,559.7],[67,494]];
+    const BARS = [[67,13.9,-15.2,-48.8,-80.7],[100,13.9,-15.2,-48.8,-73.6],[133,13.9,-15.2,-48.8,-62.3],[167,13.9,-15.2,-48.8,-46.6],[200,13.9,-15.2,-46.6,-28.9],[233,13.9,-15.2,-39.8,-11.2],[267,13.9,-15.2,-27.6,4.8],[300,13.9,-15.2,-12.1,18.6],[333,13.9,-13,4.1,29.8],[367,13.9,-5.3,18.3,38.5],[400,13.9,7.7,29.7,45.3],[433,13.9,21.7,38.5,49.7],[467,15.9,33,45,52.5],[500,22.9,41.5,49.5,53.7],[533,33.4,47.1,52.2,53.7],[567,41.6,50.6,53.6,53.7],[600,47.3,52.8,53.8,53.7],[633,50.5,53.7,53.8,53.7],[667,52.5,53.8,53.8,53.7],[700,53.7,53.8,53.8,53.7],[767,54.1,53.8,53.8,53.7]];
+    const WIFI = [[567,-33.7,-19.5,1],[633,-33.7,-19.5,1],[667,-33,-19.5,0.9992],[700,-30.2,-19.2,0.9933],[733,-26.8,-18.6,0.9794],[767,-23.5,-17.7,0.9566],[800,-20.2,-16.7,0.9297],[833,-17.2,-15.7,0.9054],[867,-14.5,-15,0.8851],[900,-11.9,-14.4,0.8691],[933,-9.6,-13.8,0.857],[967,-7.6,-13.4,0.847],[1000,-5.9,-13.1,0.8392],[1033,-4.4,-12.8,0.833],[1067,-3.2,-12.6,0.8284],[1100,-2.2,-12.5,0.8249],[1133,-1.4,-12.4,0.8223],[1167,-0.9,-12.3,0.8205],[1200,-0.5,-12.2,0.8197],[1300,-0.5,-12.2,0.8194]];
+    const LINE = [[600,5.9,151.9],[633,23.6,167.8],[667,47.9,192],[700,113.5,257.9],[733,210,348.9],[767,330.2,466.5],[800,443.4,587.8],[833,562.4,706.7],[867,677,820.6],[900,784.7,928.6],[933,885.9,1030.2],[967,980.6,1124.4],[1000,1068.9,1211.3],[1033,1151,1292.2],[1067,1227,1368.8],[1100,1298,1440.2],[1133,1364.9,1507.8],[1167,1428.8,1584.1],[1200,1487.4,1686.9],[1233,1539.5,1837.2],[1267,1589,2027.3],[1300,1635.9,2193.2],[1333,1678.2,2321.3],[1367,1719,2424.1],[1400,1756.4,2508.7],[1433,1791.6,2580.5],[1467,1823.7,2642.1],[1500,1853.9,2695],[1533,1879.6,2739.2],[1567,1901.9,2777],[1600,1920.4,2807.2],[1633,1936.3,2832.2],[1667,1949.5,2852.6],[1700,1960.8,2868.1],[1733,1970.7,2880.5],[1767,1977.5,2889.6],[1800,1983.5,2895.6],[1833,1988.8,2900.9],[1867,1993,2904.7],[1900,1995.6,2907.7],[1933,1997.5,2910],[1967,1999.4,2911.5],[2067,2001.6,2913.8],[2067,2001.6,2914.5],[2300,2002,2914.5]];
+    const DOTS = [[933,-524.1,77,-447.8,77,-371.6,77,-295.3,77],[1033,-524.1,77,-447.8,77,-371.6,77,-295.3,77],[1067,-524.1,77,-447.8,77,-371.6,77,-295.3,79.1],[1100,-524.1,77,-447.8,77,-371.6,77,-293.3,115],[1133,-523.6,77.2,-447.3,77.2,-371,79.7,-287.1,150],[1167,-522.7,77.4,-446.5,77.4,-368.3,118.3,-276.6,183.6],[1200,-521.9,77.7,-445.7,80.2,-361.2,155.8,-261.6,215.1],[1233,-520.9,78.1,-442.5,120.4,-349.5,191.8,-241.7,243.6],[1267,-519.8,78.6,-435.4,159.4,-332.7,225.4,-217.6,268.3],[1300,-517.8,103.3,-423.6,197,-311.4,256,-190,288.4],[1333,-511.5,146.5,-406.5,232.3,-285.7,282.7,-159.6,303.4],[1367,-499.7,187.5,-384.4,264,-256.2,304.6,-127.8,313.4],[1400,-481.6,226.2,-357.3,291.1,-224.2,321.3,-95.3,318.8],[1433,-456.8,260.2,-326,312.6,-190.3,333.2,-63,319.2],[1467,-425.7,288.2,-291.7,327.6,-156,339.8,-31.8,315.2],[1500,-389.8,308.4,-256,336.5,-121.8,341.2,-2.3,307.2],[1533,-351,320.1,-220,338.6,-88.6,337.5,24.4,295.2],[1567,-311.6,324.2,-185.3,335.1,-57.7,329,48.1,280.3],[1600,-273.2,321.1,-152.5,326.4,-29.9,315.4,67.8,262.7],[1633,-237,311.9,-123.3,313,-6.6,298,83.1,243.5],[1667,-204.1,297.4,-97.7,296,11.1,277.9,94,224.6],[1700,-175.7,279,-76.8,276.7,23.2,256.8,101.3,207.3],[1733,-152.4,257.6,-60.8,256.6,30.2,237.3,105.7,194.1],[1767,-134.5,235.3,-49.4,237.6,33.9,222,108.1,186.6],[1800,-122.2,214,-42.1,222.6,36,212.9,110.1,180.8],[1833,-115.7,193,-39,209.5,36.6,203.1,110.7,172],[1867,-113.1,183.1,-37.6,203.4,36.7,198,110.5,167.5],[1900,-111.7,177.2,-36.4,198.8,36.7,194,110.4,164.7],[1933,-110.5,172.7,-35.7,195.1,36.5,191.1,110.4,165.1],[1967,-109.7,168.9,-35.2,192.6,36.6,191.7,110.5,168.3],[2000,-109.1,166.4,-35.2,193.2,36.6,194.9,110.5,171.9],[2033,-109.3,167,-35.8,196.4,36.7,198.6,110.5,175.5],[2067,-109.8,170.2,-36.3,199.9,36.7,202.4,110.4,179.1],[2100,-110.4,173.8,-37.1,203.5,36.7,206.1,110.4,182.7],[2133,-111.2,177.1,-37.7,207,36.7,209.3,110.4,185.3],[2167,-111.9,180.3,-38.3,209.8,36.7,212.1,110.5,187.6],[2200,-112.3,183.1,-38.9,212.4,36.7,214.4,110.4,189.3],[2233,-113,185.7,-39.5,214.6,36.7,216.2,110.4,190.8],[2267,-113.5,187.8,-39.9,216.4,36.6,217.4,110.3,191.2],[2300,-113.8,189.4,-40,217.3,36.7,218,110.3,191.2]];
+    const RING = [[967,217.2,0,0],[1000,218.1,0,0],[1033,219.9,0,0],[1067,219.6,0,0],[1100,218.7,0,0],[1133,219.6,0,0],[1167,221.7,0,0],[1200,222,0,0],[1233,219.7,0,0],[1267,218.2,0,0],[1300,215.5,0.3,4.8],[1333,216.4,0.8,2.5],[1367,216.3,1.4,1.7],[1400,216.3,1.4,1.1],[1433,216.7,0.8,0.8],[1467,216.9,0.5,0.7],[1567,216.7,0.4,0.4],[1600,216.6,0.5,0.3],[1667,216.6,0.3,0.2]];
+    const LOOP = [[216.8,-78.7],[216.8,-70.7],[216.8,-62.7],[216.8,-54.7],[216.8,-46.7],[216.8,-38.7],[216.8,-30.7],[216.8,-22.7],[216.8,-14.7],[216.8,-6.7],[216.8,1.3],[216.8,9.3],[216.8,17.3],[217,25.3],[217.1,33.3],[217.3,41.3],[217.6,49.3],[217.8,57.3],[218.1,65.3],[218.5,73.3],[218.8,81.3],[219.1,89.3],[219.5,97.3],[219.9,105.3],[220.2,113.3],[220.6,121.3],[220.9,129.3],[221.2,137.3],[221.5,145.3],[221.8,153.3],[222.1,161.3],[222.3,169.3],[222.5,177.3],[222.9,191.3],[223.2,195.3],[223.8,201.3],[224.7,209.3],[226,217.3],[227.6,225.3],[229.5,233.3],[232.2,241.7],[235.4,248.9],[239.2,254.8],[243.8,258.5],[249.2,261],[255.5,262.8],[262.6,264.1],[270.2,264.6],[278,264.2],[285.7,262.9],[293.2,260.7],[300.4,257.6],[307.2,253.6],[313.6,249],[319.5,243.9],[325,238.3],[330,232.5],[334.5,226.3],[338.6,219.8],[342.3,213],[345.7,206],[348.8,198.8],[351.6,191.4],[353.9,183.9],[355.9,176.1],[357.5,168.3],[358.9,160.5],[360,152.6],[360.9,144.6],[361.7,136.7],[362.3,128.8],[362.8,121],[362.9,113.2],[362.7,105.4],[362.3,97.6],[361.8,89.9],[361.1,82.1],[360,74.4],[358.5,66.7],[356.6,59.1],[354.3,51.4],[351.8,43.8],[349.2,36.2],[346.6,28.7],[343.9,21.3],[341.1,13.9],[338.1,6.7],[334.9,-0.5],[331.3,-7.5],[327.6,-14.5],[323.6,-21.4],[319.6,-28.3],[315.3,-35.1],[310.9,-41.7],[306.2,-48.1],[301.4,-54.5],[296.4,-60.7],[291.2,-66.8],[286,-72.9],[280.6,-78.7],[275.1,-84.4],[269.4,-89.7],[263.5,-94.9],[257.4,-99.8],[251.1,-104.8],[244.8,-109.6],[238.5,-114.4],[232,-119.2],[225.5,-123.8],[219,-128.4],[212.4,-133],[205.9,-137.5],[199.3,-142],[192.7,-146.4],[185.9,-150.5],[179.2,-154.5],[172.4,-158.5],[165.7,-162.4],[158.9,-166.3],[152.2,-170.2],[145.3,-174],[138.3,-177.7],[131.2,-181.2],[124.2,-184.5],[117.3,-187.7],[110.3,-190.7],[103.2,-193.6],[96.1,-196.3],[90.4,-198.3],[86.7,-199.7],[74,-203.4]];
+      const R = 216.5;
+      const JOIN = 20; // degrees clockwise from 12 o'clock where LOOP meets the circle
+      const END = 2300;
+      const SIG_X = [-524.1, -447.8, -371.6, -295.3];
+      const SIG_BOTTOM = 100.2;
+      const NUB_W = 21.1;
+      const WIFI_0 = [-33.7, -19.5]; // the Wi-Fi's centre before it moves
+
+      // Linear interpolation in a [t, ...values] track, held at both ends.
+      const at = (track, t) => {
+        if (t <= track[0][0]) return track[0].slice(1);
+        for (let i = 1; i < track.length; i++) {
+          const b = track[i];
+          if (t <= b[0]) {
+            const a = track[i - 1], k = (t - a[0]) / (b[0] - a[0]);
+            return a.slice(1).map((v, j) => v + (b[j + 1] - v) * k);
+          }
+        }
+        return track[track.length - 1].slice(1);
+      };
+
+      // Arc length along LOOP, then onward around the circle.
+      const LEN = [0];
+      for (let i = 1; i < LOOP.length; i++) LEN.push(LEN[i - 1] + Math.hypot(LOOP[i][0] - LOOP[i - 1][0], LOOP[i][1] - LOOP[i - 1][1]));
+      const LOOP_LEN = LEN[LEN.length - 1];
+      const point = (s, ring = [R, 0, 0]) => {
+        if (s >= LOOP_LEN) {
+          const a = ((JOIN * Math.PI) / 180) - (s - LOOP_LEN) / R;
+          // the wider ring eases in over the first 30° past the join, so the path stays continuous
+          const k = Math.min(1, (s - LOOP_LEN) / ((30 * Math.PI * R) / 180));
+          const r = R + (ring[0] - R) * k;
+          return [ring[1] * k + r * Math.sin(a), ring[2] * k - r * Math.cos(a)];
+        }
+        let i = 1;
+        while (LEN[i] < s) i++;
+        const k = (s - LEN[i - 1]) / (LEN[i] - LEN[i - 1]);
+        return [LOOP[i - 1][0] + (LOOP[i][0] - LOOP[i - 1][0]) * k, LOOP[i - 1][1] + (LOOP[i][1] - LOOP[i - 1][1]) * k];
+      };
+      const f = (v) => Math.round(v * 10) / 10;
+      const strokeAlong = (s0, s1, ring) => {
+        let d = "";
+        for (let s = s0; ; s = Math.min(s + 6, s1)) {
+          const [x, y] = point(s, ring);
+          d += (d ? " L " : "M ") + f(x) + " " + f(y);
+          if (s >= s1) return d;
+        }
+      };
+      const roundRect = (l, r, t, b) => {
+        const k = Math.min(66, (r - l) / 2, (b - t) / 2);
+        return `M ${f(l + k)} ${f(t)} H ${f(r - k)} A ${f(k)} ${f(k)} 0 0 1 ${f(r)} ${f(t + k)} V ${f(b - k)} A ${f(k)} ${f(k)} 0 0 1 ${f(r - k)} ${f(b)} H ${f(l + k)} A ${f(k)} ${f(k)} 0 0 1 ${f(l)} ${f(b - k)} V ${f(t + k)} A ${f(k)} ${f(k)} 0 0 1 ${f(l + k)} ${f(t)} Z`;
+      };
+
+      const $ = (id) => document.getElementById(id);
+      const wifi = $("wifi"), sig = [...document.querySelectorAll(".sig")], nub = $("nub"), body = $("body"), line = $("line");
+      const LINE_FROM = LINE[0][0], DOTS_FROM = DOTS[0][0], NUB_TO = NUB[NUB.length - 1][0];
+
+      // The whole picture at time t (ms).
+      const draw = (t) => {
+        const [cx, cy, sc] = at(WIFI, t);
+        wifi.setAttribute("transform", `translate(${f(cx)} ${f(cy)}) scale(${sc.toFixed(4)}) translate(${-WIFI_0[0]} ${-WIFI_0[1]})`);
+
+        if (t < DOTS_FROM) {
+          const tops = at(BARS, t);
+          sig.forEach((el, i) => {
+            el.setAttribute("x", f(SIG_X[i] - 23.2));
+            el.setAttribute("y", f(tops[i]));
+            el.setAttribute("height", f(SIG_BOTTOM - tops[i]));
+          });
+        } else {
+          const p = at(DOTS, t);
+          sig.forEach((el, i) => {
+            el.setAttribute("x", f(p[i * 2] - 23.2));
+            el.setAttribute("y", f(p[i * 2 + 1] - 23.2));
+            el.setAttribute("height", 46.4);
+          });
+        }
+
+        if (t < LINE_FROM) {
+          const [l, r, top, bottom] = at(BODY, t);
+          body.setAttribute("d", roundRect(l, r, top, bottom));
+          line.setAttribute("d", "");
+          const [nr] = at(NUB, t);
+          nub.setAttribute("d", t < NUB_TO ? `M ${f(nr - NUB_W)} -27.5 A ${NUB_W} 26.85 0 0 1 ${f(nr - NUB_W)} 26.2 Z` : "");
+        } else {
+          body.setAttribute("d", "");
+          nub.setAttribute("d", "");
+          const [tail, head] = at(LINE, t);
+          line.setAttribute("d", strokeAlong(tail, head, at(RING, t)));
+        }
+      };
+
+      // ---------- playback ----------
+      const play = $("play"), slow = $("slow"), scrub = $("scrub"), time = $("time");
+      const still = matchMedia("(prefers-reduced-motion: reduce)");
+      scrub.max = END;
+      let t = 0, dir = 1, raf = 0, last = 0;
+      const show = () => {
+        draw(t);
+        scrub.value = Math.round(t);
+        time.textContent = `${(t / 1000).toFixed(2)} s（原片 ${((t + 958) / 1000).toFixed(2)} s）`;
+        play.textContent = (raf ? dir > 0 : t >= END / 2) ? "拆开" : "合成";
+      };
+      const tick = (now) => {
+        // a frame's timestamp can be a little before the moment run() was called: never step backwards
+        const dt = Math.max(0, now - last) * (slow.checked ? 0.25 : 1);
+        last = Math.max(last, now);
+        t = Math.max(0, Math.min(END, t + dir * dt));
+        raf = (dir > 0 ? t < END : t > 0) ? requestAnimationFrame(tick) : 0;
+        show();
+      };
+      const run = (d) => {
+        dir = d;
+        cancelAnimationFrame(raf);
+        if (still.matches) {
+          t = d > 0 ? END : 0;
+          show();
+          return;
+        }
+        last = performance.now();
+        raf = requestAnimationFrame(tick);
+      };
+      // Forward once it's whole, back once it's apart; a click mid-way turns it around.
+      const toggle = () => run(raf ? -dir : t >= END / 2 ? -1 : 1);
+      play.addEventListener("click", toggle);
+      $("stage").addEventListener("click", toggle);
+      scrub.addEventListener("input", () => {
+        cancelAnimationFrame(raf);
+        raf = 0;
+        t = +scrub.value;
+        dir = t >= END / 2 ? 1 : -1;
+        show();
+      });
+
+      // ?t=1234 shows that moment and stays (for frame-by-frame comparison with the recording).
+      const fixed = new URLSearchParams(location.search).get("t");
+      if (fixed !== null) {
+        t = +fixed;
+        show();
+      } else {
+        show();
+        // Like the recording: the three icons sit still for a second, then merge.
+        setTimeout(() => run(1), 1000);
+      }
+    </script>
+  </body>
+</html>
