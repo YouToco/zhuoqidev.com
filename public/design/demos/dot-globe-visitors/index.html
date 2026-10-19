@@ -1,0 +1,737 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>点阵地球访客地图</title>
+    <style>
+      :root {
+        --paper: #fbf8f1;
+        --paper-2: #f3eee2;
+        --card: #fffdf8;
+        --ink: #1c2230;
+        --ink-2: #4a5163;
+        --ink-3: #636877;
+        --line: #e6dfd0;
+        --dot: #d8d0bf;
+        --blue: #2f5bd3;
+        --blue-soft: #e8eefc;
+        --seal: #c0391f;
+        --hi: #ffe066;
+        --shadow: 0 1px 0 rgba(28, 34, 48, 0.04), 0 10px 28px -14px rgba(28, 34, 48, 0.28);
+        --f-sans: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+        --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #14161b;
+          --paper-2: #1c1f26;
+          --card: #1e2129;
+          --ink: #ece7dc;
+          --ink-2: #bab6ac;
+          --ink-3: #959aa8;
+          --line: #31353f;
+          --dot: #2c3039;
+          --blue: #8eaaff;
+          --blue-soft: #1f2a47;
+          --seal: #f0694e;
+          --hi: #7d6416;
+          --shadow: 0 1px 0 rgba(0, 0, 0, 0.25), 0 10px 28px -14px rgba(0, 0, 0, 0.8);
+          color-scheme: dark;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--paper) radial-gradient(var(--dot) 1px, transparent 1.2px) 0 0 / 22px 22px;
+        color: var(--ink);
+        font: 16px/1.7 var(--f-sans);
+      }
+      main {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 28px 24px 40px;
+      }
+      .kicker {
+        margin: 0;
+        font: 500 12px/1.6 var(--f-mono);
+        letter-spacing: 0.08em;
+        color: var(--seal);
+      }
+      h1 {
+        margin: 2px 0 4px;
+        font-size: 28px;
+        line-height: 1.3;
+      }
+      .hint {
+        margin: 0 0 18px;
+        font-size: 14.5px;
+        color: var(--ink-2);
+      }
+
+      /* ---------- globe + ranked list ---------- */
+      .grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 300px;
+        gap: 24px;
+        align-items: start;
+      }
+      .stage {
+        position: relative;
+        height: clamp(340px, calc(100vh - 170px), 640px);
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+      .stage canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        cursor: grab;
+        touch-action: pan-y; /* a vertical swipe still scrolls the page on a phone */
+      }
+      .stage canvas:active {
+        cursor: grabbing;
+      }
+      .legend {
+        position: absolute;
+        left: 14px;
+        bottom: 12px;
+        display: flex;
+        gap: 14px;
+        margin: 0;
+        font: 400 12px/1.6 var(--f-mono);
+        color: var(--ink-3);
+        pointer-events: none;
+      }
+      .legend i {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        margin-right: 5px;
+        vertical-align: -1px;
+        border-radius: 2px;
+        background: var(--seal);
+      }
+      .legend .arc i {
+        height: 2px;
+        vertical-align: 3px;
+        background: var(--blue);
+      }
+      .nogl {
+        display: grid;
+        place-items: center;
+        height: 100%;
+        margin: 0;
+        padding: 24px;
+        text-align: center;
+        color: var(--ink-3);
+      }
+      .tip {
+        position: absolute;
+        z-index: 2;
+        translate: -50% calc(-100% - 12px);
+        padding: 6px 10px;
+        border: 1.5px solid var(--ink);
+        border-radius: 10px;
+        background: var(--card);
+        box-shadow: 2px 3px 0 rgba(28, 34, 48, 0.18);
+        font: 500 13px/1.45 var(--f-sans);
+        white-space: nowrap;
+        pointer-events: none;
+      }
+      .tip span {
+        display: block;
+        font: 400 12px/1.5 var(--f-mono);
+        color: var(--ink-2);
+      }
+      .side h2 {
+        margin: 0 0 8px;
+        font-size: 15px;
+      }
+      .kpis {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin: 0 0 18px;
+      }
+      .kpis div {
+        padding: 8px 10px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
+      .kpis dt {
+        font-size: 12px;
+        color: var(--ink-3);
+      }
+      .kpis dd {
+        margin: 0;
+        font: 600 18px/1.4 var(--f-mono);
+      }
+      .list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        font-size: 14px;
+      }
+      .list li {
+        position: relative;
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        z-index: 0;
+        padding: 4px 8px;
+        border-radius: 6px;
+      }
+      /* The bar behind each row is as wide as its share of the top row. */
+      .list li::before {
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: var(--w);
+        border-radius: 6px;
+        background: var(--blue-soft);
+        z-index: -1;
+      }
+      .list .v {
+        font-family: var(--f-mono);
+        color: var(--ink-2);
+      }
+      .note {
+        margin: 12px 0 0;
+        font-size: 12px;
+        color: var(--ink-3);
+      }
+      @media (max-width: 820px) {
+        main {
+          padding: 20px 16px 32px;
+        }
+        h1 {
+          font-size: 24px;
+        }
+        .grid {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .stage {
+          height: min(92vw, 520px);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="kicker">VISITORS · 示例数据</p>
+      <h1>访客从哪来</h1>
+      <p class="hint">拖动地球转着看；红色光柱越高，那个国家的访客越多，蓝色弧线飞向目的地。数字都是编的。</p>
+      <div class="grid">
+        <div class="stage" data-stage>
+          <div class="tip" data-tip hidden></div>
+          <p class="legend" aria-hidden="true">
+            <span><i></i>访客数</span><span class="arc"><i></i>飞向目的地</span>
+          </p>
+        </div>
+        <aside class="side">
+          <dl class="kpis">
+            <div>
+              <dt>访客</dt>
+              <dd data-kpi="visitors">–</dd>
+            </div>
+            <div>
+              <dt>国家 / 地区</dt>
+              <dd data-kpi="countries">–</dd>
+            </div>
+            <div>
+              <dt>目的地</dt>
+              <dd data-kpi="home">–</dd>
+            </div>
+          </dl>
+          <h2>访客最多的地方</h2>
+          <ol class="list" data-list></ol>
+          <p class="note">点地球上的光柱（或鼠标悬停）看具体数字。</p>
+        </aside>
+      </div>
+    </main>
+
+    <!-- window.GEO: land bitmap + one point per country (Natural Earth, public domain). -->
+    <script src="geo.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
+        }
+      }
+    </script>
+    <script type="module">
+      import {
+        AdditiveBlending,
+        BackSide,
+        BufferAttribute,
+        BufferGeometry,
+        Color,
+        CylinderGeometry,
+        Group,
+        InstancedMesh,
+        Matrix4,
+        Mesh,
+        MeshBasicMaterial,
+        NormalBlending,
+        PerspectiveCamera,
+        Points,
+        Quaternion,
+        QuadraticBezierCurve3,
+        RingGeometry,
+        Scene,
+        ShaderMaterial,
+        SphereGeometry,
+        SRGBColorSpace,
+        TubeGeometry,
+        Vector3,
+        WebGLRenderer,
+      } from "three";
+      import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+
+      // ---------- sample data (made up) ----------
+      // Visitors per country, keyed by ISO 3166-1 alpha-2 code; in a real site this comes from your
+      // analytics. HOME is where every arc lands.
+      const HOME = { name: "上海", lat: 31.23, lon: 121.47 };
+      const VISITORS = {
+        CN: 4210,
+        US: 1830,
+        JP: 920,
+        SG: 640,
+        DE: 520,
+        GB: 480,
+        KR: 450,
+        CA: 360,
+        AU: 300,
+        FR: 280,
+        IN: 260,
+        NL: 180,
+        BR: 150,
+        RU: 140,
+        MY: 130,
+        TH: 110,
+        VN: 100,
+        ID: 90,
+        ES: 80,
+        IT: 70,
+        SE: 60,
+        AE: 50,
+        TR: 45,
+        MX: 40,
+        ZA: 40,
+        NZ: 30,
+        AR: 25,
+        EG: 20,
+        KE: 15,
+        CL: 12,
+      };
+
+      const D = Math.PI / 180;
+      const DOTS = 52000; // dots over the whole sphere; about 30% land on land
+      const MAX_ARCS = 48;
+      const ARC_STEPS = 40;
+      const UP = new Vector3(0, 1, 0);
+      const { land, points: POINTS } = window.GEO;
+      const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const darkQuery = matchMedia("(prefers-color-scheme: dark)");
+
+      let regionNames = null;
+      try {
+        regionNames = new Intl.DisplayNames(["zh-CN"], { type: "region" });
+      } catch {}
+      const nameOf = (code) => regionNames?.of(code) ?? code;
+      const rows = Object.entries(VISITORS)
+        .map(([code, visitors]) => ({ code, name: nameOf(code), visitors }))
+        .sort((a, b) => b.visitors - a.visitors);
+
+      // ---------- the side panel ----------
+      const num = new Intl.NumberFormat("zh-CN");
+      document.querySelector('[data-kpi="visitors"]').textContent = num.format(
+        rows.reduce((s, r) => s + r.visitors, 0),
+      );
+      document.querySelector('[data-kpi="countries"]').textContent = rows.length;
+      document.querySelector('[data-kpi="home"]').textContent = HOME.name;
+      const max0 = rows[0].visitors;
+      document.querySelector("[data-list]").replaceChildren(
+        ...rows.slice(0, 10).map((r) => {
+          const li = document.createElement("li");
+          li.style.setProperty("--w", `${(r.visitors / max0) * 100}%`);
+          const n = document.createElement("span");
+          n.textContent = r.name;
+          const v = document.createElement("span");
+          v.className = "v";
+          v.textContent = num.format(r.visitors);
+          li.append(n, v);
+          return li;
+        }),
+      );
+
+      // ---------- the globe ----------
+      /** lat/lon in degrees to a point on a sphere of radius r; longitude 0 faces +z. */
+      function vec(lat, lon, r = 1) {
+        const la = lat * D;
+        const lo = lon * D;
+        return new Vector3(r * Math.cos(la) * Math.sin(lo), r * Math.sin(la), r * Math.cos(la) * Math.cos(lo));
+      }
+
+      // Evenly spread dots (a Fibonacci sphere), keeping the ones that fall on land.
+      function landDots() {
+        const bits = Uint8Array.from(atob(land.bits), (c) => c.charCodeAt(0));
+        const isLand = (lat, lon) => {
+          const x = Math.min(land.w - 1, Math.floor((lon + 180) * 2));
+          const y = Math.min(land.h - 1, Math.floor((90 - lat) * 2));
+          const n = y * land.w + x;
+          return (bits[n >> 3] >> (n & 7)) & 1;
+        };
+        const out = [];
+        const golden = Math.PI * (3 - Math.sqrt(5));
+        for (let i = 0; i < DOTS; i++) {
+          const y = 1 - (2 * (i + 0.5)) / DOTS;
+          const r = Math.sqrt(1 - y * y);
+          const x = Math.cos(golden * i) * r;
+          const z = Math.sin(golden * i) * r;
+          if (isLand(Math.asin(y) / D, Math.atan2(x, z) / D)) out.push(x * 1.002, y * 1.002, z * 1.002);
+        }
+        return new Float32Array(out);
+      }
+
+      function slerp(a, b, angle, t) {
+        const s = Math.sin(angle);
+        return a
+          .clone()
+          .multiplyScalar(Math.sin((1 - t) * angle) / s)
+          .add(b.clone().multiplyScalar(Math.sin(t * angle) / s));
+      }
+
+      const css = (name) =>
+        new Color(getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "#888");
+
+      function mountGlobe(stage, tip) {
+        const canvas = document.createElement("canvas");
+        canvas.setAttribute("aria-hidden", "true");
+        // Throws without WebGL; the caller then shows a note and keeps the list.
+        const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "low-power" });
+        const dpr = Math.min(window.devicePixelRatio, 2);
+        renderer.setPixelRatio(dpr);
+        renderer.outputColorSpace = SRGBColorSpace;
+
+        const scene = new Scene();
+        const camera = new PerspectiveCamera(30, 1, 0.1, 50);
+        camera.position.set(0, 0, 5);
+        const tilt = new Group(); // leans the north towards the reader
+        const spin = new Group(); // turns about the poles
+        tilt.rotation.x = 0.42;
+        spin.rotation.y = -(HOME.lon - 10) * D; // start with the destination a little right of centre
+        tilt.add(spin);
+        scene.add(tilt);
+
+        // An opaque sphere just under the dots hides the dots on the far side.
+        const body = new MeshBasicMaterial();
+        spin.add(new Mesh(new SphereGeometry(0.995, 72, 48), body));
+
+        // A soft rim of light around the edge (a back-facing sphere, brightest at the silhouette).
+        const halo = new ShaderMaterial({
+          uniforms: { uColor: { value: new Color() }, uStrength: { value: 0.5 } },
+          vertexShader: `varying vec3 vN; void main() { vN = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+          fragmentShader: `uniform vec3 uColor; uniform float uStrength; varying vec3 vN;
+            void main() { float a = pow(clamp(0.62 + vN.z, 0.0, 1.0), 4.0); gl_FragColor = vec4(uColor, a * uStrength); }`,
+          side: BackSide,
+          transparent: true,
+          depthWrite: false,
+        });
+        tilt.add(new Mesh(new SphereGeometry(1.09, 64, 32), halo));
+
+        // Land dots, fading out towards the edge of the disc.
+        const dotGeo = new BufferGeometry();
+        dotGeo.setAttribute("position", new BufferAttribute(landDots(), 3));
+        const dots = new ShaderMaterial({
+          uniforms: { uColor: { value: new Color() }, uSize: { value: 1.9 * dpr }, uAlpha: { value: 0.8 } },
+          vertexShader: `uniform float uSize; varying float vFace;
+            void main() {
+              vec4 mv = modelViewMatrix * vec4(position, 1.0);
+              vFace = dot(normalize(normalMatrix * position), normalize(-mv.xyz));
+              gl_PointSize = uSize;
+              gl_Position = projectionMatrix * mv;
+            }`,
+          fragmentShader: `uniform vec3 uColor; uniform float uAlpha; varying float vFace;
+            void main() {
+              if (length(gl_PointCoord - 0.5) > 0.5) discard;
+              gl_FragColor = vec4(uColor, uAlpha * smoothstep(-0.05, 0.45, vFace));
+            }`,
+          transparent: true,
+        });
+        spin.add(new Points(dotGeo, dots));
+
+        // Pillars: one unit cylinder standing on its base, placed and stretched per country (one draw call).
+        const beamGeo = new CylinderGeometry(1, 1, 1, 10, 1, false).translate(0, 0.5, 0);
+        const beamMat = new MeshBasicMaterial({ transparent: true, opacity: 0.92 });
+        const beams = new InstancedMesh(beamGeo, beamMat, rows.length);
+        spin.add(beams);
+
+        // Arcs: thin tubes from each country to HOME, merged into one geometry; `t` runs 0 → 1 along each,
+        // and a pulse runs along it in the shader.
+        const arcMat = new ShaderMaterial({
+          uniforms: { uColor: { value: new Color() }, uTime: { value: 0 }, uBase: { value: 0.22 } },
+          vertexShader: `attribute float t; attribute float seed; varying float vT; varying float vSeed;
+            void main() { vT = t; vSeed = seed; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+          fragmentShader: `uniform vec3 uColor; uniform float uTime; uniform float uBase; varying float vT; varying float vSeed;
+            void main() {
+              float head = fract(uTime * 0.22 + vSeed);
+              float d = head - vT;
+              float pulse = d >= 0.0 && d < 0.22 ? 1.0 - d / 0.22 : 0.0;
+              gl_FragColor = vec4(uColor, uBase + pulse * 0.85);
+            }`,
+          transparent: true,
+          depthWrite: false,
+          blending: AdditiveBlending,
+        });
+        const arcs = new Mesh(new BufferGeometry(), arcMat);
+        spin.add(arcs);
+
+        // HOME: a dot and a ring that keeps spreading out from it.
+        const homeN = vec(HOME.lat, HOME.lon);
+        const homeQ = new Quaternion().setFromUnitVectors(new Vector3(0, 0, 1), homeN);
+        const homeMat = new MeshBasicMaterial({ transparent: true });
+        const ringMat = new MeshBasicMaterial({ transparent: true, depthWrite: false });
+        const homeDot = new Mesh(new RingGeometry(0, 0.016, 24), homeMat);
+        const ring = new Mesh(new RingGeometry(0.02, 0.026, 40), ringMat);
+        for (const m of [homeDot, ring]) {
+          m.position.copy(homeN).multiplyScalar(1.004);
+          m.quaternion.copy(homeQ);
+          spin.add(m);
+        }
+
+        // Colours come from the page's CSS tokens, so the globe follows light / dark like the rest.
+        const theme = () => {
+          const dark = darkQuery.matches;
+          body.color = css("--paper-2");
+          dots.uniforms.uColor.value = css("--ink-3");
+          dots.uniforms.uAlpha.value = dark ? 0.75 : 0.65;
+          halo.uniforms.uColor.value = css("--blue");
+          halo.uniforms.uStrength.value = dark ? 0.45 : 0.22;
+          beamMat.color = css("--seal");
+          arcMat.uniforms.uColor.value = css("--blue");
+          arcMat.blending = dark ? AdditiveBlending : NormalBlending; // adding light shows nothing on paper
+          arcMat.uniforms.uBase.value = dark ? 0.2 : 0.28;
+          arcMat.needsUpdate = true;
+          homeMat.color = css("--seal");
+          ringMat.color = css("--seal");
+          wake();
+        };
+
+        // Pillars grow from the ground towards their height; the tallest is the busiest country.
+        const max = Math.max(1, ...rows.map((r) => r.visitors));
+        const shown = rows
+          .filter((r) => POINTS[r.code])
+          .map((row) => {
+            const [lon, lat] = POINTS[row.code];
+            const n = vec(lat, lon);
+            return {
+              row,
+              n,
+              q: new Quaternion().setFromUnitVectors(UP, n),
+              h: 0,
+              to: 0.04 + 0.42 * Math.sqrt(row.visitors / max), // sqrt, so small countries still show
+            };
+          });
+        const m4 = new Matrix4();
+        const sc = new Vector3();
+        const W = 0.011;
+        const placeBeams = () => {
+          let moving = false;
+          shown.forEach((b, i) => {
+            const step = reduced ? b.to - b.h : (b.to - b.h) * 0.08;
+            b.h = Math.abs(step) < 1e-4 ? b.to : b.h + step;
+            if (b.h !== b.to) moving = true;
+            m4.compose(b.n, b.q, sc.set(W, Math.max(b.h, 1e-4), W));
+            beams.setMatrixAt(i, m4);
+          });
+          beams.count = shown.length;
+          beams.instanceMatrix.needsUpdate = true;
+          return moving;
+        };
+
+        // Each arc rises from the country, peaks over the middle of the great circle (higher for
+        // longer trips) and comes down at HOME. Countries too close to HOME get no arc.
+        const tubes = [];
+        for (const b of shown) {
+          if (tubes.length >= MAX_ARCS) break;
+          const angle = b.n.angleTo(homeN);
+          if (angle < 4 * D) continue;
+          const mid = slerp(b.n, homeN, angle, 0.5).multiplyScalar(1 + 0.12 + 0.7 * (angle / Math.PI));
+          const tube = new TubeGeometry(new QuadraticBezierCurve3(b.n, mid, homeN), ARC_STEPS, 0.0032, 5, false);
+          const uv = tube.getAttribute("uv");
+          const t = new Float32Array(uv.count);
+          for (let i = 0; i < uv.count; i++) t[i] = uv.getX(i);
+          tube.setAttribute("t", new BufferAttribute(t, 1));
+          tube.setAttribute(
+            "seed",
+            new BufferAttribute(new Float32Array(uv.count).fill((tubes.length * 0.618) % 1), 1),
+          );
+          tube.deleteAttribute("normal");
+          tube.deleteAttribute("uv");
+          tubes.push(tube);
+        }
+        arcs.geometry = mergeGeometries(tubes);
+        for (const g of tubes) g.dispose();
+
+        // Dragging spins the globe (and, with a mouse, tilts it a little); a flick keeps it turning.
+        let dragging = false;
+        let moved = 0;
+        let lastX = 0;
+        let lastY = 0;
+        let vel = 0;
+        let idleSince = performance.now();
+        canvas.addEventListener("pointerdown", (e) => {
+          dragging = true;
+          moved = 0;
+          lastX = e.clientX;
+          lastY = e.clientY;
+          vel = 0;
+          canvas.setPointerCapture(e.pointerId);
+          wake();
+        });
+        canvas.addEventListener("pointermove", (e) => {
+          if (!dragging) {
+            if (e.pointerType === "mouse") hover(e.clientX, e.clientY);
+            return;
+          }
+          const dx = e.clientX - lastX;
+          const dy = e.clientY - lastY;
+          moved += Math.abs(dx) + Math.abs(dy);
+          lastX = e.clientX;
+          lastY = e.clientY;
+          vel = dx * 0.006;
+          spin.rotation.y += vel;
+          if (e.pointerType === "mouse") tilt.rotation.x = Math.min(1.1, Math.max(-0.5, tilt.rotation.x + dy * 0.004));
+          showTip(null);
+          wake();
+        });
+        const end = (e) => {
+          if (!dragging) return;
+          dragging = false;
+          idleSince = performance.now();
+          if (moved < 6) hover(e.clientX, e.clientY); // a tap, not a drag: show that pillar's numbers
+        };
+        canvas.addEventListener("pointerup", end);
+        canvas.addEventListener("pointercancel", () => (dragging = false));
+        canvas.addEventListener("pointerleave", (e) => {
+          if (e.pointerType === "mouse" && !dragging) showTip(null);
+        });
+
+        function showTip(b, x, y) {
+          if (!b) {
+            tip.hidden = true;
+            return;
+          }
+          tip.replaceChildren(b.row.name);
+          const v = document.createElement("span");
+          v.textContent = `${num.format(b.row.visitors)} 位访客`;
+          tip.append(v);
+          tip.style.left = `${x}px`;
+          tip.style.top = `${y}px`;
+          tip.hidden = false;
+        }
+
+        // The pillar whose top is nearest the pointer (within 16px), on the side facing the reader.
+        const top = new Vector3();
+        const face = new Vector3();
+        const q = new Quaternion();
+        function hover(x, y) {
+          const r = canvas.getBoundingClientRect();
+          spin.getWorldQuaternion(q);
+          let best = null;
+          let bestD = 16 * 16;
+          let at = [0, 0];
+          for (const b of shown) {
+            face.copy(b.n).applyQuaternion(q);
+            if (face.z < 0.1) continue;
+            top.copy(b.n).multiplyScalar(1 + b.h);
+            spin.localToWorld(top).project(camera);
+            const sx = r.left + ((top.x + 1) / 2) * r.width;
+            const sy = r.top + ((1 - top.y) / 2) * r.height;
+            const d = (sx - x) ** 2 + (sy - y) ** 2;
+            if (d < bestD) {
+              bestD = d;
+              best = b;
+              at = [sx - r.left, sy - r.top];
+            }
+          }
+          showTip(best, at[0], at[1]);
+        }
+
+        stage.prepend(canvas);
+        new ResizeObserver(([entry]) => {
+          const { width, height } = entry.contentRect;
+          renderer.setSize(width, height, false);
+          camera.aspect = width / Math.max(1, height);
+          // Keep the whole globe in view on tall, narrow screens.
+          camera.position.z = camera.aspect < 1 ? 5 / camera.aspect ** 0.8 : 5;
+          camera.updateProjectionMatrix();
+          wake();
+        }).observe(stage);
+
+        // Render only while on screen and while something moves.
+        let visible = false;
+        let running = false;
+        let last = performance.now();
+        function frame(now) {
+          const dt = Math.min(0.05, (now - last) / 1000);
+          last = now;
+          let busy = placeBeams() || dragging;
+          if (!dragging && Math.abs(vel) > 1e-4) {
+            spin.rotation.y += vel;
+            vel *= 0.94;
+            busy = true;
+          }
+          if (!reduced) {
+            if (!dragging && now - idleSince > 2500) spin.rotation.y += dt * 0.08;
+            arcMat.uniforms.uTime.value += dt;
+            const p = (now / 1600) % 1;
+            ring.scale.setScalar(1 + p * 2.4);
+            ringMat.opacity = 1 - p;
+            busy = true;
+          }
+          renderer.render(scene, camera);
+          if (!busy || !visible) stop();
+        }
+        function wake() {
+          if (running || !visible) return;
+          running = true;
+          last = performance.now();
+          renderer.setAnimationLoop(frame);
+        }
+        function stop() {
+          running = false;
+          renderer.setAnimationLoop(null);
+        }
+        new IntersectionObserver(([e]) => {
+          visible = e.isIntersecting;
+          if (visible) wake();
+        }).observe(stage);
+        darkQuery.addEventListener("change", theme);
+        theme();
+      }
+
+      const stage = document.querySelector("[data-stage]");
+      try {
+        mountGlobe(stage, stage.querySelector("[data-tip]"));
+      } catch {
+        const p = document.createElement("p");
+        p.className = "nogl";
+        p.textContent = "这个浏览器没开 WebGL，地球画不出来；右边的列表照样能看。";
+        stage.replaceChildren(p);
+      }
+    </script>
+  </body>
+</html>

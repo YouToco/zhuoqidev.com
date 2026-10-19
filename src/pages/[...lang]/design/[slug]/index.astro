@@ -1,0 +1,201 @@
+---
+import { Code } from "astro:components";
+import { render } from "astro:content";
+import { type Lang, LANGS, t, url } from "../../../../i18n";
+import designCss from "../../../../styles/design.css?raw";
+import Base from "../../../../layouts/Base.astro";
+import { slugOf, ymd } from "../../../../lib/content";
+import {
+  categoryLabel,
+  type Design,
+  demoFiles,
+  demoPath,
+  designUrl,
+  getDesigns,
+  originLabel,
+} from "../../../../lib/design";
+
+export async function getStaticPaths() {
+  const out = [];
+  for (const lang of LANGS) {
+    for (const entry of await getDesigns(lang)) {
+      out.push({ params: { lang: lang === "zh" ? undefined : "en", slug: slugOf(entry) }, props: { lang, entry } });
+    }
+  }
+  return out;
+}
+interface Props {
+  lang: Lang;
+  entry: Design;
+}
+const { lang, entry } = Astro.props;
+const L = t[lang];
+const D = L.ds;
+const d = entry.data;
+const slug = slugOf(entry);
+const { Content } = await render(entry);
+const files = await demoFiles(entry);
+const demo = demoPath(slug);
+const SHIKI = { html: "html", css: "css", js: "js", ts: "ts", json: "json" } as const;
+const shiki = (lang: string) => SHIKI[lang as keyof typeof SHIKI] ?? "plaintext";
+---
+
+<Base
+  lang={lang}
+  title={d.title}
+  description={d.summary}
+  path={`/design/${slug}/`}
+  section="design"
+  ogType="article"
+  bodyClass="dotgrid"
+  markdown={`${designUrl(lang, slug)}index.md`}
+>
+  <style slot="head" is:inline set:html={designCss}></style>
+  <main class="shelf ds-shelf ds-entry" id="main">
+    <p class="crumb ds-crumb">
+      <a href={url(lang, "/design/")}>{D.back}</a>
+      <span>~/design/{slug}</span>
+    </p>
+    <header class="ds-head">
+      <p class="ds-meta">
+        <a class="ds-kind" href={`${url(lang, "/design/")}?c=${d.category}`}>
+          {categoryLabel[lang][d.category]}
+        </a>
+        <span class={d.origin === "recreated" ? "tag red" : "tag"}>{originLabel[lang][d.origin]}</span>
+        {d.inspiredBy && (
+          <span class="ds-credit">
+            {D.inspiredBy}{" "}
+            <a href={d.inspiredBy.url} rel="noopener">
+              {d.inspiredBy.name}
+            </a>
+          </span>
+        )}
+      </p>
+      <h1>{d.title}</h1>
+      <p class="ds-lede">{d.summary}</p>
+      <p class="ds-facts">
+        <span>{d.stack.join(" · ")}</span>
+        <span>MIT</span>
+        <span>
+          {D.added} <time datetime={ymd(d.added)}>{ymd(d.added)}</time>
+        </span>
+        {d.tags.map((tag) => (
+          <a class="ds-tagline" href={`${url(lang, "/design/")}?t=${encodeURIComponent(tag)}`}>
+            #{tag}
+          </a>
+        ))}
+      </p>
+    </header>
+
+    <section class="card ds-demo" aria-label={D.demo} data-ds-demo>
+      <div class="ds-bar">
+        <span class="ds-dots" aria-hidden="true">
+          <i></i>
+          <i></i>
+          <i></i>
+        </span>
+        <span class="ds-bar-title">{D.demo}</span>
+        <span class="ds-seg ds-vp" role="group" aria-label={D.viewport} hidden>
+          <button type="button" aria-pressed="true" data-vp="">
+            {D.desktop}
+          </button>
+          <button type="button" aria-pressed="false" data-vp="375">
+            {D.phone}
+          </button>
+        </span>
+        <button type="button" class="chip-btn" data-replay hidden>
+          ↻ {D.replay}
+        </button>
+        <a class="chip-btn" href={demo} target="_blank" rel="noopener">
+          {D.openNew}
+        </a>
+      </div>
+      <div class="ds-stage">
+        <iframe
+          src={demo}
+          title={D.frameTitle(d.title)}
+          loading="lazy"
+          style={`height:${d.demoHeight}px`}
+          data-ds-frame
+        ></iframe>
+      </div>
+    </section>
+
+    <section class="ds-copy" aria-labelledby="ds-copy" data-ds-copy hidden>
+      <h2 id="ds-copy" class="kicker">
+        {D.copyTitle}
+      </h2>
+      <div class="ds-copy-row">
+        <button type="button" class="ds-copy-btn primary" data-copy-prompt={`${designUrl(lang, slug)}index.md`}>
+          <b>{D.copyPrompt}</b>
+          <small>{D.copyPromptNote}</small>
+        </button>
+        <button type="button" class="ds-copy-btn" data-copy-source>
+          <b>{D.copySource}</b>
+          <small>
+            {files[0]!.name}
+            {files.length > 1 ? ` +${files.length - 1}` : ""}
+          </small>
+        </button>
+        <button type="button" class="ds-copy-btn" data-copy-link={demo}>
+          <b>{D.copyLink}</b>
+          <small>{demo}</small>
+        </button>
+      </div>
+    </section>
+
+    <article class="paper card ds-notes" data-pagefind-body>
+      <div class="prose">
+        <Content />
+      </div>
+      <div class="agent-box" data-pagefind-ignore>
+        <span>
+          <b>$</b>
+          {L.forAgents}
+          <a href="index.md" type="text/markdown">
+            index.md
+          </a>
+        </span>
+      </div>
+    </article>
+
+    <section class="ds-source" aria-labelledby="ds-source">
+      <h2 id="ds-source">
+        {D.source} <small>{D.sourceNote}</small>
+      </h2>
+      <div class="card ds-code">
+        <div class="ds-tabs" role="tablist">
+          {files.map((f, i) => (
+            <button
+              type="button"
+              role="tab"
+              id={`ds-tab-${i}`}
+              aria-controls={`ds-pane-${i}`}
+              aria-selected={i === 0 ? "true" : "false"}
+              data-i={i}
+            >
+              {f.name}
+            </button>
+          ))}
+        </div>
+        {files.map((f, i) => (
+          <div
+            class="ds-pane"
+            id={`ds-pane-${i}`}
+            role="tabpanel"
+            aria-labelledby={`ds-tab-${i}`}
+            data-i={i}
+            hidden={i !== 0}
+          >
+            <Code code={f.text} lang={shiki(f.lang)} theme="github-dark-dimmed" />
+          </div>
+        ))}
+      </div>
+    </section>
+  </main>
+</Base>
+
+<script>
+  import { initDesignEntry } from "../../../../scripts/design";
+  initDesignEntry();
+</script>

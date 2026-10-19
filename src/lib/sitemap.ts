@@ -1,6 +1,7 @@
 import { type Lang, LANGS, other, url } from "../i18n";
 import { SITE_URL } from "../site";
 import { getPosts, getProjects, slugOf, ymd } from "./content";
+import { getDesigns } from "./design";
 import { TAXES, termsOf } from "./taxonomy";
 
 type Entry = { path: string; lastmod?: string | undefined; alt: boolean };
@@ -18,11 +19,13 @@ async function entries(lang: Lang): Promise<Entry[]> {
     { path: "/posts/", lastmod: newest, alt: true },
     { path: "/about/", alt: true },
     { path: "/projects/", alt: true },
+    { path: "/design/", alt: true },
     { path: "/guestbook/", alt: true },
     { path: "/visitors/", alt: true },
     { path: "/privacy/", alt: true },
     ...posts.map((p) => ({ path: `/posts/${slugOf(p)}/`, lastmod: ymd(p.data.updated ?? p.data.date), alt: true })),
     ...(await getProjects(lang)).map((p) => ({ path: `/projects/${slugOf(p)}/`, alt: true })),
+    ...(await getDesigns(lang)).map((d) => ({ path: `/design/${slugOf(d)}/`, lastmod: ymd(d.data.added), alt: true })),
   ];
   for (const tax of TAXES) {
     list.push({ path: `/${tax}/`, alt: true });

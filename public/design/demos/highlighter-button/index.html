@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>荧光笔划过</title>
+    <style>
+      :root {
+        --paper: #fbf8f1;
+        --card: #fffdf8;
+        --ink: #1c2230;
+        --ink-2: #4a5163;
+        --ink-3: #636877;
+        --line: #e6dfd0;
+        --dot: #d8d0bf;
+        --blue: #2f5bd3;
+        --seal: #c0391f;
+        --hi: #ffe066; /* highlighter yellow */
+        --hi-pink: #ffb3c7;
+        --hi-green: #b6f0a8;
+        --ease: cubic-bezier(0.16, 1, 0.3, 1);
+        --f-sans: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+        --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #14161b;
+          --card: #1e2129;
+          --ink: #ece7dc;
+          --ink-2: #bab6ac;
+          --ink-3: #959aa8;
+          --line: #31353f;
+          --dot: #2c3039;
+          --blue: #8eaaff;
+          --seal: #f0694e;
+          /* On dark paper the ink is light, so the marker turns into a dim, saturated stripe. */
+          --hi: #7d6416;
+          --hi-pink: #7a2e44;
+          --hi-green: #2f5f2a;
+          color-scheme: dark;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 32px 16px;
+        background: var(--paper) radial-gradient(var(--dot) 1px, transparent 1.2px) 0 0 / 22px 22px;
+        color: var(--ink);
+        font: 16px/1.8 var(--f-sans);
+      }
+      .sheet {
+        width: min(560px, 100%);
+        padding: 28px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        box-shadow: 0 10px 28px -14px rgba(28, 34, 48, 0.28);
+      }
+      .label { margin: 0 0 10px; font: 500 11px/1 var(--f-mono); letter-spacing: 0.12em; color: var(--ink-3); }
+      .label + * { margin-top: 0; }
+      section + section { margin-top: 26px; }
+
+      /* ---------- 1. a link the marker sweeps across ----------
+         The stroke is a background that grows from 0 to 100% wide. The gradient stops leave a band
+         in the lower part of the line, like a highlighter dragged a bit low; box-decoration-break
+         makes each wrapped line get its own stroke. */
+      .hl {
+        --c: var(--hi);
+        color: inherit;
+        text-decoration: none;
+        background: linear-gradient(transparent 52%, var(--c) 52%, var(--c) 90%, transparent 90%) no-repeat 0 0 / 0% 100%;
+        -webkit-box-decoration-break: clone;
+        box-decoration-break: clone;
+        padding: 0 2px;
+        transition: background-size 0.45s var(--ease);
+        border-bottom: 1px dashed var(--ink-3);
+      }
+      .hl:hover,
+      .hl:focus-visible { background-size: 100% 100%; border-bottom-color: transparent; outline: none; }
+      .hl.pink { --c: var(--hi-pink); }
+      .hl.green { --c: var(--hi-green); }
+
+      /* ---------- 2. a button with a marker stroke behind its label ----------
+         The stroke is a pseudo-element: skewed so its ends are cut at an angle like a chisel tip,
+         scaled from the left edge, and a little rotated so it is never perfectly straight. */
+      .mk {
+        position: relative;
+        isolation: isolate;
+        padding: 10px 18px;
+        border: 1.5px solid var(--ink);
+        border-radius: 999px;
+        background: transparent;
+        color: var(--ink);
+        font: 600 15px/1 var(--f-sans);
+        cursor: pointer;
+        transition: scale 0.2s;
+      }
+      .mk::before {
+        content: "";
+        position: absolute;
+        z-index: -1;
+        left: 10px;
+        right: 10px;
+        top: 52%;
+        height: 42%;
+        background: var(--hi);
+        border-radius: 2px;
+        transform-origin: 0 50%;
+        transform: rotate(-2deg) skewX(-18deg) scaleX(0);
+        transition: transform 0.4s var(--ease);
+      }
+      .mk:hover::before,
+      .mk:focus-visible::before { transform: rotate(-2deg) skewX(-18deg) scaleX(1); }
+      .mk:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+      .mk:active { scale: 0.95; }
+      /* Leaving the button, the stroke wipes away to the right instead of shrinking back. */
+      .mk:not(:hover):not(:focus-visible)::before { transform-origin: 100% 50%; }
+
+      /* ---------- 3. "already read" lines that stay highlighted ----------
+         Toggling aria-pressed draws the stroke; it stays, like marking up a printout. */
+      .pick {
+        all: unset;
+        cursor: pointer;
+        --c: var(--hi);
+        background: linear-gradient(104deg, transparent 0.6em, var(--c) 0.6em calc(100% - 0.4em), transparent calc(100% - 0.4em)) no-repeat 0 62% / 0% 58%;
+        -webkit-box-decoration-break: clone;
+        box-decoration-break: clone;
+        transition: background-size 0.5s var(--ease);
+        border-radius: 3px;
+        margin: 0 -0.6em 0 -0.6em;
+        padding: 0 0.4em 0 0.6em;
+      }
+      .pick[aria-pressed="true"] { background-size: 100% 58%; }
+      .pick:focus-visible { outline: 2px dashed var(--blue); outline-offset: 2px; }
+      p.quote { color: var(--ink-2); margin: 0; }
+      .hint { margin: 8px 0 0; font-size: 12px; color: var(--ink-3); }
+
+      @media (prefers-reduced-motion: reduce) {
+        .hl, .mk::before, .pick { transition: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="sheet">
+      <section>
+        <p class="label">01 · 链接</p>
+        <p>
+          正文里的链接平时只有一条虚线，指上去才被荧光笔<a class="hl" href="#">从左往右划一道</a>；换个颜色也行：<a class="hl pink" href="#">粉色</a>、<a class="hl green" href="#">绿色</a>。跨行的长链接<a class="hl" href="#">每一行都会单独划到，不会被拉成一整块奇怪的色带</a>。
+        </p>
+      </section>
+      <section>
+        <p class="label">02 · 按钮</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px">
+          <button class="mk" type="button">读全文 →</button>
+          <button class="mk" type="button">订阅更新</button>
+        </div>
+        <p class="hint">笔头是斜的，进来从左往右涂，离开往右边擦掉。</p>
+      </section>
+      <section>
+        <p class="label">03 · 点一下标重点</p>
+        <p class="quote">
+          <button class="pick" type="button" aria-pressed="false">先给结论，再给依据。</button>
+          读者没时间的时候，只看标黄的那几句也能明白你要说什么。
+          <button class="pick" type="button" aria-pressed="true">数字放进图里，别堆在段落里。</button>
+        </p>
+      </section>
+    </main>
+    <script>
+      for (const b of document.querySelectorAll(".pick")) {
+        b.addEventListener("click", () => b.setAttribute("aria-pressed", String(b.getAttribute("aria-pressed") !== "true")));
+      }
+      for (const a of document.querySelectorAll('a[href="#"]')) a.addEventListener("click", (e) => e.preventDefault());
+    </script>
+  </body>
+</html>

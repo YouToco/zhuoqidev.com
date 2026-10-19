@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>手绘风图表与大图查看器</title>
+    <style>
+      :root {
+        --paper: #fbf8f1;
+        --paper-2: #f3eee2;
+        --card: #fffdf8;
+        --ink: #1c2230;
+        --ink-2: #4a5163;
+        --ink-3: #636877;
+        --line: #e6dfd0;
+        --dot: #d8d0bf;
+        --blue: #2f5bd3;
+        --seal: #c0391f;
+        --sheet: #fffdf8; /* diagrams are drawn on light paper in both themes */
+        --shadow: 0 1px 0 rgba(28, 34, 48, 0.04), 0 10px 28px -14px rgba(28, 34, 48, 0.28);
+        --spring: linear(
+          0,
+          0.062,
+          0.215,
+          0.411,
+          0.615,
+          0.799,
+          0.95,
+          1.059,
+          1.126,
+          1.158,
+          1.161,
+          1.145,
+          1.116,
+          1.083,
+          1.051,
+          1.023,
+          1.001,
+          0.986,
+          0.977,
+          0.974,
+          0.974,
+          0.978,
+          0.983,
+          0.988,
+          0.994,
+          0.998,
+          1.001,
+          1.003,
+          1.004,
+          1.004,
+          1
+        );
+        --f-sans: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+        --f-serif: "Songti SC", STSong, "Noto Serif CJK SC", "Source Han Serif SC", SimSun, serif;
+        --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #14161b;
+          --paper-2: #1c1f26;
+          --card: #1e2129;
+          --ink: #ece7dc;
+          --ink-2: #bab6ac;
+          --ink-3: #959aa8;
+          --line: #31353f;
+          --dot: #2c3039;
+          --blue: #8eaaff;
+          --seal: #f0694e;
+          --shadow: 0 1px 0 rgba(0, 0, 0, 0.25), 0 10px 28px -14px rgba(0, 0, 0, 0.8);
+          color-scheme: dark;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--paper) radial-gradient(var(--dot) 1px, transparent 1.2px) 0 0 / 22px 22px;
+        color: var(--ink);
+        font: 16px/1.85 var(--f-sans);
+      }
+      article {
+        max-width: 780px;
+        margin: 0 auto;
+        padding: 36px 24px 72px;
+      }
+      .crumb {
+        margin-bottom: 14px;
+        font: 400 12px/1 var(--f-mono);
+        color: var(--ink-3);
+      }
+      .crumb b {
+        color: var(--seal);
+        font-weight: 400;
+      }
+      h1 {
+        margin: 0 0 6px;
+        font: 900 32px/1.3 var(--f-serif);
+      }
+      .lede {
+        margin: 0 0 4px;
+        color: var(--ink-2);
+      }
+      p {
+        color: var(--ink-2);
+      }
+      code {
+        font: 400 0.88em var(--f-mono);
+        color: var(--seal);
+      }
+
+      /* ---------- a diagram in the article: light paper, dashed edge, click to enlarge ---------- */
+      .diagram {
+        margin: 1.4em 0;
+        padding: 14px;
+        background: var(--sheet);
+        border: 1px dashed var(--ink-3);
+        border-radius: 12px;
+      }
+      .diagram img {
+        display: block;
+        max-width: 100%;
+        height: auto;
+        margin-inline: auto;
+      }
+      .diagram figcaption {
+        margin-top: 6px;
+        text-align: center;
+        font: 400 12px/1.5 var(--f-mono);
+        color: #6b7080;
+      }
+      .zoom-btn {
+        display: block;
+        width: 100%;
+        padding: 0;
+        border: none;
+        background: none;
+        cursor: zoom-in;
+      }
+      .zoom-btn:focus-visible {
+        outline: 2px solid var(--blue);
+        outline-offset: 4px;
+        border-radius: 10px;
+      }
+
+      /* ---------- the viewer ----------
+         It opens with the whole picture in the window: the image takes the largest size that fits
+         both the width and the height (--r is its aspect ratio, set on open), and --s (1 = fit, up
+         to 4) zooms from there. Zoomed in, the stage scrolls. 26px = padding + border; 70px adds
+         the bar. */
+      dialog.zoom {
+        --zoom-w: min(96vw, 1600px);
+        --zoom-h: 94vh;
+        width: fit-content;
+        max-width: var(--zoom-w);
+        max-height: var(--zoom-h);
+        padding: 12px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--sheet);
+        box-shadow: var(--shadow);
+      }
+      @supports (height: 1dvh) {
+        dialog.zoom {
+          --zoom-h: 94dvh;
+        }
+      }
+      dialog.zoom[open] {
+        animation: pop 0.45s var(--spring);
+      }
+      @keyframes pop {
+        from {
+          opacity: 0;
+          scale: 0.94;
+        }
+      }
+      dialog.zoom::backdrop {
+        background: rgba(10, 12, 16, 0.66);
+        -webkit-backdrop-filter: blur(4px);
+        backdrop-filter: blur(4px);
+      }
+      .zoom-bar {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 6px;
+        height: 32px;
+        margin-bottom: 8px;
+      }
+      .zoom-bar form {
+        margin: 0;
+      }
+      .chip-btn {
+        padding: 7px 11px;
+        border: 1px dashed #8b90a0;
+        border-radius: 10px;
+        background: var(--sheet);
+        color: #1c2230;
+        font: 500 13px/1 var(--f-sans);
+        white-space: nowrap;
+        cursor: pointer;
+        transition: scale 0.45s var(--spring);
+      }
+      .chip-btn:hover {
+        border-style: solid;
+      }
+      .chip-btn:active {
+        scale: 0.93;
+      }
+      .chip-btn:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+      [data-zoom="in"],
+      [data-zoom="out"] {
+        min-width: 34px;
+        font-weight: 600;
+      }
+      .zoom-level {
+        min-width: 84px;
+        font-variant-numeric: tabular-nums;
+      }
+      .zoom-hint {
+        margin-right: auto;
+        padding-right: 10px;
+        font: 400 11px/1.3 var(--f-mono);
+        color: #6b7080;
+        white-space: nowrap;
+      }
+      .zoom-stage {
+        max-width: calc(var(--zoom-w) - 26px);
+        max-height: calc(var(--zoom-h) - 70px);
+        overflow: auto;
+        overscroll-behavior: contain;
+        touch-action: none;
+        cursor: zoom-in;
+      }
+      .zoom-stage.zoomed {
+        cursor: grab;
+      }
+      .zoom-stage.dragging {
+        cursor: grabbing;
+      }
+      dialog.zoom img {
+        display: block;
+        max-width: none;
+        height: auto;
+        margin-inline: auto;
+        user-select: none;
+        -webkit-user-drag: none;
+        width: calc(min(var(--zoom-w) - 26px, (var(--zoom-h) - 70px) * var(--r, 1.5)) * var(--s, 1));
+      }
+
+      @media (max-width: 720px) {
+        .zoom-hint {
+          display: none;
+        }
+      }
+      @media (max-width: 560px) {
+        article {
+          padding: 28px 16px 56px;
+        }
+        h1 {
+          font-size: 26px;
+        }
+        .diagram {
+          padding: 8px;
+        }
+        .zoom-level {
+          min-width: 0;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        dialog.zoom[open] {
+          animation: none;
+        }
+        .chip-btn {
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <article>
+      <div class="crumb">~/notes/ <b>cat 手绘图表.md</b></div>
+      <h1>图表也可以像手画的</h1>
+      <p class="lede">文章里的流程图画成手绘风：线条有点抖、色块是斜线涂的。点一下图，在大图里缩放、拖着看细节。</p>
+
+      <figure class="diagram">
+        <img
+          src="flow.svg"
+          decoding="sync"
+          width="980"
+          height="330"
+          alt="流程图：写草稿，自己读一遍，有错别字就改一改再读一遍，没有就排版、配图，然后发布"
+        />
+        <figcaption>图 1 · 发一篇文章的流程（点图放大）</figcaption>
+      </figure>
+
+      <p>
+        写文章的时候只写 Mermaid 文本，构建时在无头浏览器里把它转成 Excalidraw 场景，再导出 SVG。页面上只是一张普通的
+        <code>&lt;img&gt;</code>，不跑任何画图脚本。
+      </p>
+
+      <figure class="diagram">
+        <img
+          src="pipeline.svg"
+          decoding="sync"
+          width="760"
+          height="700"
+          alt="流程图：Mermaid 代码块在构建时转换成 Excalidraw 场景和手绘风 SVG，场景改完可以重新导出，页面只放一张图片，点开能缩放拖动"
+        />
+        <figcaption>图 2 · 这些图是怎么来的（点图放大）</figcaption>
+      </figure>
+
+      <p>
+        查看器打开时整张图刚好放进窗口，最多放大到 4 倍；按钮、滚轮、双指、双击和键盘（+ − 0、方向键）都能操作，Esc
+        或点图外面关闭。
+      </p>
+    </article>
+
+    <dialog class="zoom" aria-label="查看大图">
+      <div class="zoom-bar">
+        <span class="zoom-hint">滚轮或双指缩放 · 拖动平移 · 双击切换</span>
+        <button class="chip-btn" type="button" data-zoom="out" aria-label="缩小">−</button>
+        <button class="chip-btn zoom-level" type="button" data-zoom="fit" data-fit="适应窗口">适应窗口</button>
+        <button class="chip-btn" type="button" data-zoom="in" aria-label="放大">+</button>
+        <form method="dialog">
+          <button class="chip-btn" type="submit" autofocus>关闭 ✕</button>
+        </form>
+      </div>
+      <div class="zoom-stage">
+        <img alt="" decoding="async" draggable="false" />
+      </div>
+    </dialog>
+
+    <script>
+      // Click a diagram to see it large. The viewer opens with all of the picture in the window and
+      // zooms from there: the − / + buttons, the wheel or a pinch, a double-click, or the + − 0 keys;
+      // drag to pan.
+      const dialog = document.querySelector("dialog.zoom");
+      if (dialog && typeof dialog.showModal === "function") {
+        const stage = dialog.querySelector(".zoom-stage");
+        const view = stage.querySelector("img");
+        const btn = (k) => dialog.querySelector(`[data-zoom="${k}"]`);
+        const [zoomOut, zoomFit, zoomIn] = [btn("out"), btn("fit"), btn("in")];
+        const MAX = 4;
+        const STEP = 1.5;
+        let scale = 1;
+
+        const centre = () => {
+          const r = stage.getBoundingClientRect();
+          return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+        };
+        const sync = () => {
+          zoomOut.disabled = scale <= 1;
+          zoomIn.disabled = scale >= MAX;
+          zoomFit.textContent = scale <= 1 ? zoomFit.dataset.fit : `${Math.round(scale * 100)}%`;
+          stage.classList.toggle("zoomed", scale > 1);
+        };
+        // Zoom so that the picture point under `at` (a cursor, a pinch, the stage centre) stays put.
+        const zoomTo = (next, at = centre()) => {
+          next = Math.min(MAX, Math.max(1, next));
+          if (Math.abs(next - scale) < 0.001) return;
+          const a = view.getBoundingClientRect();
+          const fx = (at.x - a.left) / a.width;
+          const fy = (at.y - a.top) / a.height;
+          scale = next;
+          view.style.setProperty("--s", String(scale));
+          const b = view.getBoundingClientRect();
+          stage.scrollLeft += b.left + fx * b.width - at.x;
+          stage.scrollTop += b.top + fy * b.height - at.y;
+          sync();
+        };
+
+        // Wrap each diagram image in a button, so it opens with a click, Enter or Space.
+        for (const img of document.querySelectorAll(".diagram img")) {
+          const opener = document.createElement("button");
+          opener.type = "button";
+          opener.className = "zoom-btn";
+          opener.setAttribute("aria-label", `查看大图：${img.alt}`);
+          img.replaceWith(opener);
+          opener.append(img);
+          opener.addEventListener("click", () => {
+            // The aspect ratio is needed before the large copy loads, to fit it in the window.
+            const ratio =
+              img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : img.width / img.height;
+            if (ratio > 0) view.style.setProperty("--r", String(ratio));
+            else view.style.removeProperty("--r");
+            scale = 1;
+            view.style.removeProperty("--s");
+            view.alt = img.alt;
+            view.src = img.currentSrc || img.src;
+            dialog.showModal();
+            stage.scrollTo(0, 0);
+            sync();
+          });
+        }
+
+        zoomIn.addEventListener("click", () => zoomTo(scale * STEP));
+        zoomOut.addEventListener("click", () => zoomTo(scale / STEP));
+        zoomFit.addEventListener("click", () => zoomTo(1));
+        dialog.addEventListener("keydown", (e) => {
+          if (e.ctrlKey || e.metaKey || e.altKey) return;
+          const pan = { ArrowLeft: [-80, 0], ArrowRight: [80, 0], ArrowUp: [0, -80], ArrowDown: [0, 80] }[e.key];
+          if (e.key === "+" || e.key === "=") zoomTo(scale * STEP);
+          else if (e.key === "-" || e.key === "_") zoomTo(scale / STEP);
+          else if (e.key === "0") zoomTo(1);
+          else if (pan && scale > 1) stage.scrollBy(pan[0], pan[1]);
+          else return;
+          e.preventDefault();
+        });
+        // A wheel notch is ~100px and zooms ~16%; a trackpad pinch sends small deltas with ctrlKey set.
+        stage.addEventListener(
+          "wheel",
+          (e) => {
+            e.preventDefault();
+            const per = e.deltaMode === 1 ? 0.05 : e.ctrlKey ? 0.01 : 0.0015;
+            zoomTo(scale * Math.exp(-e.deltaY * per), { x: e.clientX, y: e.clientY });
+          },
+          { passive: false },
+        );
+        stage.addEventListener("dblclick", (e) => zoomTo(scale > 1 ? 1 : 2.5, { x: e.clientX, y: e.clientY }));
+
+        // One pointer pans (mouse drag or one finger), two pinch. touch-action: none hands touches to us.
+        const pointers = new Map();
+        let pinch = null;
+        let dragged = 0; // when the last drag ended, so its trailing click doesn't close the viewer
+        let travel = 0;
+        const spread = () => {
+          const [a, b] = [...pointers.values()];
+          return Math.hypot(a.x - b.x, a.y - b.y) || 1;
+        };
+        stage.addEventListener("pointerdown", (e) => {
+          if (e.pointerType === "mouse" && e.button !== 0) return;
+          e.preventDefault();
+          stage.setPointerCapture(e.pointerId);
+          pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          travel = 0;
+          pinch = pointers.size === 2 ? { d: spread(), s: scale } : null;
+        });
+        stage.addEventListener("pointermove", (e) => {
+          const last = pointers.get(e.pointerId);
+          if (!last) return;
+          const now = { x: e.clientX, y: e.clientY };
+          pointers.set(e.pointerId, now);
+          if (pinch && pointers.size === 2) {
+            const [a, b] = [...pointers.values()];
+            zoomTo(pinch.s * (spread() / pinch.d), { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+            travel = Infinity;
+          } else if (pointers.size === 1) {
+            stage.scrollLeft -= now.x - last.x;
+            stage.scrollTop -= now.y - last.y;
+            travel += Math.abs(now.x - last.x) + Math.abs(now.y - last.y);
+            if (travel > 4) stage.classList.add("dragging");
+          }
+        });
+        const release = (e) => {
+          if (!pointers.delete(e.pointerId)) return;
+          if (pointers.size < 2) pinch = null;
+          if (!pointers.size) {
+            stage.classList.remove("dragging");
+            if (travel > 4) dragged = e.timeStamp;
+          }
+        };
+        stage.addEventListener("pointerup", release);
+        stage.addEventListener("pointercancel", release);
+
+        // A click on the backdrop (outside the picture) closes the viewer; Esc closes it natively.
+        dialog.addEventListener("click", (e) => {
+          if (e.target === dialog && e.timeStamp - dragged > 300) dialog.close();
+        });
+        dialog.addEventListener("close", () => {
+          view.removeAttribute("src");
+          pointers.clear();
+          pinch = null;
+        });
+      }
+    </script>
+  </body>
+</html>

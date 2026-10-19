@@ -46,4 +46,27 @@ const pages = defineCollection({
   }),
 });
 
-export const collections = { posts, projects, pages };
+// The design library (/design/): one runnable demo per entry in public/design/demos/<slug>/.
+// Both editions carry the same structural fields; src/lib/design.ts fails the build if they drift.
+const design = defineCollection({
+  loader: bilingual("./src/content/design"),
+  schema: z.object({
+    title: z.string(),
+    /** One sentence for the card: what it is and what is worth stealing. */
+    summary: z.string().max(140),
+    category: z.enum(["button", "navigation", "card", "layout", "style", "motion", "visual"]),
+    /** original = designed here; recreated = rebuilt from someone else's effect (credit in inspiredBy). */
+    origin: z.enum(["original", "recreated"]).default("original"),
+    inspiredBy: z.object({ name: z.string(), url: z.url() }).optional(),
+    stack: z.array(z.string()).min(1),
+    tags: z.array(z.string()).min(1),
+    order: z.number().int(),
+    /** Files under public/design/demos/<slug>/ shown as source; the first one is the demo page. */
+    files: z.array(z.string()).min(1),
+    /** Height of the demo frame on the entry page, in CSS pixels. */
+    demoHeight: z.number().int().default(520),
+    added: z.coerce.date(),
+  }),
+});
+
+export const collections = { posts, projects, pages, design };

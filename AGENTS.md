@@ -150,6 +150,31 @@
   `tools/models/argus-story-run.json`. After changing any of it,
   compare mobile Lighthouse on that page with `main`.
 
+## Design library (/design/)
+
+- A gallery of UI pieces worth keeping: buttons, navigation, cards, whole pages, visual styles,
+  motion, charts and 3D. Each entry is one self-contained demo page that readers try in a frame,
+  copy in one click, or hand to their coding agent.
+- An entry is `src/content/design/<slug>/{zh,en}.md` (schema in `src/content.config.ts`: `category`
+  is one of button / navigation / card / layout / style / motion / visual; `origin: recreated` plus
+  `inspiredBy` credits an effect rebuilt from someone else's work) and its demo in
+  `public/design/demos/<slug>/` (`files` lists what the source viewer shows, the first is the demo).
+  Both editions must agree on the demo fields; `src/lib/design.ts` fails the build otherwise.
+- Demos are served as they are: one HTML file that opens on a double-click, inline CSS and JS,
+  third-party libraries only from a CDN with an exact version, sample data inside the page, light
+  and dark through `prefers-color-scheme` (the entry page rewrites those media rules to follow the
+  site's own theme switch), no horizontal scroll at 375 px, `prefers-reduced-motion` respected.
+  Only our own code (MIT); other people's work is a link in `src/data/design-links.ts`.
+- Write the notes as `## 看点 / 怎么用 / 坑` (en: What makes it work / How to use it / Pitfalls):
+  they go, with the full source, into `/design/<slug>/index.md` for agents and into `prompt.md`,
+  which is what "copy agent prompt" copies (a short "please recreate this" brief in front).
+  `/design/index.md` and both `llms.txt` list every entry.
+- After adding or changing a demo run `node scripts/design-covers.mjs [slug…]` (Chrome; small
+  pieces are shot close up, `POSES` puts a demo in its telling state) and commit `cover.webp`.
+- `subset-fonts.mjs` and `verify-dist.mjs` skip the site checks for `/design/demos/` (those pages
+  have no site frame); `verify` still checks their links and that each entry has a demo, `index.md`
+  and `prompt.md`.
+
 ## Guestbook and visit counts (Pages Functions + D1)
 
 - The site stays static; the only server code is `functions/` (Cloudflare Pages Functions) with one

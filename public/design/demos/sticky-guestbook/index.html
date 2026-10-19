@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>便利贴留言墙</title>
+    <style>
+      :root {
+        --paper: #fbf8f1;
+        --paper-2: #f3eee2;
+        --card: #fffdf8;
+        --ink: #1c2230;
+        --ink-2: #4a5163;
+        --ink-3: #636877;
+        --line: #e6dfd0;
+        --dot: #d8d0bf;
+        --blue: #2f5bd3;
+        --blue-line: rgba(47, 91, 211, 0.35);
+        --seal: #c0391f;
+        --shadow: 0 1px 0 rgba(28, 34, 48, 0.04), 0 10px 28px -14px rgba(28, 34, 48, 0.28);
+        --ease: cubic-bezier(0.16, 1, 0.3, 1);
+        --spring: linear(
+          0,
+          0.062,
+          0.215,
+          0.411,
+          0.615,
+          0.799,
+          0.95,
+          1.059,
+          1.126,
+          1.158,
+          1.161,
+          1.145,
+          1.116,
+          1.083,
+          1.051,
+          1.023,
+          1.001,
+          0.986,
+          0.977,
+          0.974,
+          0.974,
+          0.978,
+          0.983,
+          0.988,
+          0.994,
+          0.998,
+          1.001,
+          1.003,
+          1.004,
+          1.004,
+          1
+        );
+        --f-sans: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+        --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        --f-hand: "Kaiti SC", STKaiti, KaiTi, "AR PL UKai CN", cursive;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #14161b;
+          --paper-2: #1c1f26;
+          --card: #1e2129;
+          --ink: #ece7dc;
+          --ink-2: #bab6ac;
+          --ink-3: #959aa8;
+          --line: #31353f;
+          --dot: #2c3039;
+          --blue: #8eaaff;
+          --blue-line: rgba(142, 170, 255, 0.45);
+          --seal: #f0694e;
+          --shadow: 0 1px 0 rgba(0, 0, 0, 0.25), 0 10px 28px -14px rgba(0, 0, 0, 0.8);
+          color-scheme: dark;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--paper) radial-gradient(var(--dot) 1px, transparent 1.2px) 0 0 / 22px 22px;
+        color: var(--ink);
+        font: 15px/1.7 var(--f-sans);
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+      main {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 36px 24px 64px;
+      }
+
+      /* ---------- page head ---------- */
+      .crumb {
+        margin-bottom: 12px;
+        font: 400 12px/1 var(--f-mono);
+        color: var(--ink-3);
+      }
+      .crumb b {
+        color: var(--seal);
+        font-weight: 400;
+      }
+      h1 {
+        margin: 0;
+        font: 400 46px/1.1 var(--f-hand);
+        color: var(--blue);
+      }
+      .intro {
+        margin: 8px 0 26px;
+        max-width: 640px;
+        color: var(--ink-2);
+      }
+
+      /* ---------- the form: a card with a strip of tape ---------- */
+      .card {
+        background: var(--card);
+        border: 2px dashed var(--blue-line);
+        border-radius: 14px;
+        box-shadow: var(--shadow);
+      }
+      .tape {
+        position: absolute;
+        top: -9px;
+        left: 50%;
+        width: 78px;
+        height: 18px;
+        transform: translateX(-50%) rotate(-3deg);
+        background: repeating-linear-gradient(90deg, rgba(255, 214, 61, 0.9) 0 5px, rgba(255, 214, 61, 0.45) 5px 10px);
+        border-radius: 1px;
+      }
+      .gb-form {
+        position: relative;
+        display: grid;
+        gap: 12px;
+        padding: 20px 20px 14px;
+      }
+      .gb-form textarea {
+        width: 100%;
+        min-height: 84px;
+        resize: vertical;
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: var(--paper);
+        color: var(--ink);
+        font: 400 16px/1.6 var(--f-sans);
+      }
+      .gb-form textarea:focus-visible,
+      .gb-name input:focus-visible {
+        outline: 2px solid var(--blue);
+        outline-offset: 1px;
+      }
+      .gb-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px 16px;
+      }
+      .gb-name {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font: 400 13px/1 var(--f-mono);
+        color: var(--ink-2);
+      }
+      .gb-name input {
+        width: 11em;
+        padding: 7px 10px;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: var(--paper);
+        color: var(--ink);
+        font: 400 16px/1.2 var(--f-sans);
+      }
+      .gb-colors {
+        display: flex;
+        gap: 8px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+      }
+      .gb-swatch {
+        position: relative;
+        width: 26px;
+        height: 26px;
+        border-radius: 6px;
+        cursor: pointer;
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.14);
+      }
+      .gb-swatch input {
+        position: absolute;
+        inset: 0;
+        margin: 0;
+        opacity: 0;
+        cursor: pointer;
+      }
+      .gb-swatch:has(input:checked) {
+        outline: 2px solid var(--ink);
+        outline-offset: 2px;
+      }
+      .gb-swatch:has(input:focus-visible) {
+        outline: 2px dashed var(--blue);
+        outline-offset: 2px;
+      }
+      .gb-count {
+        margin-left: auto;
+        font: 400 12px/1 var(--f-mono);
+        color: var(--ink-3);
+      }
+      .gb-count.over {
+        color: var(--seal);
+      }
+      .gb-send {
+        padding: 9px 18px;
+        border: 1px solid var(--blue);
+        border-radius: 10px;
+        background: transparent;
+        color: var(--blue);
+        font: 500 14px/1 var(--f-sans);
+        cursor: pointer;
+        transition: scale 0.45s var(--spring);
+      }
+      .gb-send:hover {
+        background: var(--paper-2);
+      }
+      .gb-send:active {
+        scale: 0.93;
+      }
+      .gb-status {
+        margin: -4px 0 0;
+        min-height: 1.4em;
+        font: 500 13px/1.4 var(--f-sans);
+        color: var(--ink-2);
+      }
+      .gb-fine {
+        margin: 0;
+        font: 400 12px/1.6 var(--f-mono);
+        color: var(--ink-3);
+      }
+
+      /* ---------- the wall ---------- */
+      /* Notes are paper: the same light colours and dark ink in both themes. */
+      .gb-wall-h {
+        margin: 34px 4px 18px;
+        font: 400 28px/1.2 var(--f-hand);
+        color: var(--seal);
+      }
+      .gb-wall {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+        gap: 22px;
+        align-items: start;
+      }
+      .gb-note,
+      .gb-swatch.yellow {
+        background: #ffe88a;
+      }
+      .gb-note.pink,
+      .gb-swatch.pink {
+        background: #ffd4dd;
+      }
+      .gb-note.blue,
+      .gb-swatch.blue {
+        background: #d5e6ff;
+      }
+      .gb-note.green,
+      .gb-swatch.green {
+        background: #d6f1cf;
+      }
+      /* Each note leans a little (--tilt is stable per note) and straightens up under the pointer. */
+      .gb-note {
+        --tilt: 0deg;
+        position: relative;
+        padding: 20px 18px 14px;
+        border-radius: 4px;
+        rotate: var(--tilt);
+        color: #2b2410;
+        box-shadow: 0 16px 24px -16px rgba(80, 60, 0, 0.45);
+        transition:
+          rotate 0.45s var(--spring),
+          translate 0.45s var(--spring);
+      }
+      .gb-note:hover {
+        rotate: 0deg;
+        translate: 0 -3px;
+      }
+      /* A short strip of see-through tape on every other note. */
+      .gb-note:nth-child(odd)::before {
+        content: "";
+        position: absolute;
+        top: -8px;
+        left: 50%;
+        width: 56px;
+        height: 16px;
+        transform: translateX(-50%) rotate(2deg);
+        background: rgba(255, 255, 255, 0.55);
+        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.04);
+      }
+      .gb-note p {
+        margin: 0;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        font: 400 18px/1.55 var(--f-hand);
+      }
+      .gb-foot {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 12px;
+        font: 400 11px/1.5 var(--f-mono);
+        color: #5c5232;
+      }
+      .gb-note.mine {
+        outline: 2px dashed rgba(43, 36, 16, 0.35);
+        outline-offset: -6px;
+      }
+      .gb-mine {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 8px;
+        font: 500 11px/1.4 var(--f-mono);
+        color: #8a3a22;
+      }
+      .gb-mine button {
+        padding: 0;
+        border: 0;
+        background: none;
+        color: inherit;
+        font: inherit;
+        text-decoration: underline dashed;
+        cursor: pointer;
+      }
+      .gb-note.new {
+        animation: stick 0.6s var(--spring);
+      }
+      @keyframes stick {
+        from {
+          opacity: 0;
+          scale: 1.15;
+          translate: 0 -18px;
+        }
+      }
+      .gb-msg {
+        grid-column: 1 / -1;
+        font: 400 13px/1.6 var(--f-mono);
+        color: var(--ink-3);
+      }
+
+      @media (max-width: 560px) {
+        main {
+          padding: 28px 16px 48px;
+        }
+        h1 {
+          font-size: 38px;
+        }
+        .gb-form {
+          padding: 18px 14px 12px;
+        }
+        .gb-name input {
+          width: 9em;
+        }
+        .gb-wall {
+          grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+          gap: 18px;
+        }
+      }
+      /* Reduced motion keeps the resting tilt (it does not move) and drops the swings. */
+      @media (prefers-reduced-motion: reduce) {
+        .gb-note {
+          transition: none;
+        }
+        .gb-note.new {
+          animation: none;
+        }
+        .gb-send {
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="crumb">~/guestbook/ <b>ls notes/</b></div>
+      <h1>✦ 留言板</h1>
+      <p class="intro">随手贴张便签：读后感、想看的题目、发现的错别字，或者就打个招呼。</p>
+
+      <form class="gb-form card" data-max="200">
+        <span class="tape" aria-hidden="true"></span>
+        <label class="sr-only" for="gb-body">便签内容</label>
+        <textarea id="gb-body" name="body" rows="3" required placeholder="想说点什么？"></textarea>
+        <div class="gb-row">
+          <label class="gb-name">
+            <span>署名</span>
+            <input name="name" maxlength="24" autocomplete="nickname" placeholder="可以不填" />
+          </label>
+          <fieldset class="gb-colors">
+            <legend class="sr-only">便签颜色</legend>
+            <label class="gb-swatch yellow"
+              ><input type="radio" name="color" value="yellow" checked /><span class="sr-only">黄色</span></label
+            >
+            <label class="gb-swatch pink"
+              ><input type="radio" name="color" value="pink" /><span class="sr-only">粉色</span></label
+            >
+            <label class="gb-swatch blue"
+              ><input type="radio" name="color" value="blue" /><span class="sr-only">蓝色</span></label
+            >
+            <label class="gb-swatch green"
+              ><input type="radio" name="color" value="green" /><span class="sr-only">绿色</span></label
+            >
+          </fieldset>
+          <span class="gb-count" data-count>0 / 200</span>
+          <button class="gb-send" type="submit">贴上去</button>
+        </div>
+        <p class="gb-status" role="status" aria-live="polite" data-status></p>
+        <p class="gb-fine">演示版：便签只存在你这台设备的浏览器里，别人看不到。</p>
+      </form>
+
+      <h2 class="gb-wall-h">墙上的便签</h2>
+      <ul class="gb-wall" data-wall></ul>
+    </main>
+
+    <script>
+      // The wall shows sample notes plus the ones posted from this browser (kept in localStorage).
+      // In a real site the form would POST to your backend, and approved notes would come back from
+      // it; the rendering below stays the same.
+      const SAMPLES = [
+        { id: 1, name: "路过的读者", body: "第一次来，便利贴的颜色好舒服。", color: "yellow", date: "2026-10-12" },
+        {
+          id: 2,
+          name: "小林",
+          body: "照着那篇按钮回弹的文章改了一下，\n我们产品的按钮手感好多了，谢谢！",
+          color: "pink",
+          date: "2026-10-11",
+        },
+        {
+          id: 3,
+          name: "细心的人",
+          body: "发现一个错别字：第三段的「布局」写成了「布据」。",
+          color: "blue",
+          date: "2026-10-10",
+        },
+        { id: 4, name: "小周", body: "能不能出一期讲深色模式配色的？", color: "green", date: "2026-10-09" },
+        { id: 5, name: "", body: "周末照着做了一个桌面风首页，拖卡片太好玩了。", color: "yellow", date: "2026-10-08" },
+        {
+          id: 6,
+          name: "远方的朋友",
+          body: "Hello from the other side of the world 👋",
+          color: "blue",
+          date: "2026-10-06",
+        },
+        { id: 7, name: "小王", body: "胶带这个小细节好可爱。", color: "pink", date: "2026-10-05" },
+        { id: 8, name: "阿杰", body: "在手机上看也很顺，排得整整齐齐。", color: "green", date: "2026-10-03" },
+      ];
+      const COLORS = ["yellow", "pink", "blue", "green"];
+      const KEY = "sticky-guestbook-mine";
+
+      const form = document.querySelector(".gb-form");
+      const wall = document.querySelector("[data-wall]");
+      const status = document.querySelector("[data-status]");
+      const count = document.querySelector("[data-count]");
+      const body = form.querySelector("textarea");
+      const max = Number(form.dataset.max);
+
+      // localStorage can be missing or throw (private mode, blocked site data); every access is guarded.
+      const mine = () => {
+        try {
+          const list = JSON.parse(localStorage.getItem(KEY) ?? "[]");
+          return Array.isArray(list) ? list : [];
+        } catch {
+          return [];
+        }
+      };
+      const keepMine = (list) => {
+        try {
+          if (list.length) localStorage.setItem(KEY, JSON.stringify(list.slice(0, 20)));
+          else localStorage.removeItem(KEY);
+        } catch {}
+      };
+
+      // Count code points, so an emoji counts as one character.
+      const length = (s) => [...s.trim()].length;
+      const today = () => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      };
+      const say = (text) => {
+        status.textContent = text;
+      };
+      const updateCount = () => {
+        const n = length(body.value);
+        count.textContent = `${n} / ${max}`;
+        count.classList.toggle("over", n > max);
+      };
+      body.addEventListener("input", updateCount);
+
+      // A slight, stable tilt per note, like paper stuck on by hand.
+      const tilt = (id) => ((((id * 37) % 7) + 7) % 7) - 3;
+
+      // Text goes in with textContent, never innerHTML: whatever people type stays text.
+      function card(n, own, fresh) {
+        const li = document.createElement("li");
+        li.className = `gb-note ${COLORS.includes(n.color) ? n.color : "yellow"}${own ? " mine" : ""}${fresh ? " new" : ""}`;
+        li.style.setProperty("--tilt", `${tilt(n.id)}deg`);
+        if (own) {
+          const tag = document.createElement("span");
+          tag.className = "gb-mine";
+          tag.textContent = "只在本机";
+          const rip = document.createElement("button");
+          rip.type = "button";
+          rip.textContent = "撕掉";
+          rip.addEventListener("click", () => {
+            keepMine(mine().filter((m) => m.id !== n.id));
+            render();
+            say("撕掉了。");
+          });
+          tag.append(rip);
+          li.append(tag);
+        }
+        const p = document.createElement("p");
+        p.textContent = n.body;
+        const foot = document.createElement("div");
+        foot.className = "gb-foot";
+        const who = document.createElement("span");
+        who.textContent = `— ${n.name || "匿名"}`;
+        const when = document.createElement("time");
+        when.dateTime = n.date;
+        when.textContent = n.date;
+        foot.append(who, when);
+        li.append(p, foot);
+        return li;
+      }
+
+      function render(freshId) {
+        const own = mine();
+        wall.replaceChildren(
+          ...own.map((n) => card(n, true, n.id === freshId)),
+          ...SAMPLES.map((n) => card(n, false, false)),
+        );
+      }
+      render();
+
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const fd = new FormData(form);
+        const text = String(fd.get("body") ?? "").trim();
+        const name = String(fd.get("name") ?? "")
+          .replace(/\s+/g, " ")
+          .trim();
+        const color = String(fd.get("color") ?? "yellow");
+        if (!length(text)) {
+          say("先写点什么再贴吧。");
+          body.focus();
+          return;
+        }
+        if (length(text) > max) {
+          say(`太长了，最多 ${max} 个字。`);
+          return;
+        }
+        const note = { id: Date.now(), name, body: text, color, date: today() };
+        keepMine([note, ...mine()]);
+        form.reset();
+        updateCount();
+        render(note.id);
+        say("贴好了！它只存在你这台设备的浏览器里。");
+      });
+    </script>
+  </body>
+</html>

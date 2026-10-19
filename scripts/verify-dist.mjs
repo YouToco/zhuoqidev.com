@@ -58,8 +58,8 @@ let links = 0;
 for (const [url, html] of pages) {
   const redirect = isRedirect(html);
 
-  // 2. internal links, images and anchors (inline scripts hold templates, not links)
-  const markup = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, "");
+  // 2. internal links, images and anchors (inline scripts hold templates and <code> shows markup, not links)
+  const markup = html.replace(/<(script|code)\b[^>]*>[\s\S]*?<\/\1>/g, "");
   for (const m of markup.matchAll(/\s(href|src)="([^"]+)"/g)) {
     let target = decode(m[2]);
     if (/^(mailto:|tel:|data:|javascript:)/.test(target)) continue;
@@ -73,12 +73,14 @@ for (const [url, html] of pages) {
       fail(`${url}: broken ${m[1]} → ${target}`);
       continue;
     }
-    if (hash && file.endsWith(".html")) {
+    // Demo pages link to placeholder sections (#home in a sample nav): only their files must exist.
+    if (hash && file.endsWith(".html") && !url.startsWith("/design/demos/")) {
       const targetHtml = file === join(DIST, url, "index.html") ? html : readFileSync(file, "utf8");
       if (!ids(targetHtml).has(decodeURIComponent(hash))) fail(`${url}: missing anchor #${hash} in ${abs}`);
     }
   }
-  if (redirect || url === "/404.html") continue;
+  // Design library demos (public/design/demos/) are standalone pages served as is: links checked, no site frame.
+  if (redirect || url === "/404.html" || url.startsWith("/design/demos/")) continue;
 
   // 3. language and alternates
   const lang = /<html lang="([^"]+)"/.exec(html)?.[1];
@@ -158,9 +160,19 @@ for (const [url, html] of pages) {
   if (ratio < 0.6) fail(`${url}: static HTML has ${Math.round(ratio * 100)}% of the Markdown text`);
   if (!html.includes('type="text/markdown"')) fail(`${url}: no rel=alternate text/markdown`);
 }
+let designs = 0;
+for (const [url, html] of pages) {
+  if (!/^\/(en\/)?design\/[^/]+\/$/.test(url) || url.includes("/demos/")) continue;
+  designs++;
+  for (const twin of ["index.md", "prompt.md"]) if (!resolvePath(`${url}${twin}`)) fail(`${url}: no ${twin}`);
+  if (!html.includes('type="text/markdown"')) fail(`${url}: no rel=alternate text/markdown`);
+  const demo = /<iframe[^>]*\ssrc="([^"]+)"/.exec(html)?.[1];
+  if (!demo || !resolvePath(demo)) fail(`${url}: demo frame ${demo} does not exist`);
+}
+if (!designs) fail("no design library entries were built");
 for (const lang of ["", "/en"]) {
   const llms = resolvePath(`${lang}/llms.txt`);
-  const count = llms ? (readFileSync(llms, "utf8").match(/^- \[.*\/index\.md\):/gm) ?? []).length : 0;
+  const count = llms ? (readFileSync(llms, "utf8").match(/^- \[.*\/posts\/[^/]+\/index\.md\):/gm) ?? []).length : 0;
   const expected = [...pages.keys()].filter(
     (u) => new RegExp(`^${lang}/posts/[^/]+/$`).test(u) && !isRedirect(pages.get(u)),
   ).length;
@@ -168,7 +180,7 @@ for (const lang of ["", "/en"]) {
 }
 
 console.log(
-  `checked ${pages.size} HTML files, ${links} internal links, ${legacy.length} legacy URLs, ${posts} articles`,
+  `checked ${pages.size} HTML files, ${links} internal links, ${legacy.length} legacy URLs, ${posts} articles, ${designs} design entries`,
 );
 if (errors.length) {
   console.error(
