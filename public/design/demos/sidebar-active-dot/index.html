@@ -109,14 +109,12 @@
       /* Every curve below is sampled frame by frame (60 fps) from the reference recording and written as
          linear(): none of these moves at a constant speed. */
       :root {
-        /* the dot's trip: slow off the mark, fast in the middle, a long settle */
-        --travel: linear(0, 0.065 9%, 0.13 18%, 0.3 27%, 0.48 36%, 0.63 45%, 0.75 55%, 0.83 64%, 0.89 73%, 0.94 82%, 0.97 91%, 1);
         /* the text pushed aside: 80% of the way in a tenth of a second, then it coasts */
         --shove: linear(0, 0.18 11%, 0.45 22%, 0.64 33%, 0.73 44%, 0.82 56%, 0.91 67%, 0.95 83%, 1);
         /* the colour sweep: a rush, a stall around three quarters, then a slow finish */
         --sweep: linear(0, 0.07 8%, 0.21 17%, 0.33 25%, 0.39 33%, 0.53 42%, 0.67 50%, 0.75 58%, 0.77 67%, 0.85 75%, 0.91 83%, 0.97 92%, 1);
         --push: 22px; /* how far the text is shoved */
-        --nudge: 7px; /* how far the dot itself moves right when it hits */
+        --nudge: 10px; /* how far the dot itself moves right when it hits */
       }
       .item .t {
         /* Text is painted with a two-colour gradient clipped to the glyphs: its right half is the plain
@@ -152,9 +150,9 @@
       .item.lit .badge { translate: var(--push) 0; transition: translate 0.15s var(--shove); }
 
       /* ---------- the one dot ----------
-         A single element for the whole list. The outer box carries it up and down (time depends on the
-         distance), the inner one sideways: on its way it drifts back to rest against the text's edge,
-         and on arrival it nudges right, which is what shoves the text. */
+         A single element for the whole list, moved by the script (Web Animations) on keyframes measured
+         from the reference: the outer box carries it up or down, the inner one sideways. The two run on
+         different curves, so the path bows out to the left, into the empty gutter, and back. */
       .dot {
         position: absolute;
         left: 22px;
@@ -163,7 +161,6 @@
         height: 6px;
         margin-top: -3px;
         pointer-events: none;
-        transition: translate var(--d, 0.19s) var(--travel);
       }
       .dot i {
         display: block;
@@ -171,9 +168,8 @@
         height: 100%;
         border-radius: 50%;
         background: var(--dot, transparent);
-        transition: translate var(--dx, 0.19s) var(--travel), background-color 0.1s;
+        transition: background-color 0.1s;
       }
-      .dot.hit i { translate: var(--nudge) 0; transition: translate 0.08s cubic-bezier(0.2, 0.8, 0.3, 1), background-color 0.1s; }
 
       /* ---------- the page beside it ---------- */
       .page { padding: 34px 32px; overflow: hidden; }
@@ -191,7 +187,7 @@
         .page h1 { font-size: 21px; }
       }
       @media (prefers-reduced-motion: reduce) {
-        .dot, .dot i, .item .t, .item.lit .t, .badge, .item.lit .badge, .page .swap { transition: none !important; }
+        .dot i, .item .t, .item.lit .t, .badge, .item.lit .badge, .page .swap { transition: none !important; }
       }
     </style>
   </head>
@@ -273,6 +269,31 @@
 
       const swap = document.getElementById("swap");
       const reduced = matchMedia("(prefers-reduced-motion: reduce)");
+      const pip = dot.firstElementChild;
+      const NUDGE = 10; // px the dot moves right when it bumps the text (CSS --nudge pushes the text 22px)
+
+      // Keyframes measured frame by frame (60 fps) on the reference, as progress from start (0) to end (1).
+      // Up / down, a long trip: slow off the mark, fast in the middle, a long settle.
+      const Y_LONG = [0, 0.059, 0.132, 0.303, 0.48, 0.633, 0.747, 0.832, 0.891, 0.934, 0.959, 0.977, 0.987, 0.992, 0.997, 1];
+      // A one-row hop starts quick instead.
+      const Y_SHORT = [0, 0.16, 0.33, 0.51, 0.65, 0.77, 0.85, 0.91, 0.95, 0.97, 0.985, 0.995, 1];
+      // Sideways, as a share of the nudge: it backs out of the text fast (well ahead of the vertical move),
+      // overshoots 2px further left into the gutter, and creeps back to rest against the text's edge.
+      const X_BACK = [1, 0.78, 0.62, 0.38, 0.16, -0.03, -0.19, -0.2, -0.2, -0.19, -0.18, -0.16, -0.11, -0.08, -0.02, -0.01, 0];
+
+      // Before a new move, every animation (running, paused or finished and held by fill) is written back
+      // into the inline style and dropped, so the dot stays exactly where it is and the next move starts there.
+      const stop = (el) =>
+        el.getAnimations().forEach((a) => {
+          if (a.playState !== "idle") a.commitStyles();
+          a.cancel();
+        });
+      const at = (el) => {
+        const [x = "0", y = "0"] = (getComputedStyle(el).translate === "none" ? "0 0" : getComputedStyle(el).translate).split(" ");
+        return [parseFloat(x), parseFloat(y)];
+      };
+      const frames = (curve, f) => curve.map((v, i) => ({ translate: f(v), offset: i / (curve.length - 1) }));
+
       let current = null;
       let timers = [];
       const later = (ms, fn) => timers.push(setTimeout(fn, ms));
@@ -285,36 +306,59 @@
           current.removeAttribute("aria-current");
           current.classList.remove("lit");
         }
-        const from = current;
         current = a;
         a.setAttribute("aria-current", "true");
         // The dot lives in .groups, the items' offsetParent: offsetTop is layout-relative, so scrolling the
         // list never skews it, and nothing is read until the reader clicks (no layout work on load).
-        const y = a.offsetTop + a.offsetHeight / 2;
+        const y1 = a.offsetTop + a.offsetHeight / 2;
         const colour = `var(--${a.dataset.group})`;
+        stop(dot);
+        stop(pip);
+        const [, y0] = at(dot);
+        const [x0] = at(pip);
         const quick = instant || reduced.matches;
-        // Travel time grows with distance, as in the reference: one row ≈ 0.16 s, five rows ≈ 0.2 s.
-        const dist = from ? Math.abs(y - (from.offsetTop + from.offsetHeight / 2)) : 0;
-        const d = quick ? 0 : Math.min(340, 140 + dist * 0.5);
-        dot.style.setProperty("--d", `${d}ms`);
-        dot.style.setProperty("--dx", `${quick ? 0 : d}ms`);
-        dot.classList.remove("hit"); // drift back to rest against the text edge while travelling
-        dot.style.translate = `0 ${y}px`;
-        later(quick ? 0 : d * 0.45, () => dot.style.setProperty("--dot", colour));
-        // Landed: the dot nudges right and, a beat later, the text is shoved aside and coloured in.
-        // Landed: the dot nudges right and, a tenth of a second later, the text gives way: shoved aside
-        // and coloured in (the reference waits about that long between the bump and the shove).
-        later(quick ? 0 : d, () => dot.classList.add("hit"));
-        later(quick ? 0 : d + 100, () => a.classList.add("lit"));
-        // the page on the right
-        swap.classList.add("out");
-        later(quick ? 0 : 140, () => {
+        const swapPage = () => {
           document.getElementById("crumb").textContent = a.dataset.groupTitle;
           document.getElementById("crumb").style.setProperty("--c", colour);
           document.getElementById("title").textContent = a.querySelector(".t").textContent;
           document.getElementById("desc").textContent = a.dataset.note;
           swap.classList.remove("out");
+        };
+        if (quick) {
+          dot.style.translate = `0 ${y1}px`;
+          pip.style.translate = `${NUDGE}px 0`;
+          dot.style.setProperty("--dot", colour);
+          a.classList.add("lit");
+          swapPage();
+          return;
+        }
+        // Up or down: time grows gently with distance; the measured curves are one sample per frame, so the
+        // reference's own trips last (samples − 1) frames: a one-row hop 0.2 s, five rows 0.25 s.
+        const dist = Math.abs(y1 - y0);
+        const d = Math.min(380, 250 * Math.max(0.8, (dist / 110) ** 0.2));
+        const yCurve = dist < 50 ? Y_SHORT : Y_LONG;
+        dot.animate(frames(yCurve, (v) => `0 ${y0 + (y1 - y0) * v}px`), { duration: d, fill: "forwards" });
+        // Sideways: back out of the text into the gutter and creep to rest, a little longer than the trip.
+        // Starting from rest (a quick second click), it still dips the 2px into the gutter.
+        pip.animate(frames(X_BACK, (v) => `${v > 0 ? x0 * v : v * NUDGE}px 0`), { duration: d * 1.1, fill: "forwards" });
+        later(d * 0.45, () => dot.style.setProperty("--dot", colour));
+        // Landing: squashed for a frame or two (8×8 → 10×8 on the reference).
+        later(d * 0.92, () =>
+          pip.animate([{ scale: "1 1" }, { scale: "1.25 0.8", offset: 0.4 }, { scale: "1 1" }], { duration: 60, easing: "ease-out" }),
+        );
+        // A beat at rest, then the bump: the dot moves right and, a frame later, the text gives way.
+        const bump = d * 1.1 + 50;
+        later(bump, () => {
+          stop(pip);
+          pip.animate(
+            [{ translate: `${at(pip)[0]}px 0` }, { translate: `${NUDGE * 0.55}px 0`, offset: 0.25 }, { translate: `${NUDGE * 0.85}px 0`, offset: 0.55 }, { translate: `${NUDGE}px 0` }],
+            { duration: 90, fill: "forwards" },
+          );
         });
+        later(bump + 16, () => a.classList.add("lit"));
+        // the page on the right
+        swap.classList.add("out");
+        later(140, swapPage);
       };
       groups.addEventListener("click", (e) => {
         const a = e.target.closest(".item");
