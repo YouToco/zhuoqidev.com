@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>糖果扁平插画</title>
+    <style>
+      /* Layout: a saturated periwinkle sheet with slowly morphing blobs; content sits on sticker-like cards with a hard ink shadow. */
+      :root {
+        --sheet: #7e7eff;
+        --ink: #1b1650;
+        --on-sheet: #ffffff;
+        --soft: #f3f1ff;
+        --card: #ffffff;
+        --card-ink: #1b1650;
+        --muted: #4a4580;
+        --pink: #f894c0;
+        --lime: #8ed462;
+        --yellow: #f5e211;
+        --shadow: #1b1650;
+        --f-round: ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", "Varela Round", system-ui, "PingFang SC",
+          "Microsoft YaHei", sans-serif;
+        --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        --spring: linear(0, 0.062, 0.215, 0.411, 0.615, 0.799, 0.95, 1.059, 1.126, 1.158, 1.161, 1.145, 1.116, 1.083,
+            1.051, 1.023, 1.001, 0.986, 0.977, 0.974, 0.974, 0.978, 0.983, 0.988, 0.994, 0.998, 1.001, 1.003, 1.004, 1);
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --sheet: #1b1650;
+          --on-sheet: #f3f1ff;
+          --soft: #c9c5f2;
+          --card: #2c2578;
+          --card-ink: #f3f1ff;
+          --muted: #c2bdf0;
+          --pink: #e6739f;
+          --lime: #79c14e;
+          --yellow: #e2cf0a;
+          --shadow: #0b0830;
+          color-scheme: dark;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+      }
+      body {
+        background: var(--sheet);
+        color: var(--on-sheet);
+        font-family: var(--f-round);
+        font-size: 16px;
+        line-height: 1.5;
+        overflow-x: hidden;
+      }
+      button {
+        font: inherit;
+      }
+      :focus-visible {
+        outline: 3px solid var(--yellow);
+        outline-offset: 3px;
+      }
+      .mono {
+        font-family: var(--f-mono);
+        font-size: 12px;
+        letter-spacing: 0.04em;
+      }
+      .wrap {
+        position: relative;
+        padding: clamp(20px, 4vw, 44px) clamp(16px, 4vw, 44px) 40px;
+        display: grid;
+        gap: 34px;
+        isolation: isolate;
+        overflow: clip;
+      }
+      .blob {
+        position: absolute;
+        z-index: -1;
+        border-radius: 58% 42% 55% 45% / 48% 60% 40% 52%;
+        animation: morph 9s ease-in-out infinite;
+      }
+      .b1 {
+        width: 300px;
+        height: 260px;
+        right: -70px;
+        top: -60px;
+        background: var(--pink);
+      }
+      .b2 {
+        width: 180px;
+        height: 160px;
+        left: 40%;
+        top: 300px;
+        background: var(--yellow);
+        animation-duration: 11s;
+        animation-direction: reverse;
+      }
+      .b3 {
+        width: 120px;
+        height: 110px;
+        left: -40px;
+        bottom: 40px;
+        background: var(--lime);
+        animation-duration: 7s;
+      }
+      @keyframes morph {
+        50% {
+          border-radius: 40% 60% 46% 54% / 62% 42% 58% 38%;
+          transform: rotate(10deg) scale(1.05);
+        }
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+        gap: 28px;
+        align-items: center;
+      }
+      .hero h1 {
+        margin: 0 0 14px;
+        font-size: clamp(42px, 7vw, 82px);
+        line-height: 1;
+        letter-spacing: -0.02em;
+        font-weight: 900;
+        text-wrap: balance;
+      }
+      .hero h1 span {
+        color: var(--yellow);
+      }
+      .hero p {
+        margin: 0 0 22px;
+        max-width: 34ch;
+        font-size: 18px;
+        color: var(--soft);
+      }
+      /* Sticker buttons: a hard shadow that the button presses into. */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 0;
+        border-radius: 999px;
+        padding: 12px 22px;
+        font-weight: 800;
+        font-size: 17px;
+        color: #1b1650;
+        background: var(--lime);
+        box-shadow: 0 5px 0 var(--shadow);
+        cursor: pointer;
+        transition: transform 0.12s, box-shadow 0.12s;
+      }
+      .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 7px 0 var(--shadow);
+      }
+      .btn:active {
+        transform: translateY(5px);
+        box-shadow: 0 0 0 var(--shadow);
+      }
+      .btn.pink {
+        background: var(--pink);
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      /* Mascot: two eyes follow the pointer */
+      .mascot {
+        position: relative;
+        width: min(220px, 60vw);
+        aspect-ratio: 1.1;
+        justify-self: center;
+        background: var(--lime);
+        border-radius: 52% 48% 46% 54% / 56% 50% 50% 44%;
+        box-shadow: 0 8px 0 var(--shadow);
+        animation: morph 8s ease-in-out infinite;
+      }
+      .eye {
+        position: absolute;
+        top: 36%;
+        width: 22%;
+        aspect-ratio: 1;
+        background: #fff;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+      }
+      .eye.l {
+        left: 22%;
+      }
+      .eye.r {
+        right: 22%;
+      }
+      .eye i {
+        width: 46%;
+        aspect-ratio: 1;
+        border-radius: 50%;
+        background: #1b1650;
+        transform: translate(var(--ex, 0), var(--ey, 0));
+        transition: transform 0.15s;
+      }
+      .mouth {
+        position: absolute;
+        left: 50%;
+        top: 66%;
+        width: 26%;
+        height: 12%;
+        transform: translateX(-50%);
+        border-radius: 0 0 999px 999px;
+        background: #1b1650;
+      }
+      .cheek {
+        position: absolute;
+        top: 60%;
+        width: 12%;
+        height: 7%;
+        border-radius: 50%;
+        background: var(--pink);
+      }
+      .cheek.l {
+        left: 12%;
+      }
+      .cheek.r {
+        right: 12%;
+      }
+
+      /* Stack of cards that fans out */
+      .stack-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 28px;
+        align-items: center;
+      }
+      .stack {
+        position: relative;
+        height: 230px;
+        border: 0;
+        background: none;
+        padding: 0;
+        cursor: pointer;
+        text-align: left;
+        color: inherit;
+      }
+      .card {
+        position: absolute;
+        inset: 0 auto auto 0;
+        width: min(300px, 100%);
+        background: var(--card);
+        color: var(--card-ink);
+        border-radius: 24px;
+        padding: 18px 20px;
+        box-shadow: 0 6px 0 var(--shadow);
+        display: grid;
+        gap: 4px;
+        transition: transform 0.6s var(--spring);
+      }
+      .card b {
+        font-size: 24px;
+        font-weight: 900;
+      }
+      .card small {
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .card:nth-child(1) {
+        background: var(--yellow);
+        color: #1b1650;
+        transform: translate(16px, 70px) rotate(6deg);
+      }
+      .card:nth-child(2) {
+        background: var(--pink);
+        color: #1b1650;
+        transform: translate(4px, 36px) rotate(-4deg);
+      }
+      .card:nth-child(3) {
+        transform: rotate(1deg);
+      }
+      .card:nth-child(-n + 2) small {
+        color: #3a346f;
+      }
+      .stack[aria-expanded="true"] .card:nth-child(1) {
+        transform: translate(40px, 150px) rotate(9deg);
+      }
+      .stack[aria-expanded="true"] .card:nth-child(2) {
+        transform: translate(-6px, 76px) rotate(-7deg);
+      }
+      .stack[aria-expanded="true"] .card:nth-child(3) {
+        transform: translate(10px, -4px) rotate(-2deg);
+      }
+      .side h2 {
+        margin: 0 0 10px;
+        font-size: 28px;
+        font-weight: 900;
+      }
+      .side p {
+        margin: 0 0 16px;
+        color: var(--soft);
+        max-width: 36ch;
+      }
+      .tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .tag {
+        border-radius: 999px;
+        padding: 4px 12px;
+        font-weight: 700;
+        font-size: 14px;
+        color: #1b1650;
+        background: var(--c);
+      }
+      .palette {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .sw {
+        border-radius: 18px;
+        aspect-ratio: 1.3;
+        background: var(--c);
+        box-shadow: 0 4px 0 var(--shadow);
+        display: flex;
+        align-items: flex-end;
+        padding: 8px 10px;
+        color: #1b1650;
+      }
+
+      @media (max-width: 680px) {
+        .b1 {
+          width: 190px;
+          height: 160px;
+          right: -100px;
+          top: -80px;
+        }
+        .hero,
+        .stack-row {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .palette {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        .stack {
+          height: 260px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <i class="blob b1" aria-hidden="true"></i><i class="blob b2" aria-hidden="true"></i
+      ><i class="blob b3" aria-hidden="true"></i>
+
+      <section class="hero" aria-labelledby="hero-h">
+        <div>
+          <span class="mono">Candy flat · 糖果扁平插画</span>
+          <h1 id="hero-h">听见数据<br /><span>背后的人</span></h1>
+          <p>我们去了三个城市，和 28 个人聊了一下午。表格里看不到的东西，都在这些对话里。</p>
+          <div class="row">
+            <button class="btn" type="button">读访谈 →</button>
+            <button class="btn pink" type="button">按下去试试</button>
+          </div>
+        </div>
+        <div class="mascot" id="mascot" aria-hidden="true">
+          <span class="eye l"><i></i></span><span class="eye r"><i></i></span>
+          <span class="cheek l"></span><span class="cheek r"></span><span class="mouth"></span>
+        </div>
+      </section>
+
+      <section class="stack-row" aria-labelledby="stack-h">
+        <button class="stack" type="button" id="stack" aria-expanded="false" aria-label="展开三张访谈卡片">
+          <span class="card"><b>拉各斯</b><small>7 场访谈 · 外卖骑手</small></span>
+          <span class="card"><b>首尔</b><small>12 场访谈 · 夜班护士</small></span>
+          <span class="card"><b>伦敦</b><small>9 场访谈 · 独立书店老板 · 点一下展开</small></span>
+        </button>
+        <div class="side">
+          <h2 id="stack-h">卡片叠一摞，各歪一点</h2>
+          <p>点一下整摞卡片，它们用弹簧缓动散开，再点一下收回去。没有直角，阴影是一条硬边，像贴纸贴在纸上。</p>
+          <div class="tags">
+            <span class="tag" style="--c: var(--yellow)">访谈</span><span class="tag" style="--c: var(--pink)">城市</span
+            ><span class="tag" style="--c: var(--lime)">人物</span><span class="tag" style="--c: #fff">2026</span>
+          </div>
+        </div>
+      </section>
+
+      <section aria-label="配色">
+        <div class="palette mono">
+          <div class="sw" style="--c: #7e7eff">#7E7EFF</div>
+          <div class="sw" style="--c: #f894c0">#F894C0</div>
+          <div class="sw" style="--c: #8ed462">#8ED462</div>
+          <div class="sw" style="--c: #f5e211">#F5E211</div>
+          <div class="sw" style="--c: #ffffff">#FFFFFF</div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      (function () {
+        var stack = document.getElementById("stack");
+        stack.addEventListener("click", function () {
+          stack.setAttribute("aria-expanded", String(stack.getAttribute("aria-expanded") !== "true"));
+        });
+
+        if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        // Pupils move toward the pointer, at most 30% of the eye's width.
+        var eyes = document.querySelectorAll(".eye");
+        addEventListener("pointermove", function (e) {
+          eyes.forEach(function (eye) {
+            var r = eye.getBoundingClientRect();
+            var dx = e.clientX - (r.left + r.width / 2);
+            var dy = e.clientY - (r.top + r.height / 2);
+            var d = Math.hypot(dx, dy) || 1;
+            var m = Math.min(d / 8, r.width * 0.3);
+            eye.firstElementChild.style.setProperty("--ex", (dx / d) * m + "px");
+            eye.firstElementChild.style.setProperty("--ey", (dy / d) * m + "px");
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>

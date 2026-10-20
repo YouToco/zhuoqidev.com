@@ -79,6 +79,11 @@ const POSES = {
     await page.click(".pick-menu li:nth-child(2)");
     await page.waitForTimeout(110);
   },
+  // A dark-first style: shoot its main (dark) cut, not the light matinee.
+  "dark-cinema": async (page) => {
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.waitForTimeout(400);
+  },
 };
 
 const server = createServer(async (req, res) => {

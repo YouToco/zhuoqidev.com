@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>瑞士网格字体样本</title>
+    <style>
+      /* Layout: a 12-column grid that is drawn on the page; everything snaps to a column line. Two colors only. */
+      :root {
+        --paper: #eeefeb;
+        --ink: #1c1d1e;
+        --ink-2: #55585c;
+        --rule: rgba(28, 29, 30, 0.14);
+        --rule-strong: rgba(28, 29, 30, 0.55);
+        --f-sans: system-ui, -apple-system, "Segoe UI Variable Display", "Helvetica Neue", Arial, "PingFang SC",
+          "Microsoft YaHei", sans-serif;
+        --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        --cols: 12;
+        --gap: 16px;
+        --pad: clamp(16px, 4vw, 40px);
+        --w: 650;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #1c1d1e;
+          --ink: #eeefeb;
+          --ink-2: #a9aba7;
+          --rule: rgba(238, 239, 235, 0.12);
+          --rule-strong: rgba(238, 239, 235, 0.5);
+          color-scheme: dark;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+      }
+      body {
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--f-sans);
+        font-size: 15px;
+        line-height: 1.55;
+        position: relative;
+        overflow-x: hidden;
+      }
+      /* The grid itself: 12 columns between the page gutters, toggled from the top bar. */
+      .overlay {
+        position: fixed;
+        inset: 0 var(--pad);
+        display: grid;
+        grid-template-columns: repeat(var(--cols), 1fr);
+        gap: var(--gap);
+        pointer-events: none;
+        z-index: 5;
+        transition: opacity 0.3s;
+      }
+      .overlay i {
+        background: var(--rule);
+        opacity: 0.32;
+      }
+      body:not(.show-grid) .overlay {
+        opacity: 0;
+      }
+      .g {
+        display: grid;
+        grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+        gap: var(--gap);
+        padding-inline: var(--pad);
+      }
+      .mono {
+        font-family: var(--f-mono);
+        font-size: 11.5px;
+        letter-spacing: 0.04em;
+      }
+      a {
+        color: inherit;
+      }
+      button {
+        font: inherit;
+        color: inherit;
+      }
+      :focus-visible {
+        outline: 2px solid var(--ink);
+        outline-offset: 3px;
+      }
+
+      /* Top bar */
+      .top {
+        align-items: center;
+        border-bottom: 1px solid var(--ink);
+        padding-block: 14px;
+        position: sticky;
+        top: 0;
+        background: var(--paper);
+        z-index: 6;
+      }
+      .top .name {
+        grid-column: span 3;
+        font-weight: 700;
+      }
+      .top nav {
+        grid-column: span 6;
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+      .top nav a {
+        text-decoration: none;
+      }
+      .top nav a:hover {
+        text-decoration: underline;
+        text-underline-offset: 4px;
+      }
+      .top .toggle {
+        grid-column: span 3;
+        justify-self: end;
+        background: none;
+        border: 1px solid var(--ink);
+        padding: 6px 12px;
+        cursor: pointer;
+      }
+      .top .toggle[aria-pressed="true"] {
+        background: var(--ink);
+        color: var(--paper);
+      }
+
+      /* Hero */
+      .hero {
+        padding-block: 40px 28px;
+        align-items: end;
+        border-bottom: 1px solid var(--ink);
+      }
+      .aa {
+        grid-column: 1 / span 6;
+        font-size: clamp(120px, 26vw, 320px);
+        line-height: 0.78;
+        letter-spacing: -0.06em;
+        font-weight: var(--w);
+        margin: 0;
+        transition: font-weight 0.25s;
+      }
+      .hero-text {
+        grid-column: 7 / span 6;
+        display: grid;
+        gap: 18px;
+      }
+      .hero-text h1 {
+        margin: 0;
+        font-size: clamp(30px, 4.6vw, 56px);
+        line-height: 1.02;
+        letter-spacing: -0.03em;
+        font-weight: 750;
+        text-wrap: balance;
+      }
+      .facts {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        border-top: 1px solid var(--rule-strong);
+      }
+      .facts div {
+        padding-top: 8px;
+        display: grid;
+        gap: 2px;
+      }
+      .facts b {
+        font-size: 20px;
+        font-weight: 650;
+        font-variant-numeric: tabular-nums;
+      }
+      .facts span {
+        color: var(--ink-2);
+      }
+
+      section.block {
+        padding-block: 28px;
+        border-bottom: 1px solid var(--ink);
+        row-gap: 14px;
+      }
+      .block > .label {
+        grid-column: 1 / span 3;
+      }
+      .block > .label b {
+        display: block;
+        font-family: var(--f-sans);
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0;
+        margin-top: 4px;
+      }
+      .block > .body {
+        grid-column: 4 / span 9;
+        min-width: 0;
+      }
+
+      /* Type scale: the steps are the content */
+      .scale {
+        display: grid;
+      }
+      .step {
+        display: grid;
+        grid-template-columns: 56px minmax(0, 1fr);
+        align-items: baseline;
+        gap: var(--gap);
+        border-top: 1px solid var(--rule-strong);
+        padding-block: 6px 4px;
+      }
+      .step:first-child {
+        border-top: 0;
+      }
+      .step .mono {
+        color: var(--ink-2);
+      }
+      .step p {
+        margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+        font-weight: var(--w);
+        transition: font-weight 0.25s;
+      }
+
+      /* Weight control */
+      .weight {
+        display: grid;
+        gap: 14px;
+      }
+      .weight .word {
+        font-size: clamp(44px, 8vw, 96px);
+        line-height: 1;
+        letter-spacing: -0.04em;
+        font-weight: var(--w);
+        transition: font-weight 0.25s;
+        margin: 0;
+      }
+      .ctl {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) 44px;
+        gap: 14px;
+        align-items: center;
+      }
+      .ctl input {
+        width: 100%;
+        accent-color: var(--ink);
+      }
+      .ctl output {
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+      }
+      .presets {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .presets button {
+        background: none;
+        border: 1px solid var(--rule-strong);
+        padding: 4px 10px;
+        cursor: pointer;
+      }
+      .presets button[aria-pressed="true"] {
+        border-color: var(--ink);
+        background: var(--ink);
+        color: var(--paper);
+      }
+
+      /* Index table: rows invert on hover */
+      .index {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        border-top: 1px solid var(--ink);
+      }
+      .index a {
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr) auto 52px;
+        gap: var(--gap);
+        align-items: baseline;
+        padding: 12px 8px;
+        border-bottom: 1px solid var(--rule-strong);
+        text-decoration: none;
+        transition: background 0.18s, color 0.18s, padding 0.25s;
+      }
+      .index a:hover,
+      .index a:focus-visible {
+        background: var(--ink);
+        color: var(--paper);
+        padding-left: 16px;
+        outline: none;
+      }
+      .index .t {
+        font-size: 19px;
+        font-weight: 650;
+        letter-spacing: -0.01em;
+        min-width: 0;
+      }
+      .index .k {
+        color: inherit;
+        opacity: 0.7;
+      }
+      .index .y {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+      }
+      .btn {
+        display: inline-flex;
+        gap: 18px;
+        align-items: center;
+        border: 1px solid var(--ink);
+        padding: 10px 14px;
+        text-decoration: none;
+        font-weight: 600;
+      }
+      .btn.solid {
+        background: var(--ink);
+        color: var(--paper);
+      }
+      .btn:hover .arr {
+        transform: translate(3px, -3px);
+      }
+      .arr {
+        transition: transform 0.2s;
+      }
+      .swatches {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--gap);
+      }
+      .sw {
+        border: 1px solid var(--ink);
+        aspect-ratio: 3 / 1;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .sw.a {
+        background: #eeefeb;
+        color: #1c1d1e;
+      }
+      .sw.b {
+        background: #1c1d1e;
+        color: #eeefeb;
+      }
+      .sw b {
+        font-size: 18px;
+      }
+      footer {
+        padding-block: 18px 28px;
+        color: var(--ink-2);
+      }
+      footer p {
+        grid-column: 1 / -1;
+        margin: 0;
+      }
+
+      @media (max-width: 760px) {
+        :root {
+          --cols: 6;
+          --gap: 12px;
+        }
+        .top .name {
+          grid-column: span 3;
+        }
+        .top nav {
+          display: none;
+        }
+        .top .toggle {
+          grid-column: span 3;
+        }
+        .aa,
+        .hero-text,
+        .block > .label,
+        .block > .body {
+          grid-column: 1 / -1;
+        }
+        .index a {
+          grid-template-columns: 32px minmax(0, 1fr) 44px;
+        }
+        .index .k {
+          display: none;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body class="show-grid">
+    <div class="overlay" aria-hidden="true"></div>
+
+    <header class="top g">
+      <span class="name">Specimen 02</span>
+      <nav class="mono" aria-label="章节">
+        <a href="#scale">01 字号</a><a href="#weight">02 字重</a><a href="#index">03 索引</a><a href="#color">04 颜色</a>
+      </nav>
+      <button class="toggle mono" type="button" id="grid-toggle" aria-pressed="true">网格 12 栏</button>
+    </header>
+
+    <main>
+      <section class="hero g" aria-labelledby="hero-h">
+        <p class="aa" aria-hidden="true">Aa</p>
+        <div class="hero-text">
+          <span class="mono">Swiss grid · 字体样本 · 两种颜色</span>
+          <h1 id="hero-h">网格先于内容，<br />字号就是版式。</h1>
+          <div class="facts">
+            <div><b>12</b><span class="mono">栏</span></div>
+            <div><b>16px</b><span class="mono">栏距</span></div>
+            <div><b>2</b><span class="mono">种颜色</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="block g" id="scale" aria-labelledby="scale-h">
+        <div class="label mono">01 · Scale<b id="scale-h">字号阶梯</b></div>
+        <div class="body scale">
+          <div class="step"><span class="mono">96</span><p style="font-size: clamp(48px, 9vw, 96px)">Grotesk</p></div>
+          <div class="step"><span class="mono">64</span><p style="font-size: clamp(36px, 6vw, 64px)">网格先于内容</p></div>
+          <div class="step"><span class="mono">40</span><p style="font-size: clamp(26px, 4vw, 40px)">The grid comes first.</p></div>
+          <div class="step"><span class="mono">24</span><p style="font-size: 24px">每一行都对齐到栏线上</p></div>
+          <div class="step"><span class="mono">16</span><p style="font-size: 16px">ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789</p></div>
+          <div class="step"><span class="mono">12</span><p style="font-size: 12px">标签、日期、页码用等宽字体，和正文拉开距离。</p></div>
+        </div>
+      </section>
+
+      <section class="block g" id="weight" aria-labelledby="weight-h">
+        <div class="label mono">02 · Weight<b id="weight-h">拖动改字重</b></div>
+        <div class="body weight">
+          <p class="word">Grotesk 字重</p>
+          <label class="ctl mono" for="wght"
+            ><span>100</span><input type="range" id="wght" min="100" max="900" step="10" value="650" /><output
+              id="wght-out"
+              for="wght"
+              >650</output
+            ></label
+          >
+          <div class="presets mono" role="group" aria-label="常用字重">
+            <button type="button" data-w="300">300 Light</button>
+            <button type="button" data-w="500">500 Medium</button>
+            <button type="button" data-w="650" aria-pressed="true">650 Semibold</button>
+            <button type="button" data-w="900">900 Black</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="block g" id="index" aria-labelledby="index-h">
+        <div class="label mono">03 · Index<b id="index-h">项目索引</b></div>
+        <div class="body">
+          <ul class="index">
+            <li>
+              <a href="#"><span class="mono">01</span><span class="t">网关计费重构</span><span class="k mono">后端 · 计费</span><span class="y mono">2026</span></a>
+            </li>
+            <li>
+              <a href="#"><span class="mono">02</span><span class="t">访客地球</span><span class="k mono">three.js</span><span class="y mono">2026</span></a>
+            </li>
+            <li>
+              <a href="#"><span class="mono">03</span><span class="t">深圳租房地图</span><span class="k mono">Leaflet · 工具</span><span class="y mono">2026</span></a>
+            </li>
+            <li>
+              <a href="#"><span class="mono">04</span><span class="t">博客重写到 Astro</span><span class="k mono">前端</span><span class="y mono">2025</span></a>
+            </li>
+          </ul>
+          <div class="actions">
+            <a class="btn solid" href="#">看全部项目 <span class="arr" aria-hidden="true">↗</span></a>
+            <a class="btn" href="#">下载样本 PDF <span class="arr" aria-hidden="true">↗</span></a>
+          </div>
+        </div>
+      </section>
+
+      <section class="block g" id="color" aria-labelledby="color-h">
+        <div class="label mono">04 · Color<b id="color-h">只有两种颜色</b></div>
+        <div class="body swatches">
+          <div class="sw a"><span class="mono">--paper</span><b>#EEEFEB</b></div>
+          <div class="sw b"><span class="mono">--ink</span><b>#1C1D1E</b></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="g mono"><p>深色模式把两个颜色对调；层次只靠字号、字重和细线。</p></footer>
+
+    <script>
+      (function () {
+        var root = document.documentElement;
+        var overlay = document.querySelector(".overlay");
+        function drawCols() {
+          var n = parseInt(getComputedStyle(root).getPropertyValue("--cols"), 10) || 12;
+          overlay.innerHTML = new Array(n + 1).join("<i></i>");
+        }
+        drawCols();
+        matchMedia("(max-width: 760px)").addEventListener("change", drawCols);
+
+        var toggle = document.getElementById("grid-toggle");
+        toggle.addEventListener("click", function () {
+          var on = document.body.classList.toggle("show-grid");
+          toggle.setAttribute("aria-pressed", String(on));
+        });
+
+        var range = document.getElementById("wght");
+        var out = document.getElementById("wght-out");
+        var presets = document.querySelectorAll(".presets button");
+        function setW(v) {
+          root.style.setProperty("--w", v);
+          range.value = v;
+          out.textContent = v;
+          presets.forEach(function (b) {
+            b.setAttribute("aria-pressed", String(b.dataset.w === String(v)));
+          });
+        }
+        range.addEventListener("input", function () {
+          setW(range.value);
+        });
+        presets.forEach(function (b) {
+          b.addEventListener("click", function () {
+            setW(b.dataset.w);
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>

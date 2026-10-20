@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>暗场电影感</title>
+    <style>
+      /* Layout: a letterboxed hero (black bars carry timecode and lens data), then film frames on a strip. Dark is the main cut; light is the matinee. */
+      :root {
+        --screen: #f2e9df;
+        --bar: #1d130c;
+        --on-bar: #f2e9df;
+        --ink: #2a1a10;
+        --ink-2: #6f5a4a;
+        --ember: #d4581f;
+        --glow: rgba(255, 133, 57, 0.42);
+        --frame: #e6d9ca;
+        --grain: 0.12;
+        --f-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, "Songti SC",
+          "Noto Serif CJK SC", serif;
+        --f-cjk: "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", "STSong", serif;
+        --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --screen: #100904;
+          --bar: #000000;
+          --on-bar: #f4e6d8;
+          --ink: #f4e6d8;
+          --ink-2: #a8927f;
+          --ember: #ff8539;
+          --glow: rgba(255, 133, 57, 0.6);
+          --frame: #1c120b;
+          --grain: 0.22;
+          color-scheme: dark;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+      }
+      body {
+        background: var(--screen);
+        color: var(--ink);
+        font-family: var(--f-serif);
+        overflow-x: hidden;
+      }
+      .mono {
+        font-family: var(--f-mono);
+        font-size: 11.5px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      a {
+        color: inherit;
+      }
+      :focus-visible {
+        outline: 2px solid var(--ember);
+        outline-offset: 3px;
+      }
+      /* Film grain: one SVG noise tile laid over everything. */
+      .grain {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 20;
+        opacity: var(--grain);
+        mix-blend-mode: overlay;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      }
+
+      .hero {
+        position: relative;
+        min-height: 460px;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        overflow: hidden;
+        isolation: isolate;
+      }
+      .bar {
+        background: var(--bar);
+        color: var(--on-bar);
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 14px clamp(16px, 4vw, 40px);
+        flex-wrap: wrap;
+      }
+      .bar .rec {
+        color: var(--ember);
+        font-variant-numeric: tabular-nums;
+      }
+      .bar .rec::before {
+        content: "●";
+        margin-right: 0.6em;
+        animation: blink 1.2s steps(1) infinite;
+      }
+      @keyframes blink {
+        50% {
+          opacity: 0;
+        }
+      }
+      .bar .dim {
+        opacity: 0.6;
+      }
+      /* The light follows the pointer, eased each frame; with no pointer it breathes on its own. */
+      .light {
+        position: absolute;
+        width: 620px;
+        height: 620px;
+        left: 0;
+        top: 0;
+        margin: -310px 0 0 -310px;
+        border-radius: 50%;
+        background: radial-gradient(circle, var(--glow) 0%, transparent 62%);
+        filter: blur(18px);
+        z-index: -1;
+        transform: translate(var(--x, 62vw), var(--y, 160px));
+        animation: breathe 6s ease-in-out infinite;
+      }
+      @keyframes breathe {
+        50% {
+          opacity: 0.75;
+        }
+      }
+      .stage {
+        padding: clamp(36px, 6vw, 64px) clamp(16px, 4vw, 40px);
+        display: grid;
+        align-content: center;
+        gap: 18px;
+      }
+      .stage h1 {
+        margin: 0;
+        font-weight: 400;
+        font-style: italic;
+        font-size: clamp(54px, 10vw, 128px);
+        line-height: 0.9;
+        letter-spacing: -0.03em;
+      }
+      .stage h1 em {
+        color: var(--ember);
+      }
+      .stage .zh {
+        font-family: var(--f-cjk);
+        font-size: clamp(15px, 2vw, 20px);
+        letter-spacing: 0.6em;
+        color: var(--ink-2);
+        margin: 0;
+      }
+      .cta {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 8px;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid var(--ember);
+        color: var(--ember);
+        border-radius: 999px;
+        padding: 10px 18px;
+        text-decoration: none;
+        transition: background 0.3s, color 0.3s;
+      }
+      .pill:hover {
+        background: var(--ember);
+        color: var(--screen);
+      }
+      .pill.ghost {
+        border-color: color-mix(in srgb, var(--ink) 35%, transparent);
+        color: var(--ink);
+      }
+      .pill.ghost:hover {
+        background: var(--ink);
+        color: var(--screen);
+      }
+
+      /* Film strip: sprocket holes are two repeating radial gradients on the strip's edges. */
+      .strip {
+        background: var(--bar);
+        padding: 22px clamp(16px, 4vw, 40px);
+        position: relative;
+      }
+      .strip::before,
+      .strip::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 10px;
+        background: radial-gradient(circle at 50% 50%, var(--screen) 0 3px, transparent 3.5px) 0 0 / 18px 10px repeat-x;
+        opacity: 0.85;
+      }
+      .strip::before {
+        top: 6px;
+      }
+      .strip::after {
+        bottom: 6px;
+      }
+      .frames {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        padding-block: 12px;
+      }
+      .frame {
+        margin: 0;
+        display: grid;
+        gap: 8px;
+        color: var(--on-bar);
+      }
+      .frame i {
+        display: block;
+        aspect-ratio: 2.39 / 1;
+        border-radius: 3px;
+        background: var(--shot);
+        filter: saturate(0.85) contrast(1.05);
+        transition: filter 0.4s, transform 0.4s;
+      }
+      .frame:hover i {
+        filter: saturate(1.1) contrast(1.1);
+        transform: scale(1.02);
+      }
+      .frame figcaption {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .notes {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+        gap: clamp(20px, 4vw, 48px);
+        padding: 36px clamp(16px, 4vw, 40px) 44px;
+      }
+      .notes h2 {
+        margin: 0 0 10px;
+        font-weight: 400;
+        font-style: italic;
+        font-size: 30px;
+      }
+      .notes p {
+        margin: 0;
+        font-size: 17px;
+        line-height: 1.7;
+        color: var(--ink-2);
+        max-width: 46ch;
+      }
+      .swatches {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        align-content: start;
+      }
+      .sw {
+        display: grid;
+        gap: 6px;
+      }
+      .sw i {
+        display: block;
+        aspect-ratio: 1.6;
+        border-radius: 4px;
+        background: var(--c);
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 20%, transparent);
+      }
+      .sw span {
+        color: var(--ink-2);
+      }
+
+      @media (max-width: 640px) {
+        .frames {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .notes {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .hero {
+          min-height: 400px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <i class="grain" aria-hidden="true"></i>
+
+    <header class="hero" id="hero">
+      <i class="light" id="light" aria-hidden="true"></i>
+      <div class="bar mono">
+        <span class="rec" id="tc">REC 00:00:00:00</span><span class="dim">35mm · f/1.8 · ISO 800</span>
+      </div>
+      <div class="stage">
+        <span class="mono" style="color: var(--ember)">Showreel 2026</span>
+        <h1>Every frame<br /><em>remembers.</em></h1>
+        <p class="zh">每一帧都记得</p>
+        <div class="cta">
+          <a class="pill mono" href="#strip">Play reel ▸</a>
+          <a class="pill ghost mono" href="#notes">幕后笔记</a>
+        </div>
+      </div>
+      <div class="bar mono"><span class="dim">Scene 04 / Take 2</span><span class="dim">深圳 · 24 fps</span></div>
+    </header>
+
+    <section class="strip" id="strip" aria-label="三个镜头">
+      <div class="frames">
+        <figure class="frame">
+          <i style="--shot: radial-gradient(40% 70% at 70% 60%, #ff8539, transparent 70%), linear-gradient(180deg, #2b160b, #0d0603)"></i>
+          <figcaption class="mono"><span>01 · 黄昏</span><span>00:00:12</span></figcaption>
+        </figure>
+        <figure class="frame">
+          <i style="--shot: radial-gradient(30% 50% at 30% 40%, #ffd2a1, transparent 70%), linear-gradient(160deg, #3b2214, #120905 70%)"></i>
+          <figcaption class="mono"><span>02 · 窗边</span><span>00:00:47</span></figcaption>
+        </figure>
+        <figure class="frame">
+          <i style="--shot: radial-gradient(60% 30% at 50% 90%, #c2461b, transparent 70%), linear-gradient(180deg, #0b0704, #1f120a)"></i>
+          <figcaption class="mono"><span>03 · 夜路</span><span>00:01:24</span></figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="notes" id="notes" aria-labelledby="notes-h">
+      <div>
+        <span class="mono" style="color: var(--ember)">Director's notes</span>
+        <h2 id="notes-h">底色带一点棕，光只有一束</h2>
+        <p>纯黑太像关机的屏幕，往暖棕偏一点才像放映厅。整页只有一个强调色，放在那团会跟着鼠标走的光里；标题用细斜体衬线，等宽小字只出现在黑边上。</p>
+      </div>
+      <div class="swatches">
+        <div class="sw" style="--c: #100904"><i></i><span class="mono">#100904</span></div>
+        <div class="sw" style="--c: #ff8539"><i></i><span class="mono">#FF8539</span></div>
+        <div class="sw" style="--c: #f4e6d8"><i></i><span class="mono">#F4E6D8</span></div>
+      </div>
+    </section>
+
+    <script>
+      (function () {
+        var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        // Timecode at 24 fps.
+        var tc = document.getElementById("tc");
+        var start = performance.now();
+        function pad(n) {
+          return String(n).padStart(2, "0");
+        }
+        function tick(now) {
+          var f = Math.floor(((now - start) / 1000) * 24);
+          var s = Math.floor(f / 24);
+          tc.textContent =
+            "REC " + pad(Math.floor(s / 3600)) + ":" + pad(Math.floor(s / 60) % 60) + ":" + pad(s % 60) + ":" + pad(f % 24);
+          if (!reduce) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+
+        if (reduce) return;
+        // The light eases toward the pointer instead of snapping to it.
+        var hero = document.getElementById("hero");
+        var light = document.getElementById("light");
+        var tx = null,
+          ty = null,
+          x = 0,
+          y = 0,
+          running = false;
+        function follow() {
+          x += (tx - x) * 0.08;
+          y += (ty - y) * 0.08;
+          light.style.setProperty("--x", x + "px");
+          light.style.setProperty("--y", y + "px");
+          if (Math.abs(tx - x) + Math.abs(ty - y) > 0.5) requestAnimationFrame(follow);
+          else running = false;
+        }
+        hero.addEventListener("pointermove", function (e) {
+          var r = hero.getBoundingClientRect();
+          if (tx === null) {
+            x = r.width * 0.62;
+            y = 160;
+          }
+          tx = e.clientX - r.left;
+          ty = e.clientY - r.top;
+          if (!running) {
+            running = true;
+            requestAnimationFrame(follow);
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>
