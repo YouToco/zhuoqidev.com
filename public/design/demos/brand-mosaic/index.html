@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>规范色块墙</title>
+    <style>
+      /* Layout: a brand guide's table of contents as one mosaic of flat color tiles on a visible grid.
+         Scrolling slides the tiles in along the grid until they lock together; after that a tile swaps its
+         colors and its glyph changes state every couple of seconds, so the wall never sits still. */
+      :root {
+        --page: #ffffff;
+        --ink: #1c1b1a;
+        --ink-2: #6b6862;
+        --rule: rgba(28, 27, 26, 0.1);
+        --blue: #2f62f5;
+        --gap: 6px;
+        --f-sans: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+        --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --page: #121212;
+          --ink: #f2f0eb;
+          --ink-2: #a5a29b;
+          --rule: rgba(242, 240, 235, 0.1);
+          --blue: #6f93ff;
+          color-scheme: dark;
+        }
+      }
+      @property --p {
+        syntax: "<number>";
+        inherits: true;
+        initial-value: 0;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+      }
+      body {
+        background: var(--page);
+        color: var(--ink);
+        font-family: var(--f-sans);
+        font-size: 16px;
+        line-height: 1.5;
+        overflow-x: hidden;
+      }
+      :focus-visible {
+        outline: 3px solid var(--blue);
+        outline-offset: 3px;
+      }
+      .grid-bg {
+        background-image: linear-gradient(var(--rule) 1px, transparent 1px),
+          linear-gradient(90deg, var(--rule) 1px, transparent 1px);
+        background-size: calc(100% / 12) 120px;
+      }
+
+      /* Intro: one sentence set in the grid, the brand's own blue */
+      .intro {
+        min-height: 62vh;
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        align-content: center;
+        padding: 40px clamp(16px, 3vw, 32px);
+      }
+      .intro p {
+        grid-column: 3 / span 6;
+        margin: 0;
+        color: var(--blue);
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        line-height: 1.08;
+        font-size: clamp(30px, 4.6vw, 64px);
+        text-wrap: balance;
+      }
+      .intro small {
+        grid-column: 3 / span 6;
+        margin-top: 18px;
+        color: var(--ink-2);
+        font: 500 12px/1.5 var(--f-mono);
+        letter-spacing: 0.06em;
+      }
+
+      /* The mosaic stage: sticky while --p runs 0 → 1 */
+      .stage {
+        height: 210vh;
+      }
+      .sticky {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        min-height: 560px;
+        display: grid;
+        place-items: center;
+        padding: clamp(10px, 2vw, 24px);
+        overflow: hidden;
+        --p: 1;
+      }
+      @supports (animation-timeline: view()) {
+        .stage {
+          view-timeline: --stage block;
+        }
+        .sticky {
+          animation: lock linear both;
+          animation-timeline: --stage;
+          animation-range: contain 0% contain 55%;
+        }
+        @keyframes lock {
+          from {
+            --p: 0;
+          }
+          to {
+            --p: 1;
+          }
+        }
+      }
+      .mosaic {
+        width: min(100%, 1100px);
+        height: min(100%, 760px);
+        display: grid;
+        gap: var(--gap);
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        grid-template-rows: repeat(5, minmax(0, 1fr));
+        grid-template-areas:
+          "f f f f f v v v v v v v"
+          "l l l l l l t t t t t t"
+          "i i i i i s t t t t t t"
+          "i i i i i c c c c c c c"
+          "m m m m m m n n n n n n";
+      }
+      .tile {
+        position: relative;
+        overflow: hidden;
+        border-radius: 4px;
+        padding: clamp(12px, 1.8vw, 22px);
+        text-decoration: none;
+        background: var(--bg);
+        color: var(--fg);
+        transition:
+          background 0.7s ease,
+          color 0.7s ease,
+          scale 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+        /* Slide in from its own offset (grid cells), locking into place at --p = 1 */
+        translate: calc(var(--ox, 0) * (1 - var(--p)) * 100%) calc(var(--oy, 0) * (1 - var(--p)) * 100%);
+      }
+      .tile:hover {
+        scale: 1.015;
+        z-index: 2;
+      }
+      .tile h2 {
+        margin: 0;
+        font-size: clamp(15px, 1.6vw, 21px);
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        position: relative;
+        z-index: 1;
+      }
+      .tile h2::after {
+        content: " →";
+        opacity: 0;
+        transition: opacity 0.2s;
+      }
+      .tile:hover h2::after {
+        opacity: 1;
+      }
+      .tile svg,
+      .tile .glyph {
+        position: absolute;
+      }
+      .tile svg * {
+        transition: all 0.7s cubic-bezier(0.5, 0, 0.2, 1);
+      }
+
+      /* 01 framework: three nodes, one moves */
+      .f {
+        grid-area: f;
+      }
+      .f svg {
+        left: 8%;
+        bottom: 12%;
+        height: 52%;
+        width: auto;
+      }
+      .f[data-alt] .n3 {
+        transform: translate(30px, -26px);
+      }
+      .f[data-alt] .e2 {
+        d: path("M14 70 L104 18");
+      }
+
+      /* 02 voice: quote marks, filled or outlined */
+      .v {
+        grid-area: v;
+      }
+      .v .glyph {
+        inset: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 18% 7% 0;
+        font: 900 clamp(90px, 13vw, 200px) / 0.6 Georgia, "Times New Roman", serif;
+      }
+      .v .glyph span {
+        transition: all 0.7s;
+        -webkit-text-stroke: 3px currentColor;
+      }
+      .v .glyph span:last-child {
+        align-self: flex-end;
+        padding-bottom: 6%;
+      }
+      .v[data-alt] .glyph span {
+        color: transparent;
+      }
+
+      /* 03 mark: a folded square that turns */
+      .l {
+        grid-area: l;
+      }
+      .l svg {
+        left: 6%;
+        bottom: 16%;
+        width: min(16%, 64px);
+        height: auto;
+      }
+      .l svg g {
+        transform-origin: 32px 32px;
+      }
+      .l[data-alt] svg g {
+        transform: rotate(90deg);
+      }
+
+      /* 04 type: Aa, bold or light italic */
+      .t {
+        grid-area: t;
+      }
+      .t .glyph {
+        right: 6%;
+        bottom: 4%;
+        font-weight: 800;
+        letter-spacing: -0.05em;
+        line-height: 0.8;
+        font-size: clamp(90px, 14vw, 210px);
+        transition: all 0.7s;
+      }
+      .t[data-alt] .glyph {
+        font-weight: 300;
+        font-style: italic;
+        letter-spacing: -0.02em;
+      }
+
+      /* 05 icons: a lock that opens */
+      .i {
+        grid-area: i;
+      }
+      .i svg {
+        left: 8%;
+        bottom: 10%;
+        width: min(34%, 120px);
+        height: auto;
+      }
+      .i[data-alt] .shackle {
+        transform: translateY(-12px);
+      }
+
+      /* the small square in the middle */
+      .s {
+        grid-area: s;
+        display: grid;
+        place-items: center;
+      }
+      .s svg {
+        position: static;
+        width: 56%;
+        height: auto;
+      }
+
+      /* 06 color: two swatches trade places */
+      .c {
+        grid-area: c;
+      }
+      .c svg {
+        right: 6%;
+        bottom: 14%;
+        width: min(18%, 90px);
+        height: auto;
+      }
+      .c[data-alt] .sq1 {
+        transform: translate(30px, 30px);
+      }
+      .c[data-alt] .sq2 {
+        transform: translate(-30px, -30px);
+      }
+
+      /* 07 imagery: the sun rises over hills */
+      .m {
+        grid-area: m;
+      }
+      .m svg {
+        right: 6%;
+        bottom: 14%;
+        width: min(22%, 110px);
+        height: auto;
+      }
+      .m[data-alt] .sun {
+        transform: translate(16px, -8px);
+      }
+
+      /* 08 motion: a dot riding an ease curve, always */
+      .n {
+        grid-area: n;
+      }
+      .n svg {
+        left: 6%;
+        right: 6%;
+        bottom: 12%;
+        width: 88%;
+        height: 50%;
+        overflow: visible;
+      }
+      .n .rider {
+        offset-path: path("M10 110 C 120 110, 200 10, 330 10");
+        animation: ride 2.4s cubic-bezier(0.7, 0, 0.2, 1) infinite alternate;
+      }
+      @keyframes ride {
+        from {
+          offset-distance: 0%;
+        }
+        to {
+          offset-distance: 100%;
+        }
+      }
+
+      .after {
+        padding: 70px clamp(16px, 3vw, 32px) 90px;
+        text-align: center;
+        color: var(--ink-2);
+      }
+      .after b {
+        display: block;
+        color: var(--ink);
+        font-size: clamp(22px, 3vw, 34px);
+        letter-spacing: -0.02em;
+        margin-bottom: 8px;
+      }
+
+      @media (max-width: 720px) {
+        .intro p,
+        .intro small {
+          grid-column: 1 / -1;
+        }
+        .mosaic {
+          height: auto;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          grid-template-rows: none;
+          grid-auto-rows: 132px;
+          grid-template-areas: "f f" "v v" "l t" "i t" "s c" "m m" "n n";
+        }
+        .stage {
+          height: auto;
+        }
+        .sticky {
+          position: static;
+          height: auto;
+          --p: 1;
+          animation: none;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          transition: none !important;
+        }
+        .sticky {
+          --p: 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <section class="intro grid-bg" aria-label="开场">
+      <p>一份好的品牌规范，让我们做出来的每一样东西，都一眼认得出是我们。</p>
+      <small>往下滚 · 八章规范拼成一面墙</small>
+    </section>
+
+    <div class="stage">
+      <div class="sticky grid-bg">
+        <nav class="mosaic" aria-label="品牌规范目录">
+          <a class="tile f" href="#" style="--bg: #2b3651; --fg: #c8d3f5; --ox: -1.2; --oy: 0">
+            <h2>框架</h2>
+            <svg viewBox="0 0 120 90" aria-hidden="true">
+              <path class="e1" d="M14 20 L104 46" stroke="currentColor" stroke-width="3" />
+              <path class="e2" d="M14 70 L104 46" stroke="currentColor" stroke-width="3" />
+              <rect x="4" y="10" width="20" height="20" rx="5" fill="currentColor" />
+              <rect x="4" y="60" width="20" height="20" rx="5" fill="currentColor" />
+              <rect class="n3" x="94" y="36" width="20" height="20" rx="5" fill="currentColor" />
+            </svg>
+          </a>
+          <a class="tile v" href="#" style="--bg: #f3cf63; --fg: #5a3d0c; --ox: 0; --oy: -1.4; --d: 0.3">
+            <h2>语气</h2>
+            <span class="glyph" aria-hidden="true"><span>“</span><span>”</span></span>
+          </a>
+          <a class="tile l" href="#" style="--bg: #6dcfec; --fg: #14485a; --ox: -1.2; --oy: 0; --d: 0.6">
+            <h2>标志</h2>
+            <svg viewBox="0 0 64 64" aria-hidden="true">
+              <g>
+                <path d="M6 6h34l18 18v34H6z" fill="currentColor" />
+                <path d="M40 6v18h18" fill="none" stroke="var(--bg)" stroke-width="5" stroke-linejoin="round" />
+              </g>
+            </svg>
+          </a>
+          <a class="tile t" href="#" style="--bg: #e9603a; --fg: #4a0f12; --ox: 1.2; --oy: 0; --d: 0.2">
+            <h2>字体</h2>
+            <span class="glyph" aria-hidden="true">Aa</span>
+          </a>
+          <a class="tile i" href="#" style="--bg: #1c1b1a; --fg: #f2f0eb; --ox: -1.2; --oy: 0.4; --d: 0.8">
+            <h2>图标</h2>
+            <svg viewBox="0 0 80 100" aria-hidden="true">
+              <path class="shackle" d="M22 46V30a18 18 0 0 1 36 0v16" fill="none" stroke="currentColor" stroke-width="7" />
+              <rect x="10" y="44" width="60" height="50" rx="10" fill="none" stroke="currentColor" stroke-width="7" />
+              <circle cx="40" cy="66" r="6" fill="currentColor" />
+              <path d="M40 70v10" stroke="currentColor" stroke-width="6" stroke-linecap="round" />
+            </svg>
+          </a>
+          <a class="tile s" href="#" aria-label="标志小样" style="--bg: #2f62f5; --fg: #ffffff; --ox: 0; --oy: 1.4; --d: 1.1">
+            <svg viewBox="0 0 64 64" aria-hidden="true">
+              <path d="M6 6h34l18 18v34H6z" fill="currentColor" />
+              <path d="M40 6v18h18" fill="none" stroke="var(--bg)" stroke-width="5" stroke-linejoin="round" />
+            </svg>
+          </a>
+          <a class="tile c" href="#" style="--bg: #f1913c; --fg: #4a2306; --ox: 1.2; --oy: 0; --d: 0.9">
+            <h2>颜色</h2>
+            <svg viewBox="0 0 90 90" aria-hidden="true">
+              <g class="sq1"><rect x="4" y="4" width="40" height="40" fill="currentColor" opacity=".55" /><circle cx="24" cy="24" r="9" fill="currentColor" /></g>
+              <g class="sq2"><rect x="46" y="46" width="40" height="40" fill="currentColor" opacity=".55" /><circle cx="66" cy="66" r="9" fill="currentColor" /></g>
+            </svg>
+          </a>
+          <a class="tile m" href="#" style="--bg: #7a2850; --fg: #f6b9cf; --ox: -1.2; --oy: 0.6; --d: 1.2">
+            <h2>图像</h2>
+            <svg viewBox="0 0 110 80" aria-hidden="true">
+              <rect width="110" height="80" fill="currentColor" opacity=".9" />
+              <circle class="sun" cx="38" cy="30" r="9" fill="var(--bg)" />
+              <path d="M0 62 Q 30 40 55 58 T 110 50 V80 H0z" fill="var(--bg)" opacity=".75" />
+            </svg>
+          </a>
+          <a class="tile n" href="#" style="--bg: #c5b1ec; --fg: #3b1f63; --ox: 1.2; --oy: 0.6; --d: 1">
+            <h2>动效</h2>
+            <svg viewBox="0 0 340 120" aria-hidden="true">
+              <path d="M10 110 C 120 110, 200 10, 330 10" fill="none" stroke="currentColor" stroke-width="3" />
+              <path d="M10 110 H 120 M 330 10 H 200" stroke="currentColor" stroke-width="2" opacity=".6" />
+              <rect x="114" y="104" width="12" height="12" rx="3" fill="currentColor" />
+              <rect x="194" y="4" width="12" height="12" rx="3" fill="currentColor" />
+              <circle class="rider" r="8" fill="currentColor" />
+            </svg>
+          </a>
+        </nav>
+      </div>
+    </div>
+
+    <section class="after">
+      <b>每一块都是一章的门。</b>
+      拼好之后，隔几秒会有一块换配色、换状态，像这份规范在自己演示自己。
+    </section>
+
+    <script>
+      (function () {
+        if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        // Color pairs the tiles can swap into: [background, foreground].
+        var pairs = [
+          ["#2b3651", "#c8d3f5"],
+          ["#f3cf63", "#5a3d0c"],
+          ["#6dcfec", "#14485a"],
+          ["#e9603a", "#4a0f12"],
+          ["#1c1b1a", "#f2f0eb"],
+          ["#2f62f5", "#ffffff"],
+          ["#f1913c", "#4a2306"],
+          ["#7a2850", "#f6b9cf"],
+          ["#c5b1ec", "#3b1f63"],
+          ["#c2db4b", "#22401a"],
+        ];
+        var tiles = Array.prototype.slice.call(document.querySelectorAll(".tile"));
+        var last = null;
+        setInterval(function () {
+          if (document.hidden) return;
+          var t;
+          do {
+            t = tiles[Math.floor(Math.random() * tiles.length)];
+          } while (t === last);
+          last = t;
+          var bg = t.style.getPropertyValue("--bg").trim();
+          var pick;
+          do {
+            pick = pairs[Math.floor(Math.random() * pairs.length)];
+          } while (pick[0] === bg);
+          t.style.setProperty("--bg", pick[0]);
+          t.style.setProperty("--fg", pick[1]);
+          t.toggleAttribute("data-alt");
+        }, 1800);
+      })();
+    </script>
+  </body>
+</html>

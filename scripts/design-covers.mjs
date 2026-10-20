@@ -79,6 +79,15 @@ const POSES = {
     await page.click(".pick-menu li:nth-child(2)");
     await page.waitForTimeout(110);
   },
+  // Scroll-built pages: shoot them once the pieces have gathered.
+  "collab-canvas": async (page) => {
+    await page.evaluate(() => scrollTo(0, innerHeight * 1.1));
+    await page.waitForTimeout(700);
+  },
+  "brand-mosaic": async (page) => {
+    await page.evaluate(() => scrollTo(0, innerHeight * 1.45));
+    await page.waitForTimeout(700);
+  },
 };
 
 const server = createServer(async (req, res) => {
