@@ -5,34 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>规范色块墙</title>
     <style>
-      /* Layout: a brand guide's table of contents as one mosaic of flat color tiles on a visible grid.
-         Scrolling slides the tiles in along the grid until they lock together; after that a tile swaps its
-         colors and its glyph changes state every couple of seconds, so the wall never sits still. */
+      /* Layout: a brand guide's contents as one full-bleed mosaic. The page opens on a bare grid and one quiet
+         sentence; scrolling shows a single blue square, then the camera pulls back until that square is the small
+         mark tile in the middle of the whole wall. Hovering a tile turns it into a black blueprint of itself. */
       :root {
         --page: #ffffff;
-        --ink: #1c1b1a;
-        --ink-2: #6b6862;
-        --rule: rgba(28, 27, 26, 0.1);
-        --blue: #2f62f5;
-        --gap: 6px;
+        --grid: rgba(0, 97, 254, 0.1);
+        --blue: #0061fe;
+        --ink: #1a1918;
+        --hover: #1a1918;
+        --on-hover: #ffffff;
+        --gap: clamp(5px, 0.7vw, 10px);
         --f-sans: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
-        --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        --f-serif: "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", "STSong", serif;
         color-scheme: light;
       }
       @media (prefers-color-scheme: dark) {
         :root {
-          --page: #121212;
-          --ink: #f2f0eb;
-          --ink-2: #a5a29b;
-          --rule: rgba(242, 240, 235, 0.1);
-          --blue: #6f93ff;
+          --page: #111111;
+          --grid: rgba(120, 160, 255, 0.12);
+          --blue: #3d82ff;
+          --ink: #f2efe8;
+          --hover: #f4f1ea;
+          --on-hover: #1a1918;
           color-scheme: dark;
         }
-      }
-      @property --p {
-        syntax: "<number>";
-        inherits: true;
-        initial-value: 0;
       }
       * {
         box-sizing: border-box;
@@ -45,462 +42,561 @@
         background: var(--page);
         color: var(--ink);
         font-family: var(--f-sans);
-        font-size: 16px;
-        line-height: 1.5;
         overflow-x: hidden;
       }
       :focus-visible {
         outline: 3px solid var(--blue);
-        outline-offset: 3px;
-      }
-      .grid-bg {
-        background-image: linear-gradient(var(--rule) 1px, transparent 1px),
-          linear-gradient(90deg, var(--rule) 1px, transparent 1px);
-        background-size: calc(100% / 12) 120px;
+        outline-offset: -3px;
       }
 
-      /* Intro: one sentence set in the grid, the brand's own blue */
-      .intro {
-        min-height: 62vh;
-        display: grid;
-        grid-template-columns: repeat(12, minmax(0, 1fr));
-        align-content: center;
-        padding: 40px clamp(16px, 3vw, 32px);
-      }
-      .intro p {
-        grid-column: 3 / span 6;
-        margin: 0;
-        color: var(--blue);
-        font-weight: 700;
-        letter-spacing: -0.03em;
-        line-height: 1.08;
-        font-size: clamp(30px, 4.6vw, 64px);
-        text-wrap: balance;
-      }
-      .intro small {
-        grid-column: 3 / span 6;
-        margin-top: 18px;
-        color: var(--ink-2);
-        font: 500 12px/1.5 var(--f-mono);
-        letter-spacing: 0.06em;
-      }
-
-      /* The mosaic stage: sticky while --p runs 0 → 1 */
+      /* ---------- the stage: sticky viewport, scroll drives the camera ---------- */
       .stage {
-        height: 210vh;
+        height: 460vh;
+        position: relative;
       }
-      .sticky {
+      .view {
         position: sticky;
         top: 0;
         height: 100vh;
-        min-height: 560px;
-        display: grid;
-        place-items: center;
-        padding: clamp(10px, 2vw, 24px);
         overflow: hidden;
-        --p: 1;
+        background-image: linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+          linear-gradient(var(--grid) 1px, transparent 1px);
+        background-size: calc(100% / 12) calc(100vh / 7.5);
       }
-      @supports (animation-timeline: view()) {
-        .stage {
-          view-timeline: --stage block;
-        }
-        .sticky {
-          animation: lock linear both;
-          animation-timeline: --stage;
-          animation-range: contain 0% contain 55%;
-        }
-        @keyframes lock {
-          from {
-            --p: 0;
-          }
-          to {
-            --p: 1;
-          }
+      .intro {
+        position: absolute;
+        left: calc(100% / 12 * 1.5);
+        top: calc(100vh / 7.5 * 0.6);
+        width: min(30ch, 70vw);
+        margin: 0;
+        color: var(--blue);
+        font-weight: 600;
+        font-size: clamp(20px, 2.2vw, 32px);
+        line-height: 1.22;
+        letter-spacing: -0.01em;
+        opacity: var(--intro, 1);
+        transition: opacity 0.4s;
+      }
+      .hint {
+        position: absolute;
+        right: calc(100% / 12 * 0.5);
+        bottom: 24px;
+        width: 22px;
+        height: 22px;
+        color: var(--blue);
+        opacity: var(--intro, 1);
+        animation: nudge 1.6s ease-in-out infinite;
+      }
+      @keyframes nudge {
+        50% {
+          translate: 0 6px;
         }
       }
+
       .mosaic {
-        width: min(100%, 1100px);
-        height: min(100%, 760px);
+        position: absolute;
+        inset: var(--gap);
         display: grid;
         gap: var(--gap);
-        grid-template-columns: repeat(12, minmax(0, 1fr));
-        grid-template-rows: repeat(5, minmax(0, 1fr));
+        /* Symmetric tracks, so the small middle tile sits exactly at the centre of the screen. */
+        grid-template-columns: 268fr 377fr 90fr 377fr 268fr;
+        grid-template-rows: 385fr 90fr 385fr;
         grid-template-areas:
-          "f f f f f v v v v v v v"
-          "l l l l l l t t t t t t"
-          "i i i i i s t t t t t t"
-          "i i i i i c c c c c c c"
-          "m m m m m m n n n n n n";
+          "f v v l t"
+          "f c s l n"
+          "i c m m n";
+        transform-origin: 50% 50%;
+        scale: var(--s, 1);
+        opacity: var(--show, 1);
       }
       .tile {
         position: relative;
         overflow: hidden;
-        border-radius: 4px;
-        padding: clamp(12px, 1.8vw, 22px);
         text-decoration: none;
         background: var(--bg);
         color: var(--fg);
-        transition:
-          background 0.7s ease,
-          color 0.7s ease,
-          scale 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-        /* Slide in from its own offset (grid cells), locking into place at --p = 1 */
-        translate: calc(var(--ox, 0) * (1 - var(--p)) * 100%) calc(var(--oy, 0) * (1 - var(--p)) * 100%);
+        --g: var(--fg);
+        padding: clamp(10px, 1.1vw, 16px) clamp(12px, 1.2vw, 18px);
+        transition: background 0.35s ease, color 0.35s ease;
       }
-      .tile:hover {
-        scale: 1.015;
-        z-index: 2;
-      }
-      .tile h2 {
-        margin: 0;
-        font-size: clamp(15px, 1.6vw, 21px);
-        font-weight: 600;
-        letter-spacing: -0.01em;
+      .tile b {
         position: relative;
         z-index: 1;
+        font-weight: 500;
+        font-size: clamp(15px, 2.33vw, 34px);
+        letter-spacing: -0.01em;
+        line-height: 1;
+        white-space: nowrap;
       }
-      .tile h2::after {
-        content: " →";
-        opacity: 0;
-        transition: opacity 0.2s;
-      }
-      .tile:hover h2::after {
-        opacity: 1;
-      }
-      .tile svg,
-      .tile .glyph {
+      .tile svg {
         position: absolute;
+        overflow: visible;
       }
       .tile svg * {
-        transition: all 0.7s cubic-bezier(0.5, 0, 0.2, 1);
+        transition: fill 0.35s, stroke 0.35s, opacity 0.35s, translate 0.6s cubic-bezier(0.3, 1.4, 0.5, 1),
+          rotate 0.6s cubic-bezier(0.3, 1.4, 0.5, 1);
+      }
+      /* Blueprint on hover: black tile, white label, glyphs become line drawings. */
+      .tile:hover,
+      .tile:focus-visible {
+        background: var(--hover);
+        color: var(--on-hover);
+        --g: var(--on-hover);
+      }
+      .solid {
+        fill: var(--g);
+        stroke: var(--g);
+        stroke-width: 0;
+      }
+      .tile:hover .solid,
+      .tile:focus-visible .solid {
+        fill: transparent;
+        stroke-width: 2;
+      }
+      .line {
+        fill: none;
+        stroke: var(--g);
+        stroke-width: 3;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .only-hover {
+        opacity: 0;
+      }
+      .tile:hover .only-hover,
+      .tile:focus-visible .only-hover {
+        opacity: 1;
+      }
+      .tile:hover .only-rest,
+      .tile:focus-visible .only-rest {
+        opacity: 0;
       }
 
-      /* 01 framework: three nodes, one moves */
       .f {
         grid-area: f;
+        --bg: #283750;
+        --fg: #b4c8e1;
+        border-top-left-radius: 8px;
       }
-      .f svg {
-        left: 8%;
-        bottom: 12%;
-        height: 52%;
-        width: auto;
-      }
-      .f[data-alt] .n3 {
-        transform: translate(30px, -26px);
-      }
-      .f[data-alt] .e2 {
-        d: path("M14 70 L104 18");
-      }
-
-      /* 02 voice: quote marks, filled or outlined */
       .v {
         grid-area: v;
+        --bg: #fad24b;
+        --fg: #684505;
       }
-      .v .glyph {
-        inset: 0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 18% 7% 0;
-        font: 900 clamp(90px, 13vw, 200px) / 0.6 Georgia, "Times New Roman", serif;
-      }
-      .v .glyph span {
-        transition: all 0.7s;
-        -webkit-text-stroke: 3px currentColor;
-      }
-      .v .glyph span:last-child {
-        align-self: flex-end;
-        padding-bottom: 6%;
-      }
-      .v[data-alt] .glyph span {
-        color: transparent;
-      }
-
-      /* 03 mark: a folded square that turns */
       .l {
         grid-area: l;
+        --bg: #3dd3ee;
+        --fg: #055463;
       }
-      .l svg {
-        left: 6%;
-        bottom: 16%;
-        width: min(16%, 64px);
-        height: auto;
-      }
-      .l svg g {
-        transform-origin: 32px 32px;
-      }
-      .l[data-alt] svg g {
-        transform: rotate(90deg);
-      }
-
-      /* 04 type: Aa, bold or light italic */
       .t {
         grid-area: t;
+        --bg: #fa551e;
+        --fg: #4e0119;
+        border-top-right-radius: 8px;
       }
-      .t .glyph {
-        right: 6%;
-        bottom: 4%;
-        font-weight: 800;
-        letter-spacing: -0.05em;
-        line-height: 0.8;
-        font-size: clamp(90px, 14vw, 210px);
-        transition: all 0.7s;
-      }
-      .t[data-alt] .glyph {
-        font-weight: 300;
-        font-style: italic;
-        letter-spacing: -0.02em;
-      }
-
-      /* 05 icons: a lock that opens */
       .i {
         grid-area: i;
+        --bg: #b4dc19;
+        --fg: #175641;
+        border-bottom-left-radius: 8px;
+      }
+      .c {
+        grid-area: c;
+        --bg: #ff8c19;
+        --fg: #5e2600;
+      }
+      .s {
+        grid-area: s;
+        --bg: var(--blue);
+        --fg: #ffffff;
+        display: grid;
+        place-items: center;
+        padding: 0;
+      }
+      .m {
+        grid-area: m;
+        --bg: #892055;
+        --fg: #ffafa5;
+      }
+      .n {
+        grid-area: n;
+        --bg: #c8aff0;
+        --fg: #682760;
+        border-bottom-right-radius: 8px;
+      }
+
+      /* glyph placement, all in percent of the tile */
+      .f svg {
+        left: 7%;
+        top: 30%;
+        width: 78%;
+        height: 50%;
+      }
+      .f .arrow {
+        stroke-dasharray: 260;
+        stroke-dashoffset: 260;
+        transition: stroke-dashoffset 0.9s cubic-bezier(0.6, 0, 0.2, 1) 0.1s, opacity 0.2s;
+      }
+      .f:hover .arrow,
+      .f:focus-visible .arrow {
+        stroke-dashoffset: 0;
+      }
+      .v .q1 {
+        left: 6%;
+        top: 26%;
+        width: 15%;
+        aspect-ratio: 0.8;
+      }
+      .v .q2 {
+        right: 6%;
+        bottom: 9%;
+        width: 15%;
+        aspect-ratio: 0.8;
+      }
+      .l svg {
+        right: 7%;
+        bottom: 7%;
+        width: 40%;
+        aspect-ratio: 1;
+      }
+      .l:hover .p1,
+      .l:focus-visible .p1 {
+        translate: -7px -7px;
+        rotate: -4deg;
+      }
+      .l:hover .p2,
+      .l:focus-visible .p2 {
+        translate: 8px 8px;
+        rotate: 5deg;
+      }
+      .t .yong {
+        position: absolute;
+        right: 6%;
+        bottom: 2%;
+        font: 600 clamp(64px, 11vw, 176px) / 1 var(--f-serif);
+        color: var(--g);
+        -webkit-text-stroke: 2px var(--g);
+        transition: color 0.35s;
+      }
+      .t:hover .yong,
+      .t:focus-visible .yong {
+        color: transparent;
       }
       .i svg {
         left: 8%;
-        bottom: 10%;
-        width: min(34%, 120px);
-        height: auto;
+        bottom: 8%;
+        width: 40%;
+        aspect-ratio: 0.8;
       }
-      .i[data-alt] .shackle {
-        transform: translateY(-12px);
-      }
-
-      /* the small square in the middle */
-      .s {
-        grid-area: s;
-        display: grid;
-        place-items: center;
-      }
-      .s svg {
-        position: static;
-        width: 56%;
-        height: auto;
-      }
-
-      /* 06 color: two swatches trade places */
-      .c {
-        grid-area: c;
+      .i:hover .shackle,
+      .i:focus-visible .shackle {
+        translate: 0 -10px;
       }
       .c svg {
-        right: 6%;
-        bottom: 14%;
-        width: min(18%, 90px);
-        height: auto;
+        right: 7%;
+        bottom: 5%;
+        width: 30%;
+        aspect-ratio: 1;
       }
-      .c[data-alt] .sq1 {
-        transform: translate(30px, 30px);
+      .c:hover .sw1,
+      .c:focus-visible .sw1 {
+        translate: 50px 0;
       }
-      .c[data-alt] .sq2 {
-        transform: translate(-30px, -30px);
-      }
-
-      /* 07 imagery: the sun rises over hills */
-      .m {
-        grid-area: m;
+      .c:hover .sw2,
+      .c:focus-visible .sw2 {
+        translate: -50px 0;
       }
       .m svg {
         right: 6%;
-        bottom: 14%;
-        width: min(22%, 110px);
-        height: auto;
-      }
-      .m[data-alt] .sun {
-        transform: translate(16px, -8px);
-      }
-
-      /* 08 motion: a dot riding an ease curve, always */
-      .n {
-        grid-area: n;
+        bottom: 8%;
+        width: 44%;
+        aspect-ratio: 1.35;
       }
       .n svg {
-        left: 6%;
-        right: 6%;
-        bottom: 12%;
-        width: 88%;
-        height: 50%;
-        overflow: visible;
+        left: 10%;
+        right: 10%;
+        top: 22%;
+        bottom: 8%;
+        width: 80%;
+        height: 70%;
       }
-      .n .rider {
-        offset-path: path("M10 110 C 120 110, 200 10, 330 10");
-        animation: ride 2.4s cubic-bezier(0.7, 0, 0.2, 1) infinite alternate;
+      .n .dot {
+        offset-path: path("M 10 230 C 150 230, 50 10, 190 10");
+        offset-distance: 0%;
+        opacity: 0;
+      }
+      .n:hover .dot,
+      .n:focus-visible .dot {
+        opacity: 1;
+        animation: ride 1.6s cubic-bezier(0.7, 0, 0.2, 1) infinite alternate;
       }
       @keyframes ride {
-        from {
-          offset-distance: 0%;
-        }
         to {
           offset-distance: 100%;
         }
       }
+      .s svg {
+        width: 46%;
+        aspect-ratio: 1;
+        position: static;
+        opacity: calc(1 - var(--blurb, 0));
+      }
+
+      /* The blue square's paragraph: drawn on top of the stage at screen size, so it stays crisp while zooming. */
+      .blurb {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: var(--bw, 300px);
+        height: var(--bw, 300px);
+        translate: -50% -50%;
+        padding: calc(var(--bw, 300px) * 0.05);
+        color: #fff;
+        font-weight: 600;
+        font-size: calc(var(--bw, 300px) * 0.078);
+        line-height: 1.22;
+        letter-spacing: -0.01em;
+        opacity: var(--blurb, 0);
+        pointer-events: none;
+        margin: 0;
+      }
+      /* While the square is close up, its mark sits small in the corner, as on a cover. */
+      .blurb::after {
+        content: "";
+        position: absolute;
+        left: calc(var(--bw, 300px) * 0.05);
+        bottom: calc(var(--bw, 300px) * 0.05);
+        width: calc(var(--bw, 300px) * 0.11);
+        aspect-ratio: 1;
+        background:
+          linear-gradient(#fff, #fff) 0 0 / 62% 62% no-repeat,
+          linear-gradient(rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.6)) 100% 100% / 62% 62% no-repeat;
+      }
 
       .after {
-        padding: 70px clamp(16px, 3vw, 32px) 90px;
+        padding: 80px 24px 100px;
         text-align: center;
-        color: var(--ink-2);
-      }
-      .after b {
-        display: block;
-        color: var(--ink);
-        font-size: clamp(22px, 3vw, 34px);
-        letter-spacing: -0.02em;
-        margin-bottom: 8px;
+        font-size: 15px;
+        color: color-mix(in srgb, var(--ink) 65%, transparent);
       }
 
+      /* Phones: no camera move, just the sentence, the blue paragraph and a two-column wall. */
       @media (max-width: 720px) {
-        .intro p,
-        .intro small {
-          grid-column: 1 / -1;
-        }
-        .mosaic {
-          height: auto;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          grid-template-rows: none;
-          grid-auto-rows: 132px;
-          grid-template-areas: "f f" "v v" "l t" "i t" "s c" "m m" "n n";
-        }
         .stage {
           height: auto;
         }
-        .sticky {
+        .view {
           position: static;
           height: auto;
-          --p: 1;
-          animation: none;
+          overflow: visible;
+          padding: 28px 12px 12px;
+          display: grid;
+          gap: 18px;
+          background-size: calc(100% / 6) 90px;
+        }
+        .intro,
+        .blurb {
+          position: static;
+          translate: none;
+          width: auto;
+          height: auto;
+          opacity: 1;
+        }
+        .blurb {
+          background: var(--blue);
+          border-radius: 8px;
+          padding: 18px;
+          font-size: 19px;
+        }
+        .hint {
+          display: none;
+        }
+        .mosaic {
+          position: static;
+          scale: 1;
+          opacity: 1;
+          grid-template-columns: 1fr 1fr;
+          grid-template-rows: none;
+          grid-auto-rows: 150px;
+          grid-template-areas: "f v" "f v" "l t" "l s" "i c" "m c" "m n" "m n";
+        }
+        .tile {
+          border-radius: 4px;
         }
       }
       @media (prefers-reduced-motion: reduce) {
+        .stage {
+          height: auto;
+        }
+        .intro,
+        .hint,
+        .blurb {
+          display: none;
+        }
         *,
         *::before,
         *::after {
           animation: none !important;
           transition: none !important;
         }
-        .sticky {
-          --p: 1;
-        }
       }
     </style>
   </head>
   <body>
-    <section class="intro grid-bg" aria-label="开场">
-      <p>一份好的品牌规范，让我们做出来的每一样东西，都一眼认得出是我们。</p>
-      <small>往下滚 · 八章规范拼成一面墙</small>
-    </section>
+    <div class="stage" id="stage">
+      <div class="view" id="view">
+        <p class="intro">卓琪的开发笔记有一套自己的规矩，让每一页看起来都像同一个人写的。</p>
+        <svg class="hint" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M6 6l6 6 6-6M6 12l6 6 6-6" />
+        </svg>
 
-    <div class="stage">
-      <div class="sticky grid-bg">
-        <nav class="mosaic" aria-label="品牌规范目录">
-          <a class="tile f" href="#" style="--bg: #2b3651; --fg: #c8d3f5; --ox: -1.2; --oy: 0">
-            <h2>框架</h2>
-            <svg viewBox="0 0 120 90" aria-hidden="true">
-              <path class="e1" d="M14 20 L104 46" stroke="currentColor" stroke-width="3" />
-              <path class="e2" d="M14 70 L104 46" stroke="currentColor" stroke-width="3" />
-              <rect x="4" y="10" width="20" height="20" rx="5" fill="currentColor" />
-              <rect x="4" y="60" width="20" height="20" rx="5" fill="currentColor" />
-              <rect class="n3" x="94" y="36" width="20" height="20" rx="5" fill="currentColor" />
+        <nav class="mosaic" aria-label="规范目录">
+          <a class="tile f" href="#"
+            ><b>框架</b>
+            <svg viewBox="0 0 200 120" aria-hidden="true">
+              <path class="line only-rest" d="M14 16 L 174 62 M14 106 L 174 62" style="stroke-width: 4" />
+              <path class="line arrow only-hover" d="M16 16 C 80 0, 150 20, 168 56" />
+              <path class="line arrow only-hover" d="M16 104 C 80 124, 150 104, 168 68" />
+              <path class="line only-hover" d="M156 46 L 168 56 L 172 40 M154 80 L 168 68 L 174 84" style="stroke-width: 3" />
+              <rect class="solid" x="0" y="2" width="28" height="28" rx="6" />
+              <rect class="solid" x="0" y="90" width="28" height="28" rx="6" />
+              <rect class="solid" x="164" y="48" width="28" height="28" rx="6" />
             </svg>
           </a>
-          <a class="tile v" href="#" style="--bg: #f3cf63; --fg: #5a3d0c; --ox: 0; --oy: -1.4; --d: 0.3">
-            <h2>语气</h2>
-            <span class="glyph" aria-hidden="true"><span>“</span><span>”</span></span>
-          </a>
-          <a class="tile l" href="#" style="--bg: #6dcfec; --fg: #14485a; --ox: -1.2; --oy: 0; --d: 0.6">
-            <h2>标志</h2>
-            <svg viewBox="0 0 64 64" aria-hidden="true">
-              <g>
-                <path d="M6 6h34l18 18v34H6z" fill="currentColor" />
-                <path d="M40 6v18h18" fill="none" stroke="var(--bg)" stroke-width="5" stroke-linejoin="round" />
-              </g>
+          <a class="tile v" href="#"
+            ><b>语气</b>
+            <svg class="q1" viewBox="0 0 64 80" aria-hidden="true"><path class="solid" d="M4 4 H60 V24 H26 V76 H4 Z" /></svg>
+            <svg class="q2" viewBox="0 0 64 80" aria-hidden="true"><path class="solid" d="M60 76 H4 V56 H38 V4 H60 Z" /></svg
+          ></a>
+          <a class="tile l" href="#"
+            ><b>标志</b>
+            <svg viewBox="0 0 100 100" aria-hidden="true">
+              <g class="p1"><rect class="solid" x="6" y="6" width="58" height="58" rx="10" /></g>
+              <g class="p2"><rect class="solid" x="36" y="36" width="58" height="58" rx="10" /></g>
             </svg>
           </a>
-          <a class="tile t" href="#" style="--bg: #e9603a; --fg: #4a0f12; --ox: 1.2; --oy: 0; --d: 0.2">
-            <h2>字体</h2>
-            <span class="glyph" aria-hidden="true">Aa</span>
-          </a>
-          <a class="tile i" href="#" style="--bg: #1c1b1a; --fg: #f2f0eb; --ox: -1.2; --oy: 0.4; --d: 0.8">
-            <h2>图标</h2>
+          <a class="tile t" href="#"><b>字体</b><span class="yong" aria-hidden="true">永</span></a>
+          <a class="tile i" href="#"
+            ><b>图标</b>
             <svg viewBox="0 0 80 100" aria-hidden="true">
-              <path class="shackle" d="M22 46V30a18 18 0 0 1 36 0v16" fill="none" stroke="currentColor" stroke-width="7" />
-              <rect x="10" y="44" width="60" height="50" rx="10" fill="none" stroke="currentColor" stroke-width="7" />
-              <circle cx="40" cy="66" r="6" fill="currentColor" />
-              <path d="M40 70v10" stroke="currentColor" stroke-width="6" stroke-linecap="round" />
+              <path class="line shackle" d="M22 46V30a18 18 0 0 1 36 0v16" style="stroke-width: 7" />
+              <rect class="solid" x="8" y="44" width="64" height="52" rx="10" />
+              <circle cx="40" cy="68" r="7" fill="var(--bg)" class="only-rest" />
+              <circle cx="40" cy="68" r="7" class="line only-hover" style="stroke-width: 2" />
             </svg>
           </a>
-          <a class="tile s" href="#" aria-label="标志小样" style="--bg: #2f62f5; --fg: #ffffff; --ox: 0; --oy: 1.4; --d: 1.1">
-            <svg viewBox="0 0 64 64" aria-hidden="true">
-              <path d="M6 6h34l18 18v34H6z" fill="currentColor" />
-              <path d="M40 6v18h18" fill="none" stroke="var(--bg)" stroke-width="5" stroke-linejoin="round" />
+          <a class="tile c" href="#"
+            ><b>颜色</b>
+            <svg viewBox="0 0 100 100" aria-hidden="true">
+              <g class="sw1"><rect class="solid" x="0" y="0" width="46" height="46" style="opacity: 0.7" /><circle class="solid" cx="23" cy="23" r="10" /></g>
+              <g class="sw2"><rect class="solid" x="54" y="54" width="46" height="46" style="opacity: 0.7" /><circle class="solid" cx="77" cy="77" r="10" /></g>
             </svg>
           </a>
-          <a class="tile c" href="#" style="--bg: #f1913c; --fg: #4a2306; --ox: 1.2; --oy: 0; --d: 0.9">
-            <h2>颜色</h2>
-            <svg viewBox="0 0 90 90" aria-hidden="true">
-              <g class="sq1"><rect x="4" y="4" width="40" height="40" fill="currentColor" opacity=".55" /><circle cx="24" cy="24" r="9" fill="currentColor" /></g>
-              <g class="sq2"><rect x="46" y="46" width="40" height="40" fill="currentColor" opacity=".55" /><circle cx="66" cy="66" r="9" fill="currentColor" /></g>
+          <a class="tile s" href="#" aria-label="标志小样"
+            ><svg viewBox="0 0 100 100" aria-hidden="true">
+              <rect x="6" y="6" width="58" height="58" rx="10" fill="#fff" />
+              <rect x="36" y="36" width="58" height="58" rx="10" fill="#fff" opacity=".6" /></svg
+          ></a>
+          <a class="tile m" href="#"
+            ><b>图像</b>
+            <svg viewBox="0 0 135 100" aria-hidden="true">
+              <rect class="solid" x="0" y="0" width="135" height="100" />
+              <circle class="only-rest" cx="40" cy="36" r="10" fill="#892055" />
+              <path class="only-rest" d="M0 76 C 30 50, 50 80, 80 56 S 120 30, 135 44 V100 H0 Z" fill="#cd2f7b" />
+              <path class="line only-hover" d="M46 26 a 12 12 0 1 0 8 22 a 10 10 0 1 1 -8 -22 z" style="stroke-width: 2" />
+              <path class="line only-hover" d="M0 76 C 30 50, 50 80, 80 56 S 120 30, 135 44" style="stroke-width: 2" />
             </svg>
           </a>
-          <a class="tile m" href="#" style="--bg: #7a2850; --fg: #f6b9cf; --ox: -1.2; --oy: 0.6; --d: 1.2">
-            <h2>图像</h2>
-            <svg viewBox="0 0 110 80" aria-hidden="true">
-              <rect width="110" height="80" fill="currentColor" opacity=".9" />
-              <circle class="sun" cx="38" cy="30" r="9" fill="var(--bg)" />
-              <path d="M0 62 Q 30 40 55 58 T 110 50 V80 H0z" fill="var(--bg)" opacity=".75" />
-            </svg>
-          </a>
-          <a class="tile n" href="#" style="--bg: #c5b1ec; --fg: #3b1f63; --ox: 1.2; --oy: 0.6; --d: 1">
-            <h2>动效</h2>
-            <svg viewBox="0 0 340 120" aria-hidden="true">
-              <path d="M10 110 C 120 110, 200 10, 330 10" fill="none" stroke="currentColor" stroke-width="3" />
-              <path d="M10 110 H 120 M 330 10 H 200" stroke="currentColor" stroke-width="2" opacity=".6" />
-              <rect x="114" y="104" width="12" height="12" rx="3" fill="currentColor" />
-              <rect x="194" y="4" width="12" height="12" rx="3" fill="currentColor" />
-              <circle class="rider" r="8" fill="currentColor" />
+          <a class="tile n" href="#"
+            ><b>动效</b>
+            <svg viewBox="0 0 200 240" preserveAspectRatio="none" aria-hidden="true">
+              <path class="line" d="M 10 230 C 150 230, 50 10, 190 10" style="stroke-width: 2.4" />
+              <path class="line" d="M 10 230 H 60 M 190 10 H 140" style="stroke-width: 2" />
+              <rect class="solid" x="2" y="222" width="16" height="16" rx="3" />
+              <rect class="solid" x="54" y="224" width="12" height="12" rx="3" />
+              <rect class="solid" x="182" y="2" width="16" height="16" rx="3" />
+              <rect class="solid" x="134" y="4" width="12" height="12" rx="3" />
+              <circle class="dot" r="9" fill="var(--g)" />
             </svg>
           </a>
         </nav>
+
+        <p class="blurb" id="blurb">从图标到插画、从标志到用词，这里是这个博客长什么样、读起来什么感觉的全部规矩。</p>
       </div>
     </div>
 
-    <section class="after">
-      <b>每一块都是一章的门。</b>
-      拼好之后，隔几秒会有一块换配色、换状态，像这份规范在自己演示自己。
-    </section>
+    <p class="after">把鼠标放到任意一块上，它会变成自己的线稿。</p>
 
     <script>
       (function () {
-        if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-        // Color pairs the tiles can swap into: [background, foreground].
-        var pairs = [
-          ["#2b3651", "#c8d3f5"],
-          ["#f3cf63", "#5a3d0c"],
-          ["#6dcfec", "#14485a"],
-          ["#e9603a", "#4a0f12"],
-          ["#1c1b1a", "#f2f0eb"],
-          ["#2f62f5", "#ffffff"],
-          ["#f1913c", "#4a2306"],
-          ["#7a2850", "#f6b9cf"],
-          ["#c5b1ec", "#3b1f63"],
-          ["#c2db4b", "#22401a"],
-        ];
-        var tiles = Array.prototype.slice.call(document.querySelectorAll(".tile"));
-        var last = null;
-        setInterval(function () {
-          if (document.hidden) return;
-          var t;
-          do {
-            t = tiles[Math.floor(Math.random() * tiles.length)];
-          } while (t === last);
-          last = t;
-          var bg = t.style.getPropertyValue("--bg").trim();
-          var pick;
-          do {
-            pick = pairs[Math.floor(Math.random() * pairs.length)];
-          } while (pick[0] === bg);
-          t.style.setProperty("--bg", pick[0]);
-          t.style.setProperty("--fg", pick[1]);
-          t.toggleAttribute("data-alt");
-        }, 1800);
+        var stage = document.getElementById("stage");
+        var view = document.getElementById("view");
+        var mosaic = view.querySelector(".mosaic");
+        var small = view.querySelector(".tile.s");
+        var narrow = matchMedia("(max-width: 720px)");
+        var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+        var clamp = function (v, a, b) {
+          return Math.min(b, Math.max(a, v));
+        };
+        var span = function (p, a, b) {
+          return clamp((p - a) / (b - a), 0, 1);
+        };
+        var ease = function (t) {
+          return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        };
+        var frame = 0;
+        var tiles = Array.prototype.slice.call(mosaic.querySelectorAll(".tile"));
+        var offsets = [];
+        // Each tile's distance from the middle of the wall at rest, before any transform.
+        function measure() {
+          var cx = mosaic.offsetWidth / 2;
+          var cy = mosaic.offsetHeight / 2;
+          offsets = tiles.map(function (t) {
+            return [t.offsetLeft + t.offsetWidth / 2 - cx, t.offsetTop + t.offsetHeight / 2 - cy];
+          });
+        }
+
+        function update() {
+          frame = 0;
+          if (narrow.matches || reduce) {
+            view.style.cssText = "";
+            tiles.forEach(function (t) {
+              t.style.translate = "";
+            });
+            return;
+          }
+          var max = stage.offsetHeight - innerHeight;
+          var p = clamp(-stage.getBoundingClientRect().top / max, 0, 1);
+          // The small tile is 90 / 1440 of the width at rest; open with it about 300px wide.
+          var s0 = Math.max(2, (0.21 * innerWidth) / small.offsetWidth);
+          var s1 = s0 * 0.8;
+          // 0–6%: sentence; 6–12%: the blue square appears; 12–46%: slow drift; 46–56%: words fade; 56–92%: pull back.
+          var s = s0 - (s0 - s1) * span(p, 0.12, 0.46);
+          s = s - (s - 1) * ease(span(p, 0.56, 0.92));
+          view.style.setProperty("--intro", String(1 - span(p, 0.02, 0.06)));
+          view.style.setProperty("--show", String(span(p, 0.06, 0.12)));
+          view.style.setProperty("--s", s.toFixed(4));
+          // Tiles also start pushed apart and close in while the camera pulls back, so the opening is mostly white.
+          var spread = 1 + 0.32 * (1 - ease(span(p, 0.12, 0.94)));
+          if (!offsets.length) measure();
+          tiles.forEach(function (t, k) {
+            var d = offsets[k];
+            t.style.translate = (d[0] * (spread - 1)).toFixed(1) + "px " + (d[1] * (spread - 1)).toFixed(1) + "px";
+          });
+          view.style.setProperty("--blurb", String(span(p, 0.08, 0.14) * (1 - span(p, 0.46, 0.54))));
+          view.style.setProperty("--bw", (small.offsetWidth * s).toFixed(1) + "px");
+          mosaic.style.pointerEvents = p > 0.9 ? "auto" : "none";
+        }
+        function queue() {
+          if (!frame) frame = requestAnimationFrame(update);
+        }
+        addEventListener("scroll", queue, { passive: true });
+        addEventListener("resize", function () {
+          offsets = [];
+          queue();
+        });
+        narrow.addEventListener("change", queue);
+        update();
       })();
     </script>
   </body>

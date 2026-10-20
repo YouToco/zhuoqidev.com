@@ -79,13 +79,9 @@ const POSES = {
     await page.click(".pick-menu li:nth-child(2)");
     await page.waitForTimeout(110);
   },
-  // Scroll-built pages: shoot them once the pieces have gathered.
-  "collab-canvas": async (page) => {
-    await page.evaluate(() => scrollTo(0, innerHeight * 1.1));
-    await page.waitForTimeout(700);
-  },
+  // Built by scrolling: shoot it once the camera has pulled all the way back.
   "brand-mosaic": async (page) => {
-    await page.evaluate(() => scrollTo(0, innerHeight * 1.45));
+    await page.evaluate(() => scrollTo(0, document.getElementById("stage").offsetHeight - innerHeight));
     await page.waitForTimeout(700);
   },
 };
