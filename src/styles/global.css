@@ -1178,26 +1178,81 @@ dialog.wechat h2 { margin: 0 0 16px; font: 400 30px/1.15 var(--f-hand-zh); color
 .site-footer .bye-foot a { color: #a9b0bf; border: 0; }
 .site-footer .bye-foot a:hover { color: var(--yellow); }
 
-/* Boot screen (homepage, first visit, wide screens; see src/scripts/boot.ts). */
+/* Opening (homepage, first visit, wide screens; src/scripts/boot.ts + boot-play.ts): 卓琪 written in
+   stroke order, a stone seal stamps it, the print flies onto the logo and the page opens from there.
+   Everything starts hidden here; boot-play.ts animates it with the Web Animations API. */
+@property --hole { syntax: "<length>"; inherits: false; initial-value: -70px; } /* fully closed: the 70px soft edge sits outside */
 .boot { display: none; }
 html.booting { overflow: hidden; }
 html.booting .boot {
-  display: grid; place-items: center; align-content: center; gap: 30px; position: fixed; inset: 0; z-index: 300;
+  display: block; position: fixed; inset: 0; z-index: 300; overflow: hidden;
+  --H: 200px; /* each of the two big characters */
+  --S: 118px; /* the seal; the logo seal is 36px */
+  --ox: 38px; --oy: 29px; /* where the page opens from: the logo seal (set from its real position) */
   background: var(--paper) radial-gradient(var(--dot) 1px, transparent 1.2px) 0 0 / 22px 22px;
+  /* the hole grows from the logo with a 70px soft edge, like ink soaking through paper */
+  mask: radial-gradient(circle at var(--ox) var(--oy), transparent var(--hole), #000 calc(var(--hole) + 70px));
 }
 html.booting .board > .pin { animation-play-state: paused; }
-.boot .laptop { width: min(560px, 80vw); }
-.boot .terminal { box-shadow: 0 40px 70px -40px rgba(28, 34, 48, .55); }
-.boot-bar { display: inline-block; width: 220px; height: 9px; vertical-align: 0; border: 1px solid #3a404c; border-radius: 5px; overflow: hidden; }
-.boot-bar i { display: block; height: 100%; width: 0; background: var(--term-green); }
-.play .boot-bar i { animation: bar-fill .8s calc(var(--d, 0s) + .1s) var(--ease) forwards; }
-@keyframes bar-fill { to { width: 100%; } }
-.boot-skip { margin: 0; font: 400 12px/1 var(--f-mono); color: var(--ink-3); letter-spacing: .06em; }
-.boot.zoom { animation: boot-out .7s ease-in forwards; }
-.boot.zoom .laptop { animation: boot-zoom .7s cubic-bezier(.7, 0, .84, 0) forwards; }
-.boot.skip { animation: boot-out .25s ease-out forwards; }
-@keyframes boot-zoom { to { scale: 7; opacity: 0; } }
-@keyframes boot-out { 55% { opacity: 1; } to { opacity: 0; } }
+.boot-stage { position: absolute; inset: 0; display: grid; place-items: center; }
+.boot-sig { position: relative; display: grid; justify-items: start; gap: 6px; translate: calc(var(--S) * -.55) 0; }
+.boot-hanzi { display: block; width: calc(var(--H) * 1.92); height: var(--H); overflow: visible; filter: url(#boot-brush); }
+.boot-hanzi path { fill: none; stroke: var(--ink); stroke-width: 200; stroke-linecap: round; stroke-linejoin: round; }
+.boot-line { margin: 0; display: flex; align-items: baseline; gap: 14px; padding-left: calc(var(--H) * .08); }
+.boot-line .boot-name { font: 400 calc(var(--H) * .17)/1.2 var(--f-hand); color: var(--ink); }
+.boot-line .boot-url { font: 600 calc(var(--H) * .15)/1 var(--font-caveat), cursive; color: var(--blue); }
+/* hidden until boot-play.ts splits it into letters, which then fade in one by one */
+.boot-line [data-split] { visibility: hidden; }
+.boot-line span span { display: inline-block; visibility: visible; opacity: 0; }
+.boot-seal { position: absolute; width: var(--S); height: var(--S); left: calc(100% + var(--S) * .06); top: calc(var(--H) - var(--S) * .78); }
+.boot-seal > div { position: absolute; inset: 0; opacity: 0; }
+.boot-shadow { border-radius: calc(var(--S) * .16); background: rgba(40, 30, 20, .55); filter: blur(18px); }
+.boot-seal > .boot-dent { inset: -35%; border-radius: 50%; background: radial-gradient(closest-side, transparent 58%, rgba(120, 90, 60, .22) 72%, transparent 100%); }
+/* the print: same face as the logo seal, worn by #boot-worn */
+.boot-print {
+  display: grid; place-items: center; border-radius: calc(var(--S) * .167); rotate: -4deg;
+  background: var(--stamp); color: #fff8ef; box-shadow: inset 0 0 0 calc(var(--S) * .056) rgba(255, 248, 239, .55);
+  font: 900 calc(var(--S) * .36)/1.05 var(--f-serif); letter-spacing: calc(var(--S) * .028); writing-mode: vertical-rl;
+  filter: url(#boot-worn);
+}
+/* fresh ink shines for a moment, then dries */
+.boot-wet {
+  border-radius: calc(var(--S) * .167); rotate: -4deg; mix-blend-mode: soft-light;
+  background: linear-gradient(125deg, rgba(255, 255, 255, .55) 0%, transparent 38%, rgba(255, 255, 255, .2) 62%, transparent 80%);
+}
+/* the stone seal seen from above: pale stone, a small knob on top, a red lip of ink at the bottom */
+.boot-stone {
+  border-radius: calc(var(--S) * .14);
+  background:
+    radial-gradient(120% 90% at 25% 15%, rgba(255, 255, 255, .55), transparent 45%),
+    radial-gradient(80% 60% at 80% 85%, rgba(120, 70, 30, .25), transparent 60%),
+    linear-gradient(150deg, #efe3cb 0%, #dcc6a0 48%, #c3a57a 100%);
+  box-shadow:
+    inset 0 calc(var(--S) * .02) 0 rgba(255, 255, 255, .7),
+    inset 0 calc(var(--S) * -.05) calc(var(--S) * .08) rgba(90, 55, 25, .35),
+    0 calc(var(--S) * .035) 0 #a8321b;
+}
+.boot-stone::after {
+  content: ""; position: absolute; inset: 34%; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #f6ecda, #c8ab80 70%);
+  box-shadow: inset 0 -2px 4px rgba(90, 55, 25, .4), 0 2px 3px rgba(90, 55, 25, .25);
+}
+.boot-ink { position: absolute; border-radius: 50%; background: var(--stamp); opacity: 0; }
+/* paper grain and darker corners over the whole sheet */
+.boot-grain {
+  position: absolute; inset: 0; pointer-events: none; opacity: .55; mix-blend-mode: multiply;
+  background:
+    radial-gradient(ellipse 75% 70% at 50% 48%, transparent 55%, rgba(110, 90, 60, .14)),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .42  0 0 0 0 .36  0 0 0 0 .26  0 0 0 .5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+.boot-ripple {
+  position: absolute; left: var(--ox); top: var(--oy); width: 0; height: 0; border-radius: 50%;
+  border: 1.5px solid var(--stamp); opacity: 0;
+}
+.boot-skip {
+  position: absolute; left: 0; right: 0; bottom: 32px; margin: 0; text-align: center; opacity: 0;
+  font: 400 12px/1 var(--f-mono); color: var(--ink-3); letter-spacing: .06em;
+}
 
 /* ---------- 小装饰：大号淡数字 / 引号 / 扫描线 / 桌面星星 ---------- */
 .big-n {
