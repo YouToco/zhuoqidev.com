@@ -5,7 +5,7 @@ description: "Cheap Claude, GPT and Seedance relays keep multiplying, and their 
 date: 2026-10-24
 updated: 2026-10-24
 glyph: token-loupe
-lead: "Across the 30-odd relays I tested over the past month or so, the most common problem was not a fake model. It was **a real model that comes through a different channel than you think, charges you for tokens you never see, and silently drops your parameters**. All of that can be found before you pay: most checks cost nothing, a full set of official-side baselines costs about a dollar, and the relay side costs whatever the relay charges. **A group name is not evidence; tokens are.**"
+lead: "Across the 30-odd relays I tested over the past month or so, the most common problem was not a fake model. It was **a real model that comes through a different channel than you think, charges you for tokens you never see, and silently drops your parameters**. All of that can be found before you pay: most checks cost nothing, and across the text-line audits I have run, the official and relay sides together mostly came to under one dollar, at most about $1.30. **A group name is not evidence; tokens are.**"
 tags:
   - API Relays
   - new-api
@@ -60,14 +60,14 @@ flowchart LR
   B -.-> F
 ```
 
-"Legitimate business" is the official API itself, or the same model hosted by a cloud platform under license from the model vendor. The two to watch: a subscription pool **often** adds a system prompt you never see to every request and bills you for it (I have also seen pools that don't, so measure), and reselling consumer subscriptions **usually** breaks the upstream terms of service, so the accounts can be banned at any time. Self-hosted open weights are simply not the model you paid for.
+"Legitimate business" is the official API itself, or the same model hosted by a cloud platform under license from the model vendor. The two to watch: a subscription pool may add a system prompt you never see to its requests and bill you for it — of the two I tested, one added 508 tokens to every request and the other added nothing, so every one has to be measured — and reselling consumer subscriptions **usually** breaks the upstream terms of service, so the accounts can be banned at any time. Self-hosted open weights are simply not the model you paid for.
 
 A few terms first:
 
 - **Group**: one source for the same model inside a relay, each with its own price; the relay names it however it likes.
 - **Ratio**: how many times the official list price a group charges; new-api calls it `group_ratio`.
 - **Official baseline**: the result of the same request sent with an official key per the official docs; everything is compared against it.
-- **Counting endpoint**: the official "how many tokens is this input" endpoint. Claude's `/v1/messages/count_tokens` is documented as free (with a per-minute rate limit); OpenAI's `/v1/responses/input_tokens` doesn't say whether it is billed, so check your bill the first time.
+- **Counting endpoint**: the official "how many tokens is this input" endpoint. Claude's `/v1/messages/count_tokens` is documented as free (with a per-minute rate limit); OpenAI's `/v1/responses/input_tokens` doesn't say whether it is billed, but it works with an official key whose balance is zero, so in practice it is free.
 - **C2PA**: content credentials written into an image or video file, carrying a signing certificate and a digital signature.
 
 > [!TIP]
@@ -218,7 +218,7 @@ Beyond the procedure, it takes care of things people get wrong: keys are masked 
 
 ## Limits and sources
 
-- **Measured**: 508, about 4,380, the $0.29 job read as $2, and the swallowed-parameter and swapped-model cases all come from my integration tests of 30-odd relays in September and October 2026; the relays are not named.
+- **Measured**: 508 (the injecting one of the two subscription pools), about 4,380, the $0.29 job read as $2, the cost per audit, OpenAI's counting endpoint not billing (it works on a zero-balance key), and the swallowed-parameter and swapped-model cases all come from my integration tests of 30-odd relays in September and October 2026; the relays are not named.
 - **Observed patterns, not vendor promises**: id prefixes (especially `msg_011C`), the exact token count a subscription pool injects, and error wording can all change, at the vendor or at the relay.
 - **Inference**: that reselling consumer subscriptions usually breaks the upstream terms is inferred from vendors' usual terms; read the terms of the service you actually use.
 - **Official docs** (checked 2026-10-23): [Anthropic token counting](https://platform.claude.com/docs/en/build-with-claude/token-counting) · [OpenAI input token counts](https://developers.openai.com/api/reference/resources/responses/subresources/input_tokens) · [C2PA specification](https://c2pa.org/specifications/specifications/2.2/specs/C2PA_Specification.html)
