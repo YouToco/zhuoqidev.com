@@ -130,6 +130,21 @@ export function postImage(slug: string, file: string): ImageMetadata | undefined
   return postImages[`${slug}/${file.replace(/^\.\//, "")}`];
 }
 
+const projectImages = Object.fromEntries(
+  Object.entries(
+    import.meta.glob<ImageMetadata>("/src/content/projects/*/*.{png,jpg,jpeg,webp,gif,svg}", {
+      eager: true,
+      import: "default",
+    }),
+  ).map(([path, img]) => [path.split("/").slice(-2).join("/"), img]),
+);
+
+/** An image next to a post or a project, as referenced from its Markdown (`./file.png`). */
+function entryImage(entry: Post | Project, file: string): ImageMetadata | undefined {
+  const key = `${slugOf(entry)}/${file.replace(/^\.\//, "")}`;
+  return entry.collection === "projects" ? projectImages[key] : postImages[key];
+}
+
 /** Absolute URL of an optimized copy, for Markdown exports, feeds and social cards. */
 export async function imageUrl(img: ImageMetadata, width: number, site: URL) {
   // Reading `src` of the imported image marks the 4K original as "used" and ships it to dist/.
@@ -145,14 +160,17 @@ export function firstImage(post: Post): ImageMetadata | undefined {
 }
 
 /**
- * Large copies of a post's images and diagrams for the click-to-zoom viewer, keyed by file stem
+ * Large copies of a post's (or project's) images and diagrams for the click-to-zoom viewer, keyed by file stem
  * (the stem survives in Astro's hashed output names, so the page script can match them).
  */
-export async function zoomSources(post: Post, site: URL): Promise<Record<string, { src: string; srcset?: string }>> {
+export async function zoomSources(
+  post: Post | Project,
+  site: URL,
+): Promise<Record<string, { src: string; srcset?: string }>> {
   const out: Record<string, { src: string; srcset?: string }> = {};
   const path = async (img: ImageMetadata, width: number) => new URL(await imageUrl(img, width, site)).pathname;
   for (const m of (post.body ?? "").matchAll(/!\[[^\]]*\]\(\.\/([^\s)]+)/g)) {
-    const img = postImage(slugOf(post), m[1]!);
+    const img = entryImage(post, m[1]!);
     if (!img) continue;
     const src = await path(img, 1600);
     // Zoomed in (or on a high-DPI screen) the viewer needs more pixels: the originals are 4K, so

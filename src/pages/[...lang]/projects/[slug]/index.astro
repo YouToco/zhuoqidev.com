@@ -2,9 +2,10 @@
 import { getCollection, render } from "astro:content";
 import ArgusStory from "../../../../components/ArgusStory.astro";
 import Page from "../../../../components/Page.astro";
+import ZoomDialog from "../../../../components/ZoomDialog.astro";
 import { type Lang, LANGS } from "../../../../i18n";
 import Base from "../../../../layouts/Base.astro";
-import { getProjects, type Project, slugOf } from "../../../../lib/content";
+import { getProjects, type Project, slugOf, zoomSources } from "../../../../lib/content";
 
 export async function getStaticPaths() {
   const out = [];
@@ -24,6 +25,7 @@ const slug = slugOf(project);
 const { Content } = await render(project);
 const all = await getCollection("projects");
 const hasAlt = all.some((p) => slugOf(p) === slug && p.id !== project.id);
+const zoom = await zoomSources(project, Astro.site!);
 ---
 
 <Base
@@ -48,3 +50,10 @@ const hasAlt = all.some((p) => slugOf(p) === slug && p.id !== project.id);
     <Content />
   </Page>
 </Base>
+
+<ZoomDialog lang={lang} zoom={zoom} />
+
+<script>
+  // Copy buttons on code blocks and the image viewer, as on article pages.
+  import "../../../../scripts/post";
+</script>
