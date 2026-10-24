@@ -1255,10 +1255,13 @@ html.booting .board > .pin { animation-play-state: paused; }
 }
 
 /* ---------- 小装饰：大号淡数字 / 引号 / 扫描线 / 桌面星星 ---------- */
+/* The number is drawn from data-n by ::before, not written as text: it is 7% ink on purpose, and as
+   real text it failed Lighthouse's contrast check even with aria-hidden. */
 .big-n {
   position: absolute; top: 2px; right: 14px; pointer-events: none; user-select: none;
   font: 700 64px/1 var(--f-hand); color: var(--ink); opacity: .07;
 }
+.big-n::before { content: attr(data-n); }
 .proj .big-n { top: 6px; right: 18px; font-size: 76px; }
 .quote-card { position: relative; }
 .sticky::before, .quote-card::before {
