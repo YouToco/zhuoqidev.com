@@ -20,5 +20,11 @@ allowBuilds:
   esbuild: false # postinstall only verifies and swaps in the native binary; the package works without it
   workerd: false # same as esbuild: the binary comes from the @cloudflare/workerd-<platform> optional dependency
 
+# Security fixes a dependency's own pin keeps out. Drop each one once the parent ships the fix.
+overrides:
+  # miniflare (via wrangler, local Pages dev only) pins undici 7.29.1 exactly, up to wrangler
+  # 4.152.0; 7.30.1 fixes GHSA-xjj6-f33q-929c, GHSA-4qv8-2p9j-2685 and GHSA-f72v-6w45-q472.
+  miniflare>undici: 7.30.1
+
 # Fail when the running Node does not satisfy package.json "engines".
 engineStrict: true
