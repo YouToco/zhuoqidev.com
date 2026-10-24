@@ -163,12 +163,26 @@ The second row is the dangerous one: a compliance requirement you relied on neve
 
 Video lines add another question: the clip may be an official output that was copied elsewhere, or one generated with open weights on the relay's own hardware. Work down the evidence from hardest to softest:
 
-| Step | Question | Yes | No → verdict |
-|---|---|---|---|
-| 1 | C2PA present, signature valid, hash matches? | Next step | Not the official file as generated (official wan3 originals have no C2PA; go by step 3) |
-| 2 | Signing-certificate fingerprint = that of an original you fetched from the official API? | Next step | The signature may be self-signed; not evidence of an original |
-| 3 | Encoder and metadata match an official original? | Next step | Re-wrapped or re-encoded |
-| 4 | Video link, task id and usage are the official ones? | Official original, passed through as is | An original, but copied or wrapped; can't reconcile or integrate it the official way |
+```mermaid
+flowchart TB
+    %% layout: tree
+    S(["Got a video"])
+    S --> Q1["① C2PA present, signature valid, hash matches?"]
+    Q1 --> N1["No: not the official file as generated<br>(official wan3 originals have no C2PA; go to ③)"]
+    Q1 --> Q2["Yes → ② signing-cert fingerprint = an original you fetched from the official API?"]
+    Q2 --> N2["No: the signature may be self-signed; not evidence of an original"]
+    Q2 --> Q3["Yes → ③ encoder and metadata match an official original?"]
+    Q3 --> N3["No: re-wrapped or re-encoded"]
+    Q3 --> Q4["Yes → ④ video link, task id and usage are the official ones?"]
+    Q4 --> N4["No: an original, but copied or wrapped<br>can't reconcile or integrate it the official way"]
+    Q4 --> OK["Yes: official original, passed through as is"]
+    classDef q fill:#fff3bf,stroke:#f08c00
+    classDef bad fill:#ffe3e3,stroke:#e03131
+    classDef pick fill:#d3f9d8,stroke:#2f9e44
+    class S,Q1,Q2,Q3,Q4 q
+    class N1,N2,N3,N4 bad
+    class OK pick
+```
 
 The step people miss is the second one: **a valid signature does not mean the vendor signed it.** Anyone can create a self-signed certificate that names "Byteplus Pte. Ltd." as the issuer, and the signature will still validate. Compare the signing certificate's fingerprint with one from an original you fetched from the official API yourself; only a match counts as an official original. The third step looks at the encoder version, the encoder info inside the bitstream, and whether there is an AIGC label — which must **match the official original**: Alibaba wan3 originals carry an AIGC label, Seedance originals don't, so a Seedance clip that has one has been re-wrapped. Self-hosted pipelines also often leave an entire ComfyUI workflow in the metadata, with the model, quantization and sampling steps spelled out.
 
