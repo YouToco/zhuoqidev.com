@@ -1,0 +1,38 @@
+---
+import { type Lang, t } from "../i18n";
+
+interface Props {
+  lang: Lang;
+  zoom: Record<string, { src: string; srcset?: string }>;
+}
+const { lang, zoom } = Astro.props;
+const L = t[lang];
+---
+
+{Object.keys(zoom).length > 0 && (
+  <>
+    <script type="application/json" id="zoom-map" set:html={JSON.stringify(zoom)} />
+    <dialog class="zoom" aria-label={L.zoomOpen}>
+      <div class="zoom-bar">
+        <span class="zoom-hint">{L.zoomHint}</span>
+        <button class="chip-btn" type="button" data-zoom="out" aria-label={L.zoomOut}>
+          −
+        </button>
+        <button class="chip-btn zoom-level" type="button" data-zoom="fit" data-fit={L.zoomFit}>
+          {L.zoomFit}
+        </button>
+        <button class="chip-btn" type="button" data-zoom="in" aria-label={L.zoomIn}>
+          +
+        </button>
+        <form method="dialog">
+          <button class="chip-btn" type="submit" autofocus>
+            {L.zoomClose} ✕
+          </button>
+        </form>
+      </div>
+      <div class="zoom-stage">
+        <img alt="" decoding="async" draggable="false" />
+      </div>
+    </dialog>
+  </>
+)}

@@ -913,7 +913,7 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
   position: absolute; left: 50%; top: 50%; translate: -50% -55%; white-space: nowrap; pointer-events: none;
   font: 900 clamp(72px, 15vw, 140px)/1 var(--f-serif); letter-spacing: -0.03em; color: var(--ink); opacity: 0;
 }
-.opener-head { font: 900 clamp(30px, 6.4vw, 58px)/1.18 var(--f-serif); letter-spacing: -.01em; color: var(--ink); max-width: 16em; }
+.opener-head { font: 900 clamp(30px, 6.4vw, 58px)/1.18 var(--f-serif); letter-spacing: -.01em; color: var(--ink); max-width: 16em; text-wrap: balance; }
 .opener-sub { max-width: 34em; font: 400 15.5px/1.7 var(--f-sans); color: var(--ink-2); }
 .opener-device {
   position: relative; margin: 34px auto 0; width: min(260px, 58%); aspect-ratio: 2.85 / 1;

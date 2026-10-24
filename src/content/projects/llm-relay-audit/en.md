@@ -8,36 +8,59 @@ glyph: vs-sheets
 **llm-relay-audit** is the audit procedure I use at work when choosing upstream suppliers for a platform, stripped of everything internal and open-sourced as an Agent skill. Give a relay's base URL and key to an Agent such as Claude Code, Codex or Cursor; it compares the relay with the official API item by item following a fixed procedure, and hands you two reports: one you can send straight to the vendor, one for whoever makes the call.
 
 [🐙 GitHub](https://github.com/YouToco/llm-relay-audit)
-[📖 How to use it: check a relay API before you buy](/en/posts/verify-llm-relay-api/)
+
+[📖 Guide: check a relay API before you buy](/en/posts/verify-llm-relay-api/)
+
+[📦 v0.3.0 release notes](https://github.com/YouToco/llm-relay-audit/releases/tag/v0.3.0) · [📄 Sample report PDFs](https://github.com/YouToco/llm-relay-audit/tree/main/docs/samples)
 
 ```bash
+# one-line install (Claude Code, Codex, Cursor, Gemini CLI)
 npx skills add YouToco/llm-relay-audit
 ```
 
 ## What it solves
 
-Cheap Claude, GPT and Seedance relays keep multiplying, with groups labelled "official" or "official key", but a group name is not evidence. Across the 30-odd relays I tested, the most common problem was a real model coming through a different channel than advertised, billing tokens you never see and dropping your parameters. All of it can be found before you pay; it just has to be done item by item for every relay and turned into a report someone else can read, which is exactly the kind of work to hand to an Agent.
+Cheap Claude, GPT and Seedance relays keep multiplying, with groups labelled "official" or "official key", but a group name is not evidence. Among the 30-odd relays I tested, it caught things like these:
 
-![The six questions llm-relay-audit answers, how it checks them, and what it produces](./hero-en.png "How each of the six questions is checked, and the two reports you get.")
+- a subscription-pool relay adding 508 tokens of Claude Code's system prompt to every request, billed at your price;
+- responses naming the expensive model you paid for while the error revealed a different one, priced as the expensive one;
+- a valid "run inference only in the US" parameter stripped silently, with the response still showing global inference.
+
+All of it can be found before you pay; it just has to be done item by item for every relay and turned into a report someone else can read, which is exactly the kind of work to hand to an Agent.
 
 ## How it works
 
-The procedure is fixed: set up → free probes → **a price quote and your OK** → minimal paid matrix → verification (authenticity, video originality, field-by-field comparison with the official docs) → fill in `findings.json` → the generator writes two reports. Seventeen numbered rules constrain every step the Agent takes, for example:
+```mermaid
+flowchart TB
+  A[Set up: task folder<br/>read the vendor's official baseline] --> B[Free probes<br/>id prefix / counting endpoint / error matrix]
+  B --> C[Quote and wait for your OK<br/>unit price × count + cap]
+  C --> D[Minimal paid matrix<br/>every tier measured]
+  D --> E[Verify<br/>authenticity / video / field by field vs official docs]
+  E --> F[Fill in findings.json<br/>raw requests cited, never hand-copied]
+  F --> G[Generator writes two reports<br/>external evidence + internal decision card]
+```
 
-- **Quote before spending**: every request that may be billed is listed with unit price, count and cap first; every tier is measured, never extrapolated.
-- **"Identical" must be computed**: fields, response headers and streaming event names are diffed by a program before anyone writes "same".
-- **Every raw request goes to JSONL**: reports cite only what was logged, never hand-copied text.
-- **Stop on other people's data**: if a probe exposes another tenant's data, record only that it is reachable, and read nothing.
+Seventeen numbered rules constrain every step the Agent takes, for example: **quote before spending** (every tier measured, never extrapolated); **"identical" must be computed** (fields, response headers and streaming event names diffed by a program, not by eye); **every raw request goes to JSONL**; **stop on other people's data** (if a probe exposes another tenant's data, record only that it is reachable, and read nothing).
 
-It ships official baselines for 10 vendors: Claude (incl. Bedrock), OpenAI (incl. Azure), Grok, Gemini, Kimi, GLM and DeepSeek for text; Alibaba wan3, MiniMax H3 and Seedance for video; plus notes on how the new-api and sub2api relay programs behave.
+It ships official baselines for 10 vendors, plus notes on two kinds of relay programs:
+
+| Line | Official baselines |
+|---|---|
+| Text | Claude (incl. Bedrock), OpenAI (incl. Azure), Grok, Gemini, Kimi, GLM, DeepSeek |
+| Video | Alibaba wan3, MiniMax H3, Seedance (Volcengine Ark / BytePlus) |
+| Relay programs | new-api / one-api (groups, ratios, logs, passthrough), sub2api (subscription pools) |
 
 ## The output
 
-![Pages produced by the report generator](./gallery-en.png "All rendered straight from the repository's fictional examples by the generator.")
+The external evidence report covers only "this relay vs the official API": claims vs measurements, authenticity evidence, differences ranked by customer impact, what the vendor should fix, and an appendix with official and relay raw requests side by side. Its first page:
 
-- **External evidence PDF**: only "this relay vs the official API": claims vs measurements, authenticity evidence, differences ranked by customer impact, what the vendor should fix, and an appendix with official and relay raw requests side by side.
-- **Internal decision card**: one A4 page with the verdict (primary / backup / fix first / reject), cost and success rate against your existing lines, and what your gateway would need to change.
-- Write `"lang": "en"` for an English report; individuals who only want to know whether a relay is genuine can add `--external-only` to get the external report alone.
+![First page of the external evidence report: one-line verdict and four cards for backend, model, API and cost](./report-en.png "First page of the external evidence report (the repository's fictional example, rendered by the generator).")
+
+The internal decision card is one A4 page: the verdict (primary / backup / fix first / reject), cost and 30-day success rate against your existing lines for the same model, and what your gateway would need to change:
+
+![Internal decision card: verdict "backup", cost and 30-day success rate against an existing line for the same model](./card-en.png "Internal decision card (fictional example).")
+
+Write `"lang": "en"` for an English report; individuals who only want to know whether a relay is genuine can add `--external-only` to get the external report alone.
 
 ## Engineering worth mentioning
 
@@ -45,7 +68,7 @@ It ships official baselines for 10 vendors: Claude (incl. Bedrock), OpenAI (incl
 - **Video authenticity is more than "signature valid"**: anyone can self-sign a certificate carrying a vendor's name, and the signature will still validate. The C2PA check compares the signing certificate's fingerprint and calls a file official only if it matches an original fetched from the official API.
 - **No leaks in the external report**: the generator refuses to write it if an internal line name, another vendor or anything key-like appears, whether hidden by letter case, escaping, markdown, image captions or file names.
 - **Verifiable**: 84 unit tests; CI runs the tests, example validation, Agent Skills spec validation (`skills-ref`), npx discoverability and a secret scan; every GitHub Action is pinned to a commit SHA.
-- **Reviewed three ways before release**: before v0.3.0, three independent Agents looked for problems as a new user, a content reviewer and a code auditor; 30-plus issues were fixed before publishing.
+- **Reviewed three ways before release**: before v0.3.0, three independent Agents looked for problems as a new user, a content reviewer and a code auditor; security, billing and content issues were fixed before publishing (details in the [CHANGELOG](https://github.com/YouToco/llm-relay-audit/blob/main/CHANGELOG.md)).
 
 ## Tech stack
 
