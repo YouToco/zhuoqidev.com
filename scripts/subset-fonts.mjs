@@ -65,6 +65,12 @@ const FACES = {
       url: "https://github.com/lxgw/LxgwWenKai-Screen/releases/download/v1.522/LXGWWenKaiGBScreen.ttf",
       sha256: "23ec023913e1851925eb94462c4b0ccd1d78bb89533745aaa8cc682ccd339dc0",
     },
+    // optional, not swap: the TL;DR note and comic dialogue mix Latin words into CJK lines, and
+    // WenKai arriving late re-wrapped them (mobile CLS 0.06-0.08). If it is not there by first
+    // render, that page view keeps the system Kai.
+    display: "optional",
+    // fetched with the HTML so it can make the short optional window on a reasonable connection
+    preload: true,
     weight: () => 400,
     variable: false,
   },
@@ -186,7 +192,7 @@ async function subset(family, weight, chars, outDir) {
 }
 
 const faceRule = (family, weight, url, range) =>
-  `@font-face{font-family:"${family}";font-style:normal;font-weight:${weight};font-display:swap;` +
+  `@font-face{font-family:"${family}";font-style:normal;font-weight:${weight};font-display:${FACES[family].display ?? "swap"};` +
   `src:url(${url}) format("woff2")${range ? `;unicode-range:${range}` : ""}}`;
 
 // ---------------------------------------------------------------------------------------------
@@ -261,12 +267,15 @@ for (const job of files) {
     faces.set(id, (faces.get(id) ?? "") + chars);
   }
   const rules = [];
+  const preloads = [];
   let pageBytes = 0;
   for (const [id, chars] of faces) {
     const [family, weight] = id.split("|");
     // Keep the spaces: a missing space glyph would fall back to the system font mid-title.
     const { url, size } = await subset(family, Number(weight), `${visible(chars)} \u00a0`, outDir);
     rules.push(faceRule(family, weight, url));
+    if (FACES[family].preload)
+      preloads.push(`<link rel="preload" href="${url}" as="font" type="font/woff2" crossorigin>`);
     pageBytes += size;
   }
   if (/^\/(en\/)?search\/index\.html$/.test(job.path)) {
@@ -280,7 +289,7 @@ for (const job of files) {
   }
   if (pageBytes > largest.size) largest = { size: pageBytes, path: job.path };
   if (!rules.length) continue;
-  const html = job.html.replace("</head>", `<style data-zq-fonts>${rules.join("")}</style></head>`);
+  const html = job.html.replace("</head>", `${preloads.join("")}<style data-zq-fonts>${rules.join("")}</style></head>`);
   if (html === job.html) throw new Error(`subset-fonts: no </head> in ${job.path}`);
   await writeFile(job.file, html);
 }

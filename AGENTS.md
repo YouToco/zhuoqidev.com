@@ -110,7 +110,12 @@
   that page draws in them and inlined as `<style data-zq-fonts>`. Caveat moved
   there because its full Latin file (73 KB) loaded on every page for a few words
   and held back first paint on mobile; it goes first in the hand stacks, so Latin
-  letters draw in Caveat and CJK ones fall through to Long Cang. Google's unicode-range slices cost 0.4–1.3 MB per page
+  letters draw in Caveat and CJK ones fall through to Long Cang. `"ZQ Comic"`
+  (the TL;DR note and comic dialogue) is `font-display: optional` and preloaded:
+  swapping it in late re-wrapped the Latin words in those CJK lines (mobile CLS
+  0.06–0.08). Without the preload a per-page subset never makes the optional
+  window and readers never see WenKai; with it they do on any decent connection,
+  and a very slow first load keeps the system face without a shift. Google's unicode-range slices cost 0.4–1.3 MB per page
   and took mobile Lighthouse down to the 50s. Use those family names through
   `--f-serif` / `--f-hand*` in CSS; text inserted at run time falls back to the
   system serif (the search pages also lazy-load every title's characters). Source
