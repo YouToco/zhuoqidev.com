@@ -5,7 +5,7 @@
 //
 // Runs after `astro build`, before og-images (the social cards use the same faces):
 //   1. download the pinned source fonts (cached in node_modules/.cache/zq-fonts, sha256-checked);
-//   2. open every page in Chrome and collect the characters drawn in "ZQ Serif" / "ZQ Hand";
+//   2. open every page in Chrome and collect the characters drawn in each "ZQ …" face;
 //   3. subset with HarfBuzz and inline the @font-face rules into the page's <head>.
 // Text that only exists at run time (search results) falls back to the system serif, except on
 // the search pages, which also get a lazily loaded face covering every title in their language.
@@ -43,6 +43,19 @@ const FACES = {
     },
     weight: () => 400,
     variable: false,
+  },
+  // Latin hand-writing, chained before "ZQ Hand" in --f-hand (global.css): only Latin glyphs, so
+  // CJK characters in the same text fall through to Long Cang
+  "ZQ Caveat": {
+    slug: "caveat",
+    source: {
+      file: "Caveat-VF.ttf",
+      url: `${GOOGLE_FONTS}/8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5/ofl/caveat/Caveat%5Bwght%5D.ttf`,
+      sha256: "0bdb6b660482d31531b3945849fba5916b3ef8695da7024a9e6b9ee3c4157988",
+    },
+    // the two weights the site shipped before (400 and 600 drew with the nearest of them)
+    weight: (w) => (w >= 600 ? 700 : 500),
+    variable: true,
   },
   // comic dialogue (src/lib/markdown/comic-html.ts): LXGW WenKai Screen, GB glyph forms, OFL
   "ZQ Comic": {
@@ -101,14 +114,15 @@ async function htmlFiles(dir) {
 // Runs in the page: every character drawn in a display family, keyed by "family|weight".
 function collect(families) {
   const out = {};
+  // Every one of our families in the stack gets the text: "ZQ Caveat", "ZQ Hand" draws Latin in
+  // the first and CJK in the second, and each subset keeps only the glyphs its font has.
   const add = (style, text) => {
-    const family = style.fontFamily
-      .split(",")
-      .map((f) => f.trim().replace(/^["']|["']$/g, ""))
-      .find((f) => families.includes(f));
-    if (!family || !text) return;
-    const key = `${family}|${parseInt(style.fontWeight, 10) || 400}`;
-    out[key] = (out[key] ?? "") + text + text.toUpperCase() + text.toLowerCase();
+    if (!text) return;
+    const stack = style.fontFamily.split(",").map((f) => f.trim().replace(/^["']|["']$/g, ""));
+    for (const family of stack.filter((f) => families.includes(f))) {
+      const key = `${family}|${parseInt(style.fontWeight, 10) || 400}`;
+      out[key] = (out[key] ?? "") + text + text.toUpperCase() + text.toLowerCase();
+    }
   };
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
