@@ -51,6 +51,11 @@ const POSES = {
     await page.click(".row .copy");
     await page.waitForTimeout(600);
   },
+  // Frozen just after the stone lifts: both characters written, the print wet, ink spots around it.
+  "stamp-opening": async (page) => {
+    await page.goto(`${page.url()}?t=3050`, { waitUntil: "networkidle" });
+    await page.waitForTimeout(1200);
+  },
   "magnetic-button": async (page) => {
     const box = await page.locator(".mag").first().boundingBox();
     if (box) await page.mouse.move(box.x + box.width + 30, box.y - 20, { steps: 8 });

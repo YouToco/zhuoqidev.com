@@ -120,6 +120,9 @@
 .ds-tabs button { font: 400 13px/1 var(--f-mono); padding: 8px 11px; border: 0; border-radius: 7px; background: transparent; color: var(--term-ink); opacity: .8; cursor: pointer; }
 .ds-tabs button[aria-selected="true"] { background: rgba(255, 255, 255, .1); opacity: 1; color: var(--yellow); }
 .ds-pane pre.astro-code { margin: 0; padding: 16px 18px; max-height: 620px; overflow: auto; font: 400 13px/1.7 var(--f-mono); background-color: var(--term) !important; tab-size: 2; }
+/* github-dark-dimmed's comment colour is 4.49:1 on --term; the article code blocks swap it in
+   rehype-prose.ts, this does the same for <Code> (4.88:1). */
+.ds-pane pre.astro-code span[style*="#768390" i] { color: #7c8996 !important; }
 
 @media (max-width: 760px) {
   .ds-copy-row { grid-template-columns: 1fr; }

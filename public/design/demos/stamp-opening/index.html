@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>落款盖章开场</title>
+    <!-- Fonts from Fontsource on jsDelivr (each file is a unicode-range slice, so only the
+         characters on the page are fetched). Everything falls back to system faces. -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/long-cang@5.2.8/400.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/caveat@5.2.8/600.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-sc@5.3.0/900.css" />
+    <style>
+      :root {
+        --paper: #fbf8f1; --card: #fffdf8; --dot: #d8d0bf; --line: #e6dfd0;
+        --ink: #1c2230; --ink-2: #4a5163; --ink-3: #636877; --blue: #2f5bd3; --blue-line: rgba(47, 91, 211, .35);
+        --stamp: #c0391f; --hi: #ffe066; --chip: rgba(28, 34, 48, .07); --chip-on: rgba(28, 34, 48, .13);
+        --grain-blend: multiply;
+        --f-hand: "Long Cang", "Kaiti SC", STKaiti, KaiTi, cursive;
+        --f-latin-hand: Caveat, "Comic Sans MS", cursive;
+        --f-serif: "Noto Serif SC", "Songti SC", STSong, serif;
+        --f-sans: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+        --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        /* the two big characters, and the seal (the logo seal is 32px) */
+        --H: clamp(84px, 21vw, 190px);
+        --S: calc(var(--H) * .59);
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #14161b; --card: #1e2129; --dot: #2c3039; --line: #31353f;
+          --ink: #ece7dc; --ink-2: #bab6ac; --ink-3: #959aa8; --blue: #8eaaff; --blue-line: rgba(142, 170, 255, .45);
+          --hi: #7d6416; --chip: rgba(255, 255, 255, .08); --chip-on: rgba(255, 255, 255, .16);
+          --grain-blend: screen;
+          color-scheme: dark;
+        }
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; }
+      body {
+        overflow: hidden; color: var(--ink); font: 15px/1.6 var(--f-sans);
+        background: var(--paper) radial-gradient(var(--dot) 1px, transparent 1.2px) 0 0 / 22px 22px;
+      }
+
+      /* ---------- the page the opening uncovers (a small mock of the blog's homepage) ---------- */
+      .top {
+        display: flex; align-items: center; gap: 10px; height: 54px; padding: 0 18px;
+        border-bottom: 2px dashed var(--blue-line); background: var(--paper);
+      }
+      .seal {
+        display: grid; place-items: center; width: 32px; height: 32px; flex: none; border-radius: 5px; rotate: -4deg;
+        background: var(--stamp); color: #fff8ef; box-shadow: inset 0 0 0 2px rgba(255, 248, 239, .55);
+        font: 900 12px/1.05 var(--f-serif); letter-spacing: 1px; writing-mode: vertical-rl;
+      }
+      .top b { font: 700 16px/1.2 var(--f-serif); }
+      .top small { font: 12px var(--f-mono); color: var(--ink-3); }
+      main { padding: 28px 22px; display: grid; gap: 18px; max-width: 760px; }
+      h1 { margin: 0; font: 400 clamp(30px, 6vw, 46px)/1.15 var(--f-hand); }
+      h1 .mark { padding: 0 4px; background: linear-gradient(transparent 58%, var(--hi) 58%, var(--hi) 92%, transparent 92%); }
+      .sub { margin: -8px 0 0; font: 600 20px/1.2 var(--f-latin-hand); color: var(--blue); }
+      .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; }
+      .card { padding: 14px 16px; background: var(--card); border: 1.5px dashed var(--blue-line); border-radius: 12px; }
+      .card span { font: 11px var(--f-mono); color: var(--ink-3); letter-spacing: .06em; }
+      .card p { margin: 4px 0 0; font: 700 15px/1.45 var(--f-serif); }
+
+      /* ---------- the opening ---------- */
+      @property --hole { syntax: "<length>"; inherits: false; initial-value: -70px; }
+      .boot {
+        display: none; position: fixed; inset: 0; z-index: 10; overflow: hidden;
+        --ox: 34px; --oy: 27px; /* replaced with the logo's real centre */
+        background: var(--paper) radial-gradient(var(--dot) 1px, transparent 1.2px) 0 0 / 22px 22px;
+        /* the page opens from the logo through a hole with a 70px soft edge; the hole starts at
+           -70px so the edge is outside too and nothing shows through before it opens */
+        -webkit-mask: radial-gradient(circle at var(--ox) var(--oy), transparent var(--hole), #000 calc(var(--hole) + 70px));
+        mask: radial-gradient(circle at var(--ox) var(--oy), transparent var(--hole), #000 calc(var(--hole) + 70px));
+      }
+      .boot.on { display: block; }
+      .stage { position: absolute; inset: 0; display: grid; place-items: center; }
+      .sig { position: relative; display: grid; justify-items: start; gap: 4px; translate: calc(var(--S) * -.55) 0; }
+      .hanzi { display: block; width: calc(var(--H) * 1.92); height: var(--H); overflow: visible; filter: url(#brush); }
+      .hanzi path { fill: none; stroke: var(--ink); stroke-width: 200; stroke-linecap: round; stroke-linejoin: round; }
+      .hanzi text { fill: var(--ink); font: 900 860px var(--f-serif); opacity: 0; }
+      .line { margin: 0; display: flex; align-items: baseline; gap: 12px; padding-left: calc(var(--H) * .08); }
+      .line .name { font: 400 calc(var(--H) * .17)/1.2 var(--f-hand); }
+      .line .url { font: 600 calc(var(--H) * .15)/1 var(--f-latin-hand); color: var(--blue); }
+      /* hidden until the script splits it into letters, which then fade in one by one */
+      .line [data-split] { visibility: hidden; }
+      .line span span { display: inline-block; visibility: visible; opacity: 0; }
+      .seal-wrap { position: absolute; width: var(--S); height: var(--S); left: calc(100% + var(--S) * .06); top: calc(var(--H) - var(--S) * .78); }
+      .seal-wrap > div { position: absolute; inset: 0; opacity: 0; }
+      .shadow { border-radius: calc(var(--S) * .16); background: rgba(40, 30, 20, .55); filter: blur(18px); }
+      .seal-wrap > .dent { inset: -35%; border-radius: 50%; background: radial-gradient(closest-side, transparent 58%, rgba(120, 90, 60, .22) 72%, transparent 100%); }
+      /* the print: the same face as the logo seal, worn by #worn */
+      .print {
+        display: grid; place-items: center; border-radius: calc(var(--S) * .167); rotate: -4deg;
+        background: var(--stamp); color: #fff8ef; box-shadow: inset 0 0 0 calc(var(--S) * .056) rgba(255, 248, 239, .55);
+        font: 900 calc(var(--S) * .36)/1.05 var(--f-serif); letter-spacing: calc(var(--S) * .028); writing-mode: vertical-rl;
+        filter: url(#worn);
+      }
+      /* fresh ink shines for a moment, then dries */
+      .wet {
+        border-radius: calc(var(--S) * .167); rotate: -4deg; mix-blend-mode: soft-light;
+        background: linear-gradient(125deg, rgba(255, 255, 255, .55) 0%, transparent 38%, rgba(255, 255, 255, .2) 62%, transparent 80%);
+      }
+      /* the stone seal seen from above: pale stone, a knob, a red lip of ink at the bottom */
+      .stone {
+        border-radius: calc(var(--S) * .14);
+        background:
+          radial-gradient(120% 90% at 25% 15%, rgba(255, 255, 255, .55), transparent 45%),
+          radial-gradient(80% 60% at 80% 85%, rgba(120, 70, 30, .25), transparent 60%),
+          linear-gradient(150deg, #efe3cb 0%, #dcc6a0 48%, #c3a57a 100%);
+        box-shadow:
+          inset 0 calc(var(--S) * .02) 0 rgba(255, 255, 255, .7),
+          inset 0 calc(var(--S) * -.05) calc(var(--S) * .08) rgba(90, 55, 25, .35),
+          0 calc(var(--S) * .035) 0 #a8321b;
+      }
+      .stone::after {
+        content: ""; position: absolute; inset: 34%; border-radius: 50%;
+        background: radial-gradient(circle at 40% 35%, #f6ecda, #c8ab80 70%);
+        box-shadow: inset 0 -2px 4px rgba(90, 55, 25, .4), 0 2px 3px rgba(90, 55, 25, .25);
+      }
+      .ink { position: absolute; border-radius: 50%; background: var(--stamp); opacity: 0; }
+      /* paper grain and darker corners */
+      .grain {
+        position: absolute; inset: 0; pointer-events: none; opacity: .55; mix-blend-mode: var(--grain-blend);
+        background:
+          radial-gradient(ellipse 75% 70% at 50% 48%, transparent 55%, rgba(110, 90, 60, .14)),
+          url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .42  0 0 0 0 .36  0 0 0 0 .26  0 0 0 .5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+      }
+      .ripple { position: absolute; left: var(--ox); top: var(--oy); width: 0; height: 0; border-radius: 50%; border: 1.5px solid var(--stamp); opacity: 0; }
+
+      /* ---------- controls (above the opening) ---------- */
+      .bar {
+        position: fixed; left: 0; right: 0; bottom: 16px; z-index: 20; display: flex; flex-wrap: wrap;
+        justify-content: center; gap: 8px; padding: 0 16px; pointer-events: none;
+      }
+      .bar button, .bar label {
+        pointer-events: auto; font: 13px/1 var(--f-sans); color: var(--ink); background: var(--chip);
+        border: 0; border-radius: 999px; padding: 9px 14px; cursor: pointer; backdrop-filter: blur(6px);
+      }
+      .bar button:hover, .bar label:hover { background: var(--chip-on); }
+      .bar button:focus-visible, .bar input:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+      .bar label { display: inline-flex; align-items: center; gap: 6px; user-select: none; }
+      .bar input { margin: 0; accent-color: var(--stamp); }
+    </style>
+  </head>
+  <body>
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <!-- the brush edge: ink spreads a little into the paper -->
+      <filter id="brush" x="-5%" y="-5%" width="110%" height="110%">
+        <feTurbulence type="fractalNoise" baseFrequency=".035" numOctaves="2" seed="11" result="t" />
+        <feDisplacementMap in="SourceGraphic" in2="t" scale="3" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+      <!-- a real print: rough edges and a few spots the ink missed -->
+      <filter id="worn" x="-10%" y="-10%" width="120%" height="120%">
+        <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="2" seed="7" result="grain" />
+        <feDisplacementMap in="SourceGraphic" in2="grain" scale="2" xChannelSelector="R" yChannelSelector="G" result="rough" />
+        <feTurbulence type="fractalNoise" baseFrequency=".045" numOctaves="2" seed="4" result="blot" />
+        <feColorMatrix in="blot" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -4 3.2" result="holes" />
+        <feComposite in="rough" in2="holes" operator="in" />
+      </filter>
+    </svg>
+
+    <div class="page">
+      <header class="top">
+        <span class="seal" aria-hidden="true">卓琪</span>
+        <b>卓琪的开发笔记</b>
+        <small>zhuoqidev.com</small>
+      </header>
+      <main>
+        <h1>把 Agent 做进<span class="mark">真实产品</span></h1>
+        <p class="sub">notes from shipping agents to production</p>
+        <div class="cards">
+          <div class="card"><span>最新 · 10-24</span><p>买中转 API 之前先验货</p></div>
+          <div class="card"><span>选型 · 10-18</span><p>Mac 到底适不适合跑大模型</p></div>
+          <div class="card"><span>工程实践 · 05-16</span><p>为什么我们从 Celery 迁移到 Temporal</p></div>
+        </div>
+      </main>
+    </div>
+
+    <div class="boot" aria-hidden="true">
+      <div class="stage">
+        <div class="sig">
+          <svg class="hanzi" viewBox="0 0 1966 1024"></svg>
+          <p class="line"><span class="name" data-split>的开发笔记</span><span class="url" data-split>zhuoqidev.com</span></p>
+          <div class="seal-wrap">
+            <div class="dent"></div>
+            <div class="print">卓琪</div>
+            <div class="wet"></div>
+            <div class="shadow"></div>
+            <div class="stone"></div>
+          </div>
+        </div>
+      </div>
+      <div class="grain"></div>
+      <div class="ripple"></div>
+    </div>
+
+    <div class="bar">
+      <button type="button" data-play>↻ 再播一次</button>
+      <label><input type="checkbox" data-slow /> 慢放 ¼×</label>
+    </div>
+
+    <script>
+      // Timeline (ms):  250 卓琪 in stroke order (1.55 s) · 1750 the line under it · 2050 the stone
+      // hovers and comes down · 2500 it lands, ink spatters, the print appears · 2560 the stone lifts,
+      // the wet print dries · 3150 the print flies onto the logo · 3720 the page opens from the logo · 4380 done.
+      // ?t=2700 freezes the opening at that moment (before 3150); with reduced motion it waits for the button.
+
+      // Stroke outlines and centre lines from Make Me a Hanzi, published as hanzi-writer-data
+      // (Arphic Public License; the data is fetched, not copied into this file).
+      const DATA = "https://cdn.jsdelivr.net/npm/hanzi-writer-data@2.0.1/";
+      const SVG = "http://www.w3.org/2000/svg";
+      const SKIP_ON = ["pointerdown", "keydown", "wheel", "touchstart"];
+      // ink spots around the seal: x, y, size as fractions of the seal, and a height factor
+      const SPOTS = [[-0.34, -0.22, 0.07, 1], [1.18, -0.12, 0.045, 0.7], [1.1, 0.96, 0.06, 1.3], [-0.2, 1.12, 0.035, 1], [1.3, 0.42, 0.03, 0.8], [0.5, -0.3, 0.03, 1.4], [-0.42, 0.6, 0.04, 0.9]];
+
+      const boot = document.querySelector(".boot");
+      const $ = (sel) => boot.querySelector(sel);
+      const glyphs = Promise.all(["卓", "琪"].map((ch) => fetch(DATA + encodeURIComponent(ch) + ".json").then((r) => r.json()))).catch(() => null);
+      const original = boot.innerHTML;
+      let stop = () => {};
+
+      // Each stroke outline is a clip path; a thick line drawn along its centre line inside it
+      // reveals the stroke the way a brush would. Without the data, the two characters fade in as text.
+      function strokes(svg, data) {
+        if (!data) {
+          const text = svg.appendChild(document.createElementNS(SVG, "text"));
+          Object.assign(text, { textContent: "卓琪" });
+          text.setAttribute("x", "0");
+          text.setAttribute("y", "860");
+          return [];
+        }
+        const defs = svg.appendChild(document.createElementNS(SVG, "defs"));
+        const out = [];
+        data.forEach((glyph, gi) => {
+          const g = svg.appendChild(document.createElementNS(SVG, "g"));
+          g.setAttribute("transform", `translate(${gi * 942} 900) scale(1 -1)`);
+          glyph.strokes.forEach((outline, i) => {
+            const clip = defs.appendChild(document.createElementNS(SVG, "clipPath"));
+            clip.id = `s${gi}-${i}`;
+            clip.appendChild(document.createElementNS(SVG, "path")).setAttribute("d", outline);
+            const pen = g.appendChild(document.createElementNS(SVG, "path"));
+            pen.setAttribute("d", "M" + glyph.medians[i].map((p) => p.join(" ")).join(" L"));
+            pen.setAttribute("clip-path", `url(#${clip.id})`);
+            const len = pen.getTotalLength() + 200;
+            pen.style.strokeDasharray = `${len} ${len}`;
+            pen.style.strokeDashoffset = len;
+            out.push({ pen, len, glyph: gi });
+          });
+        });
+        return out;
+      }
+
+      async function play({ rate = 1, freezeAt = null } = {}) {
+        stop();
+        boot.innerHTML = original;
+        boot.style.removeProperty("--hole");
+        boot.getAnimations().forEach((a) => a.cancel());
+        boot.classList.add("on"); // the paper goes down first, then the stroke data is awaited
+        const data = await glyphs;
+        const stage = $(".stage"), sig = $(".sig"), seal = $(".seal-wrap"), stone = $(".stone"), shadow = $(".shadow");
+        const print = $(".print"), wet = $(".wet"), dent = $(".dent"), line = $(".line"), ripple = $(".ripple");
+        const svg = $(".hanzi");
+        const logo = document.querySelector(".top .seal");
+
+        const anims = [], timers = [];
+        // later animations on an element that already has one use fill "forwards", or their waiting
+        // state would override the earlier one while it runs
+        const A = (el, kf, o) => {
+          const a = el.animate(kf, { fill: "both", ...o });
+          a.playbackRate = rate;
+          anims.push(a);
+          return a;
+        };
+        const at = (ms, fn) => timers.push(setTimeout(fn, ms / rate));
+        let done = false;
+        const finish = () => {
+          if (done) return;
+          done = true;
+          timers.forEach(clearTimeout);
+          SKIP_ON.forEach((t) => removeEventListener(t, skip));
+          boot.classList.remove("on");
+          anims.forEach((a) => a.cancel());
+        };
+        function skip(e) {
+          if (e.target.closest?.(".bar")) return;
+          SKIP_ON.forEach((t) => removeEventListener(t, skip));
+          boot.animate({ opacity: [1, 0] }, { duration: 220 }).finished.then(finish, finish);
+        }
+        stop = finish;
+        if (freezeAt === null) SKIP_ON.forEach((t) => addEventListener(t, skip, { passive: true }));
+
+        const r0 = logo.getBoundingClientRect();
+        const tx = r0.left + r0.width / 2, ty = r0.top + r0.height / 2;
+        boot.style.setProperty("--ox", `${tx}px`);
+        boot.style.setProperty("--oy", `${ty}px`);
+        const pens = strokes(svg, data);
+        const chars = [...line.querySelectorAll("[data-split]")].flatMap((el) => {
+          el.replaceChildren(...Array.from(el.textContent.trim(), (c) => Object.assign(document.createElement("span"), { textContent: c })));
+          return [...el.children];
+        });
+        const S = seal.offsetWidth;
+        const inks = SPOTS.map(([x, y, d, r]) => {
+          const i = seal.appendChild(document.createElement("i"));
+          i.className = "ink";
+          Object.assign(i.style, { left: `${x * S}px`, top: `${y * S}px`, width: `${d * S}px`, height: `${d * S * r}px` });
+          return i;
+        });
+
+        // camera: the scene drifts 3.5% closer while it plays
+        const push = A(stage, { scale: [1, 1.035] }, { duration: 3400, easing: "cubic-bezier(.3,.1,.3,1)" });
+
+        // 1) 卓琪 in stroke order: 1.55 s shared by length, 22 ms between strokes, 120 ms between the two
+        if (pens.length) {
+          const budget = 1550 - 22 * (pens.length - 1) - 120;
+          const sum = pens.reduce((n, s) => n + s.len + 260, 0);
+          let t = 250;
+          pens.forEach((s, i) => {
+            if (i && s.glyph !== pens[i - 1].glyph) t += 120;
+            const duration = ((s.len + 260) / sum) * budget;
+            A(s.pen, { strokeDashoffset: [s.len, 0] }, { delay: t, duration, easing: "cubic-bezier(.4,.05,.5,.95)" });
+            t += duration + 22;
+          });
+        } else {
+          A(svg.querySelector("text"), { opacity: [0, 1] }, { delay: 250, duration: 1200 });
+        }
+
+        // 2) the line under it, letter by letter out of a blur
+        chars.forEach((c, i) => A(c, [{ opacity: 0, transform: "translateY(10px)", filter: "blur(6px)" }, { opacity: 1, transform: "none", filter: "blur(0)" }], { delay: 1750 + i * 38, duration: 420, easing: "cubic-bezier(.2,.8,.2,1)" }));
+
+        // 3) the stone comes down from above, hovers, lifts a touch, presses
+        const hit = 2500;
+        const down = { delay: 2050, duration: hit - 2050, easing: "cubic-bezier(.55,0,.75,.2)" };
+        A(stone, [
+          { opacity: 0, transform: "translate(-6%, -42%) scale(1.55) rotate(-16deg)" },
+          { opacity: 1, transform: "translate(-3%, -22%) scale(1.3) rotate(-8deg)", offset: 0.55 },
+          { opacity: 1, transform: "translate(-3%, -26%) scale(1.34) rotate(-7deg)", offset: 0.78 },
+          { opacity: 1, transform: "translate(0, 0) scale(.97) rotate(-4deg)" },
+        ], down);
+        A(shadow, [
+          { opacity: 0, transform: "translate(34%, 46%) scale(1.25)", filter: "blur(26px)" },
+          { opacity: 0.28, transform: "translate(22%, 30%) scale(1.15)", filter: "blur(20px)", offset: 0.7 },
+          { opacity: 0.55, transform: "translate(2%, 4%) scale(1)", filter: "blur(5px)" },
+        ], down);
+
+        // 4) the landing: the paper dips, a pressure ring, spatter, the print
+        A(sig, [{ transform: "none" }, { transform: "translateY(3px)" }, { transform: "none" }], { delay: hit, duration: 220, easing: "ease-out", fill: "none" });
+        A(dent, [{ opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1, offset: 0.25 }, { opacity: 0, scale: 1.25 }], { delay: hit, duration: 700, easing: "ease-out" });
+        A(print, { opacity: [0, 1] }, { delay: hit, duration: 60 });
+        A(wet, [{ opacity: 0 }, { opacity: 1, offset: 0.1 }, { opacity: 0 }], { delay: hit + 150, duration: 1000, easing: "ease-in" });
+        inks.forEach((el, i) => A(el, [{ opacity: 0, scale: 0 }, { opacity: 0.85, scale: 1.15, offset: 0.6 }, { opacity: 0.85, scale: 1 }], { delay: hit + 10 + i * 12, duration: 200, easing: "cubic-bezier(.2,.9,.3,1)" }));
+
+        // 5) the stone lifts away; its shadow spreads and fades
+        A(stone, [
+          { transform: "translate(0, 0) scale(.97) rotate(-4deg)", opacity: 1, filter: "blur(0)" },
+          { transform: "translate(0, 0) scale(.985) rotate(-4deg)", opacity: 1, filter: "blur(0)", offset: 0.3 },
+          { transform: "translate(3%, -24%) scale(1.3) rotate(-2deg)", opacity: 0, filter: "blur(6px)", offset: 0.85 },
+          { transform: "translate(4%, -30%) scale(1.4) rotate(-1deg)", opacity: 0, filter: "blur(8px)" },
+        ], { delay: hit + 60, duration: 460, easing: "cubic-bezier(.3,0,.2,1)", fill: "forwards" });
+        A(shadow, [
+          { opacity: 0.55, transform: "translate(2%, 4%) scale(1)", filter: "blur(5px)" },
+          { opacity: 0, transform: "translate(30%, 44%) scale(1.3)", filter: "blur(26px)" },
+        ], { delay: hit + 230, duration: 400, easing: "ease-out", fill: "forwards" });
+
+        if (freezeAt !== null) {
+          anims.forEach((a) => { a.pause(); a.currentTime = freezeAt; });
+          return;
+        }
+
+        // 6) the rest fades; the print flies along an arc onto the logo
+        const fly = 3150;
+        for (const el of [svg, line, ...inks]) A(el, [{ opacity: 1, filter: "blur(0)" }, { opacity: 0, filter: "blur(4px)" }], { delay: fly - 30, duration: 320, easing: "ease-in", fill: "forwards" });
+        at(fly, () => {
+          push.pause(); // the drifting camera stops so the landing spot holds still
+          const k = stage.getBoundingClientRect().width / stage.offsetWidth;
+          const r = print.getBoundingClientRect();
+          const dx = (tx - (r.left + r.width / 2)) / k, dy = (ty - (r.top + r.height / 2)) / k;
+          const s = logo.offsetWidth / (S * k);
+          A(print, [
+            { translate: "0px 0px", scale: 1 },
+            { translate: `${dx * 0.45}px ${dy * 0.45 - 70 / k}px`, scale: (1 + s) / 2, offset: 0.5 },
+            { translate: `${dx}px ${dy}px`, scale: s },
+          ], { duration: 520, easing: "cubic-bezier(.6,0,.2,1)", fill: "forwards" });
+        });
+
+        // 7) the page opens from the logo, a red ripple riding the soft edge
+        const open = 3720, spread = 640;
+        const R = Math.hypot(Math.max(tx, innerWidth - tx), Math.max(ty, innerHeight - ty)) + 120;
+        const opening = { delay: open, duration: spread, easing: "cubic-bezier(.55,0,.3,1)" };
+        A(boot, { "--hole": ["-70px", `${R}px`] }, opening);
+        A(ripple, [
+          { opacity: 0.85, width: "0px", height: "0px", margin: "0px" },
+          { opacity: 0, width: `${2 * R + 70}px`, height: `${2 * R + 70}px`, margin: `${-R - 35}px` },
+        ], opening);
+        at(open + spread + 20, finish);
+      }
+
+      const slow = document.querySelector("[data-slow]");
+      document.querySelector("[data-play]").addEventListener("click", () => play({ rate: slow.checked ? 0.25 : 1 }));
+      const t = new URLSearchParams(location.search).get("t");
+      if (t !== null) play({ freezeAt: Math.min(Number(t) || 0, 3100) });
+      else if (!matchMedia("(prefers-reduced-motion: reduce)").matches) play();
+    </script>
+  </body>
+</html>
