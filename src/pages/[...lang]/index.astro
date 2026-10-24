@@ -246,9 +246,7 @@ const jsonLd = {
         {notes.map((n, i) => (
           <article class="pin card memo" id={`note-${i}`} data-drag style={layout[`note-${i}`]}>
             {i === 1 && <span class="tape blue" />}
-            <span class="big-n" aria-hidden="true">
-              {String(i + 1).padStart(2, "0")}
-            </span>
+            <span class="big-n" aria-hidden="true" data-n={String(i + 1).padStart(2, "0")} />
             <span class="kicker">
               {n.label} · {md(n.post.data.date)}
             </span>
