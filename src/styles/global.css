@@ -456,7 +456,8 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 .code-fold::before { content: "▸ " attr(data-show); }
 .code details[open] .code-fold::before { content: "▾ " attr(data-hide); }
 .code-bar:hover .code-fold { color: #fff; }
-.code .copy { position: absolute; top: 7px; right: 12px; font: 500 11px/1 var(--f-mono); color: #aab2c2; background: transparent; border: 1px solid #3a4152; border-radius: 6px; padding: 5px 9px; cursor: pointer; }
+/* 6px / 10px keeps the button 25px tall: at 5px it was 22px, under the 24px minimum tap target */
+.code .copy { position: absolute; top: 6px; right: 12px; font: 500 11px/1 var(--f-mono); color: #aab2c2; background: transparent; border: 1px solid #3a4152; border-radius: 6px; padding: 6px 10px; cursor: pointer; }
 .code .copy:hover { color: #fff; border-color: #5d6680; }
 .code pre.astro-code { margin: 0; padding: 16px 18px; overflow-x: auto; font: 400 13px/1.75 var(--f-mono); background-color: var(--term) !important; tab-size: 2; }
 .prose li .code { margin: .8em 0; }
@@ -1560,7 +1561,9 @@ html.booting .board > .pin { animation-play-state: paused; }
 }
 @keyframes read-grow { from { scale: 0 1; } }
 @keyframes bar-lift { to { opacity: 1; } }
-@keyframes rise { from { opacity: 0; translate: 0 36px; scale: .97; } }
+/* No fade: a card half way into the view was half transparent, so its small text (the tags on
+   /posts/) failed the 4.5:1 contrast check whenever it straddled the bottom edge. */
+@keyframes rise { from { translate: 0 36px; scale: .97; } }
 /* The lid swings on its hinge (bottom edge), so the near edge never grows wider than the page. */
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) and (max-width: 640px) {
@@ -1568,5 +1571,6 @@ html.booting .board > .pin { animation-play-state: paused; }
     .site-footer .laptop { animation-name: rise; }
   }
 }
-@keyframes lid-open { from { opacity: .35; transform: perspective(1100px) rotateX(32deg) translateY(24px); } }
+/* No fade here either: on a short page the footer's terminal text sits in the first view, half open. */
+@keyframes lid-open { from { transform: perspective(1100px) rotateX(32deg) translateY(24px); } }
 @keyframes drift { to { translate: 0 -90px; } }
