@@ -9,6 +9,7 @@
   --dot: #d8d0bf;
   --blue: #2f5bd3;
   --blue-soft: #e8eefc;
+  --blue-deep: #1d3d99; /* one bar picked out among --blue bars (busiest day on /visitors/) */
   --seal: #c0391f;
   --stamp: #c0391f; /* seal background behind cream text, the same in both themes */
   /* Article-header tiles (src/lib/glyphs.ts): pastel ground and dark ink in both themes, like a
@@ -57,7 +58,7 @@
   --paper: #14161b; --paper-2: #1c1f26; --card: #1e2129;
   --ink: #ece7dc; --ink-2: #bab6ac; --ink-3: #959aa8;
   --line: #31353f; --dot: #2c3039;
-  --blue: #8eaaff; --blue-soft: #1f2a47; --seal: #f0694e;
+  --blue: #8eaaff; --blue-soft: #1f2a47; --blue-deep: #4f74ef; --seal: #f0694e;
   --hi: #7d6416; --note: #ecd77e; --term: #0d0f13; --tile-1: #c3bae6; --tile-2: #a9c6ea; --tile-3: #e7b2a4; --tile-4: #e6cf84;
   --topbar: rgba(20, 22, 27, .86); --seal-soft: #3b211b; --prose: #dcd8ce;
   --hi-strong: rgba(255, 214, 90, .26); --blue-line: rgba(142, 170, 255, .45); --code-ink: #f4957f;
@@ -70,7 +71,7 @@
     --paper: #14161b; --paper-2: #1c1f26; --card: #1e2129;
     --ink: #ece7dc; --ink-2: #bab6ac; --ink-3: #959aa8;
     --line: #31353f; --dot: #2c3039;
-    --blue: #8eaaff; --blue-soft: #1f2a47; --seal: #f0694e;
+    --blue: #8eaaff; --blue-soft: #1f2a47; --blue-deep: #4f74ef; --seal: #f0694e;
     --hi: #7d6416; --note: #ecd77e; --term: #0d0f13; --tile-1: #c3bae6; --tile-2: #a9c6ea; --tile-3: #e7b2a4; --tile-4: #e6cf84;
     --topbar: rgba(20, 22, 27, .86); --seal-soft: #3b211b; --prose: #dcd8ce;
     --hi-strong: rgba(255, 214, 90, .26); --blue-line: rgba(142, 170, 255, .45); --code-ink: #f4957f;
@@ -1447,7 +1448,10 @@ html.booting .board > .pin { animation-play-state: paused; }
 .vis-table td.co { color: var(--ink-3); }
 .vis-table tr.rest td { color: var(--ink-3); }
 .vis-chart svg { display: block; width: 100%; height: 120px; fill: var(--blue); }
+.vis-chart rect.max { fill: var(--blue-deep); }
 .vis-chart rect:hover { fill: var(--seal); }
+.vis-chart .max-line { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+.vis-max { margin-bottom: 2px; font: 400 12px/1 var(--f-mono); color: var(--ink-3); }
 .vis-axis { display: flex; justify-content: space-between; margin-top: 6px; font: 400 12px/1 var(--f-mono); color: var(--ink-3); }
 .vis-method { padding: 16px 20px; font: 400 13px/1.6 var(--f-sans); color: var(--ink-2); }
 .vis-method ul { margin: 0; padding-left: 18px; }

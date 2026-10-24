@@ -163,7 +163,8 @@ function init(root: HTMLElement) {
     china?.update(provinces);
   }
 
-  // Views per day as bars; the axis shows the first and last day.
+  // Views per day as bars; a dashed line marks the busiest day's height, labelled at its
+  // top-left, and the axis shows the first and last day.
   function days(d: Stats) {
     const target = $<HTMLElement>("[data-days]");
     const all = d.days.filter((x) => x.views || x.crawlers);
@@ -179,9 +180,17 @@ function init(root: HTMLElement) {
     svg.setAttribute("preserveAspectRatio", "none");
     svg.setAttribute("role", "img");
     svg.setAttribute("aria-label", s("daily"));
+    const line = document.createElementNS(ns, "line");
+    line.setAttribute("class", "max-line");
+    line.setAttribute("x1", "0");
+    line.setAttribute("x2", String(n * 10));
+    line.setAttribute("y1", "4");
+    line.setAttribute("y2", "4");
+    svg.append(line);
     d.days.forEach((x, i) => {
       const h = Math.max(x.views ? 2 : 0, (x.views / max) * 96);
       const r = document.createElementNS(ns, "rect");
+      if (x.views === max) r.setAttribute("class", "max");
       r.setAttribute("x", String(i * 10 + 1.5));
       r.setAttribute("y", String(100 - h));
       r.setAttribute("width", "7");
@@ -192,12 +201,8 @@ function init(root: HTMLElement) {
       svg.append(r);
     });
     const axis = el("div", "vis-axis");
-    axis.append(
-      el("span", "", d.days[0]!.day),
-      el("span", "", `max ${num.format(max)}`),
-      el("span", "", d.days[n - 1]!.day),
-    );
-    target.replaceChildren(svg, axis);
+    axis.append(el("span", "", d.days[0]!.day), el("span", "", d.days[n - 1]!.day));
+    target.replaceChildren(el("div", "vis-max", `max ${num.format(max)}`), svg, axis);
   }
 
   async function load() {
