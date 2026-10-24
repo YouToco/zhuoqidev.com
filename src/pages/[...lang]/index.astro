@@ -51,7 +51,7 @@ const jsonLd = {
 <Base lang={lang} path="/" section="home" jsonLd={jsonLd}>
   <Fragment slot="head">
     <script is:inline>
-      // First visit on a wide screen: hold the desk behind a short boot screen (src/scripts/boot.ts).
+      // First visit on a wide screen: hold the desk behind the opening (src/scripts/boot.ts).
       // The timer is a safety net in case that script never runs.
       try {
         if (window.self === window.top && !localStorage.getItem("zq-booted") && matchMedia("(min-width: 1001px) and (prefers-reduced-motion: no-preference)").matches) {
@@ -63,35 +63,61 @@ const jsonLd = {
     </script>
   </Fragment>
   <div class="boot" data-boot aria-hidden="true" slot="before">
-    <div class="laptop">
-      <div class="terminal">
-        <div class="bar">
-          <i></i>
-          <i></i>
-          <i></i>
-          <span>{B.terminal.title}</span>
-        </div>
-        <div class="tty">
-          <p class="ln cmd">
-            <span class="p">$</span> whoami
-          </p>
-          <p class="ln o">&gt; {B.terminal.whoami}</p>
-          <p class="ln cmd gap">
-            <span class="p">$</span> ls ~/desk
-          </p>
-          <p class="ln o">&gt; {L.bootLs(posts.length, projects.length)}</p>
-          <p class="ln cmd gap">
-            <span class="p">$</span> open zhuoqidev.com
-          </p>
-          <p class="ln o">
-            &gt;{" "}
-            <span class="boot-bar">
-              <i></i>
-            </span>
-          </p>
+    <svg width="0" height="0" style="position: absolute">
+      <!-- the brush edge: ink spreads a little into the paper -->
+      <filter id="boot-brush" x="-5%" y="-5%" width="110%" height="110%">
+        <feTurbulence type="fractalNoise" baseFrequency=".035" numOctaves="2" seed="11" result="t"></feTurbulence>
+        <feDisplacementMap
+          in="SourceGraphic"
+          in2="t"
+          scale="3"
+          xChannelSelector="R"
+          yChannelSelector="G"
+        ></feDisplacementMap>
+      </filter>
+      <!-- a real print: rough edges and a few spots the ink missed -->
+      <filter id="boot-worn" x="-10%" y="-10%" width="120%" height="120%">
+        <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="2" seed="7" result="grain"></feTurbulence>
+        <feDisplacementMap
+          in="SourceGraphic"
+          in2="grain"
+          scale="2"
+          xChannelSelector="R"
+          yChannelSelector="G"
+          result="rough"
+        ></feDisplacementMap>
+        <feTurbulence type="fractalNoise" baseFrequency=".045" numOctaves="2" seed="4" result="blot"></feTurbulence>
+        <feColorMatrix
+          in="blot"
+          type="matrix"
+          values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -4 3.2"
+          result="holes"
+        ></feColorMatrix>
+        <feComposite in="rough" in2="holes" operator="in"></feComposite>
+      </filter>
+    </svg>
+    <div class="boot-stage">
+      <div class="boot-sig">
+        <svg class="boot-hanzi" viewBox="0 0 1966 1024"></svg>
+        <p class="boot-line">
+          <span class="boot-name" data-split>
+            {L.bootLine}
+          </span>
+          <span class="boot-url" data-split>
+            zhuoqidev.com
+          </span>
+        </p>
+        <div class="boot-seal">
+          <div class="boot-dent"></div>
+          <div class="boot-print">卓琪</div>
+          <div class="boot-wet"></div>
+          <div class="boot-shadow"></div>
+          <div class="boot-stone"></div>
         </div>
       </div>
     </div>
+    <div class="boot-grain"></div>
+    <div class="boot-ripple"></div>
     <p class="boot-skip">{L.bootSkip}</p>
   </div>
   <div class="home">

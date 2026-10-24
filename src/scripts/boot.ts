@@ -1,37 +1,20 @@
-// Homepage boot screen, first visit on a wide screen only (the inline script in the page head
-// decides and adds html.booting). The session types out, the bar fills, then the view zooms
-// through the screen onto the desk. Any click, key, wheel or touch skips straight to the desk.
-import { store } from "./store";
-import { cue } from "./typing";
-
+// Homepage opening, first visit on a wide screen only (the inline script in the page head decides
+// and adds html.booting): 卓琪 is written stroke by stroke, a stone seal stamps it, and the print
+// flies onto the logo in the top bar, where the page opens up. Any click, key, wheel or touch skips
+// straight to the page. The animation and its stroke data load only when it plays.
 const root = document.documentElement;
 const boot = document.querySelector<HTMLElement>("[data-boot]");
 
 if (boot && root.classList.contains("booting")) {
-  clearTimeout(Number(root.dataset.bootFailsafe));
-  store.set("zq-booted", 1);
-  const tty = boot.querySelector<HTMLElement>(".tty")!;
-  const end = cue(tty, 0.3);
-  tty.classList.add("play");
-
-  const skipOn = ["pointerdown", "keydown", "wheel", "touchstart"] as const;
-  let timer = 0;
-  const finish = (skipped: boolean) => {
-    clearTimeout(timer);
-    for (const type of skipOn) removeEventListener(type, skip);
-    boot.classList.add(skipped ? "skip" : "zoom");
-    setTimeout(
-      () => {
-        root.classList.remove("booting");
-        boot.remove();
-      },
-      skipped ? 250 : 700,
-    );
-  };
-  const skip = () => finish(true);
-  // The bar starts filling with the last line and takes 0.8s.
-  timer = window.setTimeout(() => finish(false), (end + 0.9) * 1000);
-  for (const type of skipOn) addEventListener(type, skip, { passive: true });
+  import("./boot-play").then(
+    ({ play }) => {
+      play(boot);
+    },
+    () => {
+      root.classList.remove("booting");
+      boot.remove();
+    },
+  );
 } else {
   boot?.remove();
 }
