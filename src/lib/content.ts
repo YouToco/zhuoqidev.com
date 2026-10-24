@@ -132,10 +132,9 @@ export function postImage(slug: string, file: string): ImageMetadata | undefined
 
 /** Absolute URL of an optimized copy, for Markdown exports, feeds and social cards. */
 export async function imageUrl(img: ImageMetadata, width: number, site: URL) {
-  // Reading a property of the imported image marks the 4K original as "used" and ships it
-  // to dist/. `clone` is the one accessor Astro exempts, so read dimensions from a copy.
-  const { width: original } = (img as ImageMetadata & { clone: ImageMetadata }).clone;
-  const out = await getImage({ src: img, width: Math.min(width, original), format: "webp" });
+  // Reading `src` of the imported image marks the 4K original as "used" and ships it to dist/.
+  // Since Astro 7.4 the dimensions are plain fields that mark nothing, so read them directly.
+  const out = await getImage({ src: img, width: Math.min(width, img.width), format: "webp" });
   return new URL(out.src, site).href;
 }
 
@@ -158,7 +157,7 @@ export async function zoomSources(post: Post, site: URL): Promise<Record<string,
     const src = await path(img, 1600);
     // Zoomed in (or on a high-DPI screen) the viewer needs more pixels: the originals are 4K, so
     // offer a 3200w copy too and let the browser pick by the size the image is shown at.
-    const large = Math.min(3200, (img as ImageMetadata & { clone: ImageMetadata }).clone.width);
+    const large = Math.min(3200, img.width);
     out[m[1]!.replace(/\.[^.]+$/, "")] =
       large > 1600 ? { src, srcset: `${src} 1600w, ${await path(img, large)} ${large}w` } : { src };
   }

@@ -141,9 +141,11 @@
 - After changing a remark/rehype plugin or Markdown config, delete
   `node_modules/.astro/data-store.json`; the content layer otherwise reuses the
   previously rendered HTML.
-- Never read `width`/`height` of an imported image directly in server code: it
-  marks the 4K original as used and copies it into `dist/`. Read them from
-  `img.clone` (see `imageUrl` in `src/lib/content.ts`).
+- Never read `src` of an imported image in server code unless the 4K original
+  should ship: reading it marks the original as used and copies it into
+  `dist/`. Since Astro 7.4 `width`/`height` are plain fields that mark nothing
+  (and `img.clone` is gone); pass the image itself to `getImage` (see
+  `imageUrl` in `src/lib/content.ts`).
 - URLs are a contract. Chinese pages live at the root and English pages under
   `/en/`; old Hugo paths are kept as redirects (`src/lib/redirects.ts`, post
   `aliases`, taxonomy pages) and listed in `tests/fixtures/hugo-urls.txt`.
