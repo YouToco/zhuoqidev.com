@@ -436,6 +436,41 @@ export const GLYPHS = {
   },
   // Vane scores every item from many sources against your profile, sends only what is worth
   // reading, and your feedback tunes the profile.
+  "token-loupe": {
+    label: { zh: "放大镜压在一张账单上，镜片里是多收的 +508 个 token", en: "A loupe over a bill, showing +508 extra tokens" },
+    tile: 3,
+    sparks: [[88, 14, 1.2], [12, 90, 0.8]],
+    shapes: [
+      R(10, 8, 46, 72, paper),
+      L(17, 20, 49, 20, thin),
+      L(17, 29, 43, 29, thin),
+      L(17, 38, 47, 38, thin),
+      L(17, 47, 37, 47, thin),
+      T(24, 70, "18", 12),
+      P([[72, 70], [78, 64], [95, 82], [89, 88]], ink),
+      E(60, 56, 42, 42, paper),
+      E(60, 56, 34, 34, thin),
+      T(60, 61, "+508", 12, red),
+    ],
+  },
+  "vs-sheets": {
+    label: { zh: "两张并排的请求单，中间写着 vs：官方一张、中转一张", en: "Two request sheets side by side with vs between them: official and relay" },
+    tile: 2,
+    sparks: [[50, 12, 1.1], [92, 90, 0.8]],
+    shapes: [
+      R(4, 22, 30, 58, paper),
+      L(9, 34, 29, 34, thin),
+      L(9, 42, 25, 42, thin),
+      L(9, 50, 27, 50, thin),
+      D("M10 66 L16 72 L28 58", red),
+      R(66, 22, 30, 58, hatch),
+      L(71, 34, 91, 34, { ...thin, onInk: true }),
+      L(71, 42, 87, 42, { ...thin, onInk: true }),
+      L(71, 50, 89, 50, { ...thin, onInk: true }),
+      T(81, 70, "?", 15, { onInk: true }),
+      T(50, 56, "vs", 18, red),
+    ],
+  },
   "vane-scores": {
     label: { zh: "几张资讯卡片打了分，9 分那张推给人，反馈再绕回来", en: "Scored news cards: the 9 goes to the reader, and the feedback loops back" },
     tile: 3,
