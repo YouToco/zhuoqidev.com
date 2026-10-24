@@ -34,7 +34,9 @@
   --callout-green: #f1f9f3;
   --green: #277a4b;
   --on-blue: #fff;
-  /* "ZQ Serif" (Noto Serif SC) and "ZQ Hand" (Long Cang) are subset per page by scripts/subset-fonts.mjs. */
+  /* "ZQ Serif" (Noto Serif SC), "ZQ Hand" (Long Cang) and "ZQ Caveat" are subset per page by scripts/subset-fonts.mjs.
+     Caveat goes first in the hand stacks: Latin letters in Caveat, the CJK ones fall through to Long Cang. */
+  --font-caveat: "ZQ Caveat";
   --f-hand-cjk: "ZQ Hand", "Kaiti SC", STKaiti, KaiTi, cursive;
   --f-hand: var(--font-caveat), var(--f-hand-cjk);
   --f-hand-zh: var(--f-hand-cjk);
@@ -377,6 +379,8 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 .tldr p { margin: 0; font: 400 17px/1.85 var(--f-comic); color: #3b2f05; letter-spacing: .01em; }
 /* WenKai ships one weight: mark the key sentence with a marker stroke instead of a faked bold */
 .tldr p strong { font-weight: 400; color: #2a2003; background: linear-gradient(transparent 58%, rgba(217, 112, 63, .32) 58%); }
+/* long paths like api/temporal_worker_blue/green have no break point and pushed a 360px phone sideways */
+.tldr code { overflow-wrap: anywhere; }
 
 .prose { font-size: 17px; line-height: 1.9; color: var(--ink); }
 .prose > p, .prose li { color: var(--prose); }

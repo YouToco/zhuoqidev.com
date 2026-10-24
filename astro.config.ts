@@ -72,17 +72,8 @@ export default defineConfig({
       subsets: ["latin"],
       fallbacks: ["ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "PingFang SC", "Microsoft YaHei", "monospace"],
     },
-    {
-      provider: fontProviders.google(),
-      name: "Caveat",
-      cssVariable: "--font-caveat",
-      weights: [500, 700],
-      subsets: ["latin"],
-      // No fallbacks: the stylesheet chains Caveat with "ZQ Hand" (Long Cang) for mixed Latin/CJK hand-written text.
-      fallbacks: [],
-      optimizedFallbacks: false,
-    },
-    // Noto Serif SC and Long Cang are subset per page after the build (scripts/subset-fonts.mjs).
+    // Noto Serif SC, Long Cang and Caveat are subset per page after the build (scripts/subset-fonts.mjs).
+    // Caveat moved there because the full Latin file (73 KB) loaded on every page for a few words.
   ],
   markdown: {
     syntaxHighlight: { type: "shiki", excludeLangs: ["mermaid", "math", "chart", "comic", "opener"] },

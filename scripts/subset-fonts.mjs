@@ -5,7 +5,7 @@
 //
 // Runs after `astro build`, before og-images (the social cards use the same faces):
 //   1. download the pinned source fonts (cached in node_modules/.cache/zq-fonts, sha256-checked);
-//   2. open every page in Chrome and collect the characters drawn in "ZQ Serif" / "ZQ Hand";
+//   2. open every page in Chrome and collect the characters drawn in each "ZQ …" face;
 //   3. subset with HarfBuzz and inline the @font-face rules into the page's <head>.
 // Text that only exists at run time (search results) falls back to the system serif, except on
 // the search pages, which also get a lazily loaded face covering every title in their language.
@@ -44,6 +44,19 @@ const FACES = {
     weight: () => 400,
     variable: false,
   },
+  // Latin hand-writing, chained before "ZQ Hand" in --f-hand (global.css): only Latin glyphs, so
+  // CJK characters in the same text fall through to Long Cang
+  "ZQ Caveat": {
+    slug: "caveat",
+    source: {
+      file: "Caveat-VF.ttf",
+      url: `${GOOGLE_FONTS}/8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5/ofl/caveat/Caveat%5Bwght%5D.ttf`,
+      sha256: "0bdb6b660482d31531b3945849fba5916b3ef8695da7024a9e6b9ee3c4157988",
+    },
+    // the two weights the site shipped before (400 and 600 drew with the nearest of them)
+    weight: (w) => (w >= 600 ? 700 : 500),
+    variable: true,
+  },
   // comic dialogue (src/lib/markdown/comic-html.ts): LXGW WenKai Screen, GB glyph forms, OFL
   "ZQ Comic": {
     slug: "comic",
@@ -52,6 +65,12 @@ const FACES = {
       url: "https://github.com/lxgw/LxgwWenKai-Screen/releases/download/v1.522/LXGWWenKaiGBScreen.ttf",
       sha256: "23ec023913e1851925eb94462c4b0ccd1d78bb89533745aaa8cc682ccd339dc0",
     },
+    // optional, not swap: the TL;DR note and comic dialogue mix Latin words into CJK lines, and
+    // WenKai arriving late re-wrapped them (mobile CLS 0.06-0.08). If it is not there by first
+    // render, that page view keeps the system Kai.
+    display: "optional",
+    // fetched with the HTML so it can make the short optional window on a reasonable connection
+    preload: true,
     weight: () => 400,
     variable: false,
   },
@@ -101,14 +120,15 @@ async function htmlFiles(dir) {
 // Runs in the page: every character drawn in a display family, keyed by "family|weight".
 function collect(families) {
   const out = {};
+  // Every one of our families in the stack gets the text: "ZQ Caveat", "ZQ Hand" draws Latin in
+  // the first and CJK in the second, and each subset keeps only the glyphs its font has.
   const add = (style, text) => {
-    const family = style.fontFamily
-      .split(",")
-      .map((f) => f.trim().replace(/^["']|["']$/g, ""))
-      .find((f) => families.includes(f));
-    if (!family || !text) return;
-    const key = `${family}|${parseInt(style.fontWeight, 10) || 400}`;
-    out[key] = (out[key] ?? "") + text + text.toUpperCase() + text.toLowerCase();
+    if (!text) return;
+    const stack = style.fontFamily.split(",").map((f) => f.trim().replace(/^["']|["']$/g, ""));
+    for (const family of stack.filter((f) => families.includes(f))) {
+      const key = `${family}|${parseInt(style.fontWeight, 10) || 400}`;
+      out[key] = (out[key] ?? "") + text + text.toUpperCase() + text.toLowerCase();
+    }
   };
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
@@ -172,7 +192,7 @@ async function subset(family, weight, chars, outDir) {
 }
 
 const faceRule = (family, weight, url, range) =>
-  `@font-face{font-family:"${family}";font-style:normal;font-weight:${weight};font-display:swap;` +
+  `@font-face{font-family:"${family}";font-style:normal;font-weight:${weight};font-display:${FACES[family].display ?? "swap"};` +
   `src:url(${url}) format("woff2")${range ? `;unicode-range:${range}` : ""}}`;
 
 // ---------------------------------------------------------------------------------------------
@@ -247,12 +267,15 @@ for (const job of files) {
     faces.set(id, (faces.get(id) ?? "") + chars);
   }
   const rules = [];
+  const preloads = [];
   let pageBytes = 0;
   for (const [id, chars] of faces) {
     const [family, weight] = id.split("|");
     // Keep the spaces: a missing space glyph would fall back to the system font mid-title.
     const { url, size } = await subset(family, Number(weight), `${visible(chars)} \u00a0`, outDir);
     rules.push(faceRule(family, weight, url));
+    if (FACES[family].preload)
+      preloads.push(`<link rel="preload" href="${url}" as="font" type="font/woff2" crossorigin>`);
     pageBytes += size;
   }
   if (/^\/(en\/)?search\/index\.html$/.test(job.path)) {
@@ -266,7 +289,7 @@ for (const job of files) {
   }
   if (pageBytes > largest.size) largest = { size: pageBytes, path: job.path };
   if (!rules.length) continue;
-  const html = job.html.replace("</head>", `<style data-zq-fonts>${rules.join("")}</style></head>`);
+  const html = job.html.replace("</head>", `${preloads.join("")}<style data-zq-fonts>${rules.join("")}</style></head>`);
   if (html === job.html) throw new Error(`subset-fonts: no </head> in ${job.path}`);
   await writeFile(job.file, html);
 }
