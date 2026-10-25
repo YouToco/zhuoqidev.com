@@ -1,6 +1,7 @@
 ---
 title: 'OpenClaw in Practice: One File Path Eliminated 84% of Tool Calls — A Cron Job Debugging Story'
 short: "One File Path Eliminated 84% of Tool Calls"
+seoTitle: "OpenClaw: One File Path Cut 84% of Tool Calls"
 description: OpenClaw's daily-ai-news cron job kept timing out. The root cause wasn't a weak model, bloated prompt, or upstream API failure — it was a missing absolute path in the SKILL.md, causing the Agent to spend 15 exec calls searching for a tool's location every run. Message count ballooned from 54 to 165, tool results from 204KB to 1.1MB. This is the full debugging story.
 date: 2026-06-20
 glyph: skill-path

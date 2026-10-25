@@ -1,5 +1,6 @@
 ---
 title: llm-relay-audit — An Agent Skill for Checking Relay APIs Before You Buy
+seoTitle: "llm-relay-audit: Verify a Relay API Before You Buy"
 description: 'An open-source Agent skill that compares an AI API relay (new-api / one-api / sub2api) with the official API item by item: real model or swapped, injected prompts, official original video, swallowed parameters, real charges. Every raw request is logged, and it ends with an external evidence PDF and an internal decision card. Python + the Agent Skills spec, one-line npx install.'
 date: 2026-10-23
 glyph: vs-sheets

@@ -1,5 +1,6 @@
 ---
 title: Argus — A Browser-Local Long-Video Understanding Agent Harness
+seoTitle: "Argus: Browser-Local Long-Video Understanding Agent"
 description: 'An open-source, frontend-only agent harness for long-video understanding: the video file never leaves the browser, multi-provider LLMs via Vercel AI SDK, with frame-extraction / memory / sub-agent tools and dual-CDN publishing. Vite + React + TypeScript.'
 date: 2026-08-30
 glyph: argus-eye

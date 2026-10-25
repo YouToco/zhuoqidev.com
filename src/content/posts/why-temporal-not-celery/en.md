@@ -1,6 +1,7 @@
 ---
 title: Why We Moved from Celery to Temporal for Production Agent Pipelines
 short: "Why We Moved from Celery to Temporal"
+seoTitle: "Why We Moved Agent Pipelines from Celery to Temporal"
 description: Agent pipelines are not ordinary async tasks — they have state, they get stuck, they need replay debugging, and one failure must not sink the entire batch. We hit every one of these walls with Celery before understanding that Temporal solves a fundamentally different problem.
 date: 2026-05-16
 glyph: event-history

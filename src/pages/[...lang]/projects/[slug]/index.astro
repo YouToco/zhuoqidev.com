@@ -31,6 +31,7 @@ const zoom = await zoomSources(project, Astro.site!);
 <Base
   lang={lang}
   title={project.data.title}
+  seoTitle={project.data.seoTitle}
   description={project.data.description}
   path={`/projects/${slug}/`}
   altPath={hasAlt ? `/projects/${slug}/` : null}

@@ -1,5 +1,6 @@
 ---
 title: 'Why Codex Does Not Give the Model Every Tool: tool_search, BM25, and Model Replacement'
+seoTitle: "Why Codex Loads Tools on Demand: tool_search and BM25"
 description: A plain-language, source-grounded explanation of why Codex loads tools on demand, how BM25 ranks the best few, and how the same design transfers to Python, Go, and other models.
 date: 2026-08-08
 glyph: small-desk

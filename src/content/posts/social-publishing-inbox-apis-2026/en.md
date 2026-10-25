@@ -1,6 +1,7 @@
 ---
 title: 'Letting an Agent Run a Dozen Overseas Social Accounts: About 60 Posting, Comment and DM APIs and MCP Servers Compared Cell by Cell (October 2026)'
 short: 'Social posting and inbox APIs compared'
+seoTitle: "60 Social Posting, Comment and DM APIs Compared"
 description: "You want an Agent such as Claude Code to publish to X, LinkedIn, YouTube, Instagram and other accounts in one go, then read the comments and answer the DMs. How far that can go is decided first by each platform's official API; the tools only carry those official capabilities into one interface. Since February 2026 X lets programs reply only to people who mentioned you, nobody can read the comments or DMs of a LinkedIn personal profile, Facebook only lets you post to Pages, and Threads and YouTube have no DM API. Within those limits I checked about 60 unified APIs, social media suites, open-source projects and session-based APIs against their official documentation of 2026-10-09, cell by cell across platform × posting / comments / mentions / DMs, scored them for integration completeness with price only as the second column, and marked what I tested and what I only read."
 date: 2026-10-09
 glyph: hand-truck

@@ -1,6 +1,7 @@
 ---
 title: 'Check the Goods Before You Buy a Relay API: Six Questions That Tell You Whether It Sells the Real Model'
 short: 'Check a relay API before you buy'
+seoTitle: "How to Verify a Relay API Sells the Real Model"
 description: "Cheap Claude, GPT and Seedance relays keep multiplying, and their groups are labelled 'official', 'official key' or 'native', but a group name is not evidence. What actually ties what a relay sells to the official API is the response id prefix, input tokens that match the official counting endpoint one for one, the error you get when you send a deliberately invalid parameter, the C2PA signature and signing certificate inside a video file, and the charges in the relay's own logs. This post walks through six questions: how to check each one, whether it costs money, what counts as a problem, and what to do without an official key. It ends with an open-source skill that hands the whole procedure to an Agent and writes the comparison report for you."
 date: 2026-10-24
 updated: 2026-10-24

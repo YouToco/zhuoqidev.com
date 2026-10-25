@@ -13,6 +13,7 @@ import "../styles/global.css";
 export interface Props {
   lang: Lang;
   title?: string | undefined;
+  seoTitle?: string | undefined;
   description?: string | undefined;
   path: string;
   altPath?: string | null | undefined;
@@ -25,11 +26,12 @@ export interface Props {
   noindex?: boolean | undefined;
 }
 
-const { lang, title, path, section, ogType = "website", jsonLd, markdown, bodyClass, noindex } = Astro.props;
+const { lang, title, seoTitle, path, section, ogType = "website", jsonLd, markdown, bodyClass, noindex } = Astro.props;
 const altPath = Astro.props.altPath === undefined ? path : Astro.props.altPath;
 const s = site[lang];
 const description = Astro.props.description ?? s.description;
-const fullTitle = title ? `${title} · ${s.title}` : s.title;
+const tabTitle = seoTitle ?? title;
+const fullTitle = tabTitle ? `${tabTitle} · ${s.title}` : s.title;
 const canonical = new URL(url(lang, path), Astro.site).href;
 const alt = altPath === null ? null : new URL(url(other(lang), altPath), Astro.site).href;
 const zhHref = lang === "zh" ? canonical : alt;
