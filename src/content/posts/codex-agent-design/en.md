@@ -37,7 +37,7 @@ The loop is valid, but it omits the hard product questions. Can several work ord
 
 For this article I read the official [openai/codex](https://github.com/openai/codex) Rust implementation at commit [`bb5054f`](https://github.com/openai/codex/commit/bb5054fe47abe73ecbbd454751066a28c89f4bb9). The component names, branches, and constants below come from that source rather than guesses from the UI. The product will continue to evolve, but the code already answers a durable engineering question: **what should an enterprise agent harness take off the model's shoulders?**
 
-### Start Here: What Actually Happens Inside One Agent Turn?
+## Start Here: What Actually Happens Inside One Agent Turn?
 
 Treat one complete restaurant visit as a Thread—the tab for the entire case. Starter, main course, and dessert can be separate Turns. Each Turn is the complete cycle from “the user requests this round of work” to “the result of this round is actually delivered.”
 

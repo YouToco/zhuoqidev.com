@@ -37,7 +37,7 @@ while True:
 
 这次我没有再从界面现象反推实现，而是阅读了官方 [openai/codex](https://github.com/openai/codex) 仓库在 commit [`bb5054f`](https://github.com/openai/codex/commit/bb5054fe47abe73ecbbd454751066a28c89f4bb9) 的 Rust 源码。下文的组件名、状态分支和数值都能在对应源码中找到；产品未来仍可能演进，但这些设计已经足够回答一个问题：**企业 Agent Harness 应该替模型承担什么？**
 
-### 先看懂：Agent 的一轮 Turn 到底做了什么
+## 先看懂：Agent 的一轮 Turn 到底做了什么
 
 把一次完整用餐看成一个 Thread：它是整件事情的总账。前菜、主菜和甜点可以是不同 Turn；每个 Turn 都是从“用户提出这一轮要求”到“这一轮结果真正交付”的完整周期。
 
