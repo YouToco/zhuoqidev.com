@@ -24,6 +24,7 @@ export const about: Record<
     contactHead: string;
     contactNote: string;
     wechat: string;
+    email: string;
   }
 > = {
   zh: {
@@ -73,14 +74,15 @@ export const about: Record<
     ],
     writingHead: "技术文章",
     writing: [
-      { title: "大模型为什么记不住你——记忆机制全拆解", href: "/posts/llm-memory-research/", note: "67 条一手资料交叉验证，覆盖 Anthropic / OpenAI / Google / Cursor 官方文档与 Karpathy / LeCun / Raschka 原文，从架构约束到产品实现彻底拆解 Agent 记忆系统。" },
-      { title: "LLM 推理引擎怎么选——2026 全景选型地图", href: "/posts/llm-inference-engine-selection/", note: "vLLM / SGLang / TensorRT-LLM 等 8 大引擎，叠加 PD 分离 / 投机解码 / FP4 量化三大新趋势，官方博客 / GitHub / arXiv 多源核验。" },
-      { title: "为什么我们从 Celery 迁移到 Temporal", href: "/posts/why-temporal-not-celery/", note: "生产环境 Agent 流水线的工作流引擎选型，来自逐条踩坑的一线实践，而非文档对比。" },
-      { title: "一个 Agent 记忆选型框架", href: "/posts/memory-choice-framework/", note: "RAG / LLM Wiki / 纯文本三条记忆路线的成本、延迟、精度与可维护性权衡，附决策树。" },
+      { title: "买中转 API 之前先验货——六个问题判断卖的是不是真模型", href: "/posts/verify-llm-relay-api/", note: "响应 id 前缀、和官方计数接口逐个对上的 token、故意发错参数时的报错、视频里的 C2PA 签名，每项怎么查、花不花钱；整套流程开源成 Agent skill llm-relay-audit，一行装上，自动出对照报告。" },
+      { title: "让 Agent 自己验收、自己整理记忆——Outcomes 与 Dreaming", href: "/posts/managed-agents-outcomes-dreaming/", note: "按官方文档拆解独立评审返工和会话之间的记忆整理，用同一个任务把 Claude Code 的 /goal 实测 12 次，最后翻译成能搬到任何 Agent 技术栈的两份契约。" },
+      { title: "读完 Codex 源码，最值得企业 Agent 借鉴的 5 个设计", href: "/posts/codex-agent-design/", note: "基于 openai/codex 源码拆解选择性并行、Unified Exec、ExecCell、Skills 渐进上下文、Goal 自动续跑，以及怎样通过 App Server 嵌入同一套 Runtime。" },
+      { title: "Codex 为什么不把所有工具都交给模型？", href: "/posts/codex-first-request-tools/", note: "基于 rust-v0.147.0 源码讲清工具为什么按需加载、BM25 怎样从大量工具里排出最相关的几个，以及怎样把同一设计搬到 Python、Go 和其他模型。" },
     ],
     contactHead: "来聊聊",
     contactNote: "也在折腾 AI 应用、Agent 工程，或者它们底下那层基础设施？上面哪个渠道都行，打个招呼就好。",
     wechat: "微信二维码",
+    email: "邮箱",
   },
   en: {
     title: "About",
@@ -129,13 +131,14 @@ export const about: Record<
     ],
     writingHead: "Technical Writing",
     writing: [
-      { title: "Why LLMs Can't Remember You — Memory Mechanisms Dissected", href: "/posts/llm-memory-research/", note: "67 primary sources cross-validated across Anthropic / OpenAI / Google / Cursor docs and Karpathy / LeCun / Raschka papers, tearing down Agent memory systems from architectural constraints to product implementation." },
-      { title: "How to Choose an LLM Inference Engine — A 2026 Map", href: "/posts/llm-inference-engine-selection/", note: "8 engines from vLLM / SGLang / TensorRT-LLM, plus PD disaggregation / speculative decoding / FP4 quantization, cross-checked against official blogs, GitHub, and arXiv." },
-      { title: "Why We Migrated from Celery to Temporal", href: "/posts/why-temporal-not-celery/", note: "Workflow-engine selection for a production Agent pipeline, drawn from hitting each pitfall in the field rather than comparing docs." },
-      { title: "An Agent Memory Selection Framework", href: "/posts/memory-choice-framework/", note: "Cost, latency, precision, and maintainability trade-offs across RAG / LLM Wiki / plain-text memory, with a decision tree." },
+      { title: "Check the Goods Before You Buy a Relay API", href: "/posts/verify-llm-relay-api/", note: "Response id prefixes, input tokens that match the official counting endpoint one for one, the error a deliberately invalid parameter gets, the C2PA signature inside a video: how to check each and what it costs. The whole procedure ships as an open-source Agent skill, llm-relay-audit, that installs in one line and writes the comparison report." },
+      { title: "Agents That Check Their Own Work and Tidy Their Own Memory", href: "/posts/managed-agents-outcomes-dreaming/", note: "Outcomes and Dreaming taken apart from the official docs, Claude Code's /goal tested 12 times on one task, and the design turned into two contracts you can carry to any Agent stack." },
+      { title: "Five Codex Harness Designs Worth Copying", href: "/posts/codex-agent-design/", note: "From the openai/codex source: selective parallelism, Unified Exec, ExecCell, progressive Skills, Goal continuation, and embedding the same runtime through App Server." },
+      { title: "Why Codex Does Not Give the Model Every Tool", href: "/posts/codex-first-request-tools/", note: "From the rust-v0.147.0 source: why tools load on demand, how BM25 ranks the best few out of many, and how to carry the same design to Python, Go, and other models." },
     ],
     contactHead: "Say hi",
     contactNote: "Tinkering with AI apps, Agent engineering, or the infrastructure underneath them too? Any channel above works — just say hi.",
     wechat: "WeChat QR code",
+    email: "Email",
   },
 };

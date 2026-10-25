@@ -114,7 +114,9 @@ const jsonLd = {
       ))}
     </ol>
 
-    <h2 class="section-t contact-t">{A.contactHead}</h2>
+    <h2 class="section-t contact-t" id="contact">
+      {A.contactHead}
+    </h2>
     <div class="contact">
       <a class="chip-btn" href={social.github}>
         GitHub · YouToco
@@ -124,6 +126,14 @@ const jsonLd = {
       </a>
       <a class="chip-btn" href={social.telegram}>
         Telegram
+      </a>
+      <a
+        class="chip-btn"
+        href="#contact"
+        data-mail={`${social.email.user} ${social.email.domain}`}
+        data-label={A.email}
+      >
+        {A.email}
       </a>
       <a class="chip-btn" href={social.wechat} data-wechat>
         {A.wechat}

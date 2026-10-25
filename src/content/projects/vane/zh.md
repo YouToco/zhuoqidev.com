@@ -1,6 +1,6 @@
 ---
-title: 见微 Vane — 生产级 AI 个性化信息推送系统
-description: 独立设计开发的 AI Agent 系统：多信源采集 → LLM 个性化打分 → 飞书推送，带用户画像反馈闭环。Go + Temporal + A2A 协议 + React 全栈。
+title: 见微 Vane — AI 个性化信息推送系统（已暂停）
+description: 独立设计开发、上过生产的 AI Agent 系统（2026-07 至 09，现已暂停）：多信源采集 → LLM 个性化打分 → 飞书推送，带用户画像反馈闭环。Go + Temporal + A2A 协议 + React 全栈。
 date: 2026-07-19
 glyph: vane-scores
 ---

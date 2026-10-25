@@ -25,6 +25,8 @@ export const social = {
   xHandle: "@busygod9527",
   telegram: "https://t.me/happyforyou0",
   wechat: "/images/wechat.jpg",
+  // Kept in two halves so the address is never in the HTML; src/scripts/site.ts joins them.
+  email: { user: "zz3752203", domain: "163.com" },
 } as const;
 
 // Kept identical to the Hugo site so traffic history stays continuous.
