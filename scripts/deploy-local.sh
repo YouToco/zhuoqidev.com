@@ -126,7 +126,11 @@ aliyun oss ls "oss://${oss_bucket}/" \
 wrangler pages deployment list \
   --project-name "$cloudflare_project" >/dev/null
 
+# Every file goes up with Cloudflare Pages' default header so browsers ask again before reusing a
+# page (with no Cache-Control they kept old pages); the passes below give hashed files their year.
+fresh_cache="Cache-Control:public, max-age=0, must-revalidate"
 aliyun oss sync dist/ "oss://${oss_bucket}/" \
+  --meta "$fresh_cache" \
   --endpoint "$oss_endpoint" \
   --region "$aliyun_region" \
   --exclude "_headers" \
@@ -141,12 +145,13 @@ aliyun oss sync dist/ "oss://${oss_bucket}/" \
 # OSS omits the charset (and has no type for .md), so upload those files again with an explicit
 # type. cp needs only PutObject, the permission sync already uses; Cloudflare reads public/_headers.
 # The sync made the directory objects already, so cp skips them (else every pass rewrites ~470).
-# OSS gzips application/javascript but not the text/javascript it picks for .js.
+# OSS gzips application/javascript but not the text/javascript it picks for .js. An upload replaces
+# all metadata, so these carry the revalidate header again.
 for rule in "*.md|text/markdown; charset=utf-8" "*.txt|text/plain; charset=utf-8" \
   "*.webmanifest|application/manifest+json" "*.js|application/javascript; charset=utf-8"; do
   aliyun oss cp dist/ "oss://${oss_bucket}/" \
     --include "${rule%%|*}" \
-    --meta "Content-Type:${rule#*|}" \
+    --meta "Content-Type:${rule#*|}#${fresh_cache}" \
     --endpoint "$oss_endpoint" \
     --region "$aliyun_region" \
     --recursive \
