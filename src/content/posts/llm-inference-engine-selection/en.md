@@ -1,5 +1,6 @@
 ---
 title: How to Choose an LLM Inference Engine — A 2026 Map from Local Single-GPU to PD Disaggregation
+seoTitle: "How to Choose an LLM Inference Engine (2026 Map)"
 description: Aliyun's four-engine table — Ollama / vLLM / SGLang / HF Pipeline — is no longer enough in 2026. This piece re-maps inference engines into three tiers (Local → High-Performance Serving → Distributed/Disaggregated), covering 8 mainstream engines plus three new trends — PD disaggregation, speculative decoding, and FP4 quantization — with a decision matrix and a decision tree.
 date: 2026-07-19
 glyph: three-tiers

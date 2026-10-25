@@ -14,6 +14,8 @@ const posts = defineCollection({
     title: z.string(),
     /** Short title for lists and cards when the full title is too long. */
     short: z.string().optional(),
+    /** Title for the browser tab and search results when the full title runs past 70 characters with the site name. */
+    seoTitle: z.string().optional(),
     description: z.string(),
     date: z.coerce.date(),
     updated: z.coerce.date().optional(),
@@ -33,6 +35,8 @@ const projects = defineCollection({
   loader: bilingual("./src/content/projects"),
   schema: z.object({
     title: z.string(),
+    /** Title for the browser tab and search results when the full title runs past 70 characters with the site name. */
+    seoTitle: z.string().optional(),
     description: z.string(),
     date: z.coerce.date().optional(),
     /** An interactive scene shown above the write-up (src/components/ArgusStory.astro). */

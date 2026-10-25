@@ -1,6 +1,7 @@
 ---
 title: 'What Does It Cost to Run an App Online Each Month? Servers, Serverless or Edge Functions: First Learn to Split the Bill in Three'
 short: 'What it costs to run an app online'
+seoTitle: "App Hosting Costs: Servers vs Serverless vs Edge"
 description: "For anyone about to put their first app online without knowing whether to buy a server or go serverless. It first explains the few things on a cloud provider's shelf, then shows how to split your own app into three bills (does its time go to waiting or computing, how many bytes does each request move, does it keep books entry by entry), places four common apps (a personal website, a mini-program or app backend, an AI app, an image or video tool) with the free tiers and new-customer prices checked; then it builds an LLM gateway from scratch as the worked example, queries prices as of 2026-10-09 with the aliyun CLI, tccli, the clouds' public pricing APIs and official pricing pages, and works out the bill line by line for seven providers at 10 million, 100 million and 1 billion requests a month."
 date: 2026-10-09
 glyph: three-bills

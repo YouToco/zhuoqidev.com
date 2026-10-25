@@ -1,6 +1,7 @@
 ---
 title: Five Codex Harness Designs Worth Copying After Reading the Source
 short: "Five Codex Harness Designs Worth Copying"
+seoTitle: "Five Codex Harness Designs Worth Copying"
 description: A source-grounded analysis of selective parallelism, Unified Exec, ExecCell, progressive Skills, persistent Goal continuation, and embedding the runtime through App Server.
 date: 2026-08-02
 glyph: queue-ticket

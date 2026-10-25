@@ -1,6 +1,7 @@
 ---
 title: 'Is a Mac Actually Good for Running Large Language Models? The Numbers Neither Apple nor NVIDIA Puts on the Product Page'
 short: 'Is a Mac actually good for local LLMs'
+seoTitle: "Is a Mac Good for Local LLMs? The Missing Numbers"
 description: "Apple says the Mac mini offers \"fast, private, on-device inference\" and up to 13.5x faster LLM prompt processing; NVIDIA says the RTX 5090 Laptop GPU has 1,824 AI TOPS. What they compare against, how the test machines were configured, and the three numbers that decide how fast a model actually feels — memory bandwidth, the compute for reading prompts, and how much memory the GPU can really use — are not where you look first. Using the llama.cpp community's shared benchmarks across dozens of machines, a check on two machines of my own, and a re-run of Apple's own footnoted test on the 16 GB base model, and the coding, compiling and testing work where the Mac mini measurably wins, this post answers, case by case, what a Mac mini, a Mac Studio and each class of NVIDIA card are actually good for."
 date: 2026-10-18
 glyph: mac-mini

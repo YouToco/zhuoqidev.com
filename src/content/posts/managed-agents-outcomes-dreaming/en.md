@@ -1,5 +1,6 @@
 ---
 title: 'Agents That Check Their Own Work and Tidy Their Own Memory: Outcomes and Dreaming from the Docs, Plus a Hands-On Test of Claude Code /goal'
+seoTitle: "Claude Outcomes and Dreaming, with a /goal Test"
 description: Outcomes has an independent grader, blind to the writer's reasoning, check the work criterion by criterion and send it back until it passes; Dreaming reads an old memory store and past sessions between runs and writes a separate, reorganized store while leaving the original untouched. Both are Claude Managed Agents APIs on the Claude Developer Platform, and Claude Code does not have them. Following the official docs, this article explains why both are needed and how they work, then identifies their closest relatives in Claude Code (/goal and the unreleased auto-dream), runs /goal 12 times on the same task, and translates the design into two contracts you can rebuild on any Agent stack.
 date: 2026-10-06
 glyph: rubric-loop
