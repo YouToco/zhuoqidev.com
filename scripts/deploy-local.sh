@@ -157,6 +157,27 @@ for rule in "*.md|text/markdown; charset=utf-8" "*.txt|text/plain; charset=utf-8
     --output-dir "$tool_root/ossutil-output"
 done
 
+# _astro/ and _fonts/ are content-hashed, so browsers may keep them for a year (Cloudflare reads
+# the same rule from public/_headers). An upload replaces all metadata, so scripts carry their
+# content type again alongside the header.
+long_cache="Cache-Control:public, max-age=31536000, immutable"
+for rule in "_astro|--exclude|*.js|${long_cache}" \
+  "_astro|--include|*.js|Content-Type:application/javascript; charset=utf-8#${long_cache}" \
+  "_fonts|--include|*|${long_cache}"; do
+  IFS='|' read -r dir filter pattern meta <<<"$rule"
+  aliyun oss cp "dist/${dir}/" "oss://${oss_bucket}/${dir}/" \
+    "$filter" "$pattern" \
+    --meta "$meta" \
+    --endpoint "$oss_endpoint" \
+    --region "$aliyun_region" \
+    --recursive \
+    --force \
+    --disable-dir-object \
+    --jobs 32 \
+    --disable-ignore-error \
+    --output-dir "$tool_root/ossutil-output"
+done
+
 commit_message=$(git log -1 --pretty=%s)
 wrangler pages deploy dist/ \
   --project-name "$cloudflare_project" \

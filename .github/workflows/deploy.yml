@@ -169,6 +169,28 @@ jobs:
           # came out about 27% larger than gzip for three.js.
           set_type "*.js" "application/javascript; charset=utf-8"
 
+      # Everything under _astro/ and _fonts/ is content-hashed (a new file name for new content),
+      # so browsers may keep it for a year. OSS sent no Cache-Control at all, so every page view
+      # asked the CDN again for the same fonts and styles. An upload replaces all metadata, so the
+      # scripts carry their content type again alongside the header.
+      - name: Cache hashed files for a year on Aliyun OSS
+        run: |
+          long="Cache-Control:public, max-age=31536000, immutable"
+          put() {
+            "$RUNNER_TEMP/aliyun-3.5.1/aliyun" oss cp "dist/$1/" "oss://zhuoqidev/$1/" \
+              "${@:2}" \
+              --endpoint oss-cn-shenzhen.aliyuncs.com \
+              --region cn-shenzhen \
+              --recursive \
+              --force \
+              --disable-dir-object \
+              --jobs 32 \
+              --disable-ignore-error
+          }
+          put _astro --exclude "*.js" --meta "$long"
+          put _astro --include "*.js" --meta "Content-Type:application/javascript; charset=utf-8#$long"
+          put _fonts --meta "$long"
+
       - name: Deploy to Cloudflare Pages
         # wrangler is a pinned devDependency, so the action finds `pnpm exec wrangler` at this
         # version and runs it. Without it the action runs `pnpm add wrangler`, which fails on
@@ -262,3 +284,24 @@ jobs:
             exit 1
           fi
           echo "$oss/pagefind/pagefind.js → Content-Encoding: gzip"
+
+      - name: Verify hashed files are cached for a year on both providers
+        run: |
+          check_cache() {
+            local url=$1 got
+            got=$(curl --fail --silent --show-error --head "$url" \
+              | tr -d '\r' | awk 'tolower($1)=="cache-control:" {sub(/^[^:]*: */, ""); print}')
+            if [[ $got != *"max-age=31536000"*immutable* ]]; then
+              echo "$url answered Cache-Control '$got', expected a year, immutable" >&2
+              exit 1
+            fi
+            echo "$url → $got"
+          }
+          font=$(cd dist && ls _fonts/*.woff2 | head -1)
+          css=$(cd dist && ls _astro/*.css | head -1)
+          js=$(cd dist && ls _astro/*.js | head -1)
+          for base in https://zhuoqidev.oss-cn-shenzhen.aliyuncs.com https://zhuoqidev.pages.dev; do
+            check_cache "$base/$font"
+            check_cache "$base/$css"
+            check_cache "$base/$js"
+          done

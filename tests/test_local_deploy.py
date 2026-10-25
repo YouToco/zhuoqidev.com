@@ -97,6 +97,21 @@ class LocalDeployTests(unittest.TestCase):
         self.assertIn("/*.md\n  Content-Type: text/markdown; charset=utf-8", headers)
         self.assertIn("/*.txt\n  Content-Type: text/plain; charset=utf-8", headers)
 
+    def test_hashed_files_cache_for_a_year_on_both_providers(self) -> None:
+        script = self.script()
+        headers = HEADERS.read_text(encoding="utf-8")
+        workflow = (ROOT / ".github" / "workflows" / "deploy.yml").read_text(encoding="utf-8")
+        year = "Cache-Control: public, max-age=31536000, immutable"
+
+        for path in ("/_astro/*", "/_fonts/*"):
+            with self.subTest(path=path):
+                self.assertIn(f"{path}\n  {year}", headers)
+        self.assertIn('long_cache="Cache-Control:public, max-age=31536000, immutable"', script)
+        self.assertIn('"_fonts|--include|*|${long_cache}"', script)
+        self.assertIn('"_astro|--include|*.js|Content-Type:application/javascript; charset=utf-8#${long_cache}"', script)
+        self.assertIn('put _fonts --meta "$long"', workflow)
+        self.assertIn('put _astro --include "*.js" --meta "Content-Type:application/javascript; charset=utf-8#$long"', workflow)
+
     def test_cloudflare_project_publishes_the_astro_output(self) -> None:
         self.assertIn('"pages_build_output_dir": "dist"', WRANGLER.read_text(encoding="utf-8"))
 

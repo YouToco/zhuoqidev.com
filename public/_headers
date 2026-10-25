@@ -6,6 +6,11 @@
 /*.txt
   Content-Type: text/plain; charset=utf-8
 
-# Build output under /_astro/ is content-hashed, so it can be cached forever.
+# Build output under /_astro/ and the per-page font subsets under /_fonts/
+# (scripts/subset-fonts.mjs) are content-hashed, so they can be cached forever.
+# The deploy step sets the same header on Aliyun OSS.
 /_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/_fonts/*
   Cache-Control: public, max-age=31536000, immutable
