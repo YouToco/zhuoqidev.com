@@ -90,7 +90,7 @@ class LocalDeployTests(unittest.TestCase):
         headers = HEADERS.read_text(encoding="utf-8")
 
         self.assertIn('aliyun oss cp dist/ "oss://${oss_bucket}/"', script)
-        self.assertIn('--meta "Content-Type:${rule#*|}"', script)
+        self.assertIn('--meta "Content-Type:${rule#*|}#${fresh_cache}"', script)
         self.assertIn("--disable-dir-object", script)
         self.assertIn('"*.md|text/markdown; charset=utf-8"', script)
         self.assertIn('"*.txt|text/plain; charset=utf-8"', script)
@@ -111,6 +111,18 @@ class LocalDeployTests(unittest.TestCase):
         self.assertIn('"_astro|--include|*.js|Content-Type:application/javascript; charset=utf-8#${long_cache}"', script)
         self.assertIn('put _fonts --meta "$long"', workflow)
         self.assertIn('put _astro --include "*.js" --meta "Content-Type:application/javascript; charset=utf-8#$long"', workflow)
+
+    def test_pages_are_revalidated_on_aliyun_like_cloudflare(self) -> None:
+        script = self.script()
+        workflow = (ROOT / ".github" / "workflows" / "deploy.yml").read_text(encoding="utf-8")
+        fresh = "Cache-Control:public, max-age=0, must-revalidate"
+        sync_command = script[script.index("aliyun oss sync"):script.index("for rule in")]
+
+        self.assertIn(f'fresh_cache="{fresh}"', script)
+        self.assertIn('--meta "$fresh_cache"', sync_command)
+        self.assertIn(f'--meta "{fresh}"', workflow)
+        self.assertIn(f'--meta "Content-Type:$2#{fresh}"', workflow)
+        self.assertIn("Verify pages are revalidated on both providers", workflow)
 
     def test_cloudflare_project_publishes_the_astro_output(self) -> None:
         self.assertIn('"pages_build_output_dir": "dist"', WRANGLER.read_text(encoding="utf-8"))

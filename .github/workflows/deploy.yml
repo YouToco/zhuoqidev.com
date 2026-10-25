@@ -128,9 +128,14 @@ jobs:
       # A fresh build is newer than everything in the bucket, so every file goes up on every
       # deploy (about 1,200 files and 470 directory objects). Each one is a round trip from the
       # runner to Shenzhen; ossutil's default of 3 at a time made this step take 4-5 minutes.
+      # Every file goes up with the header Cloudflare Pages sends by default, so browsers ask again
+      # before reusing a page. Without any Cache-Control they guessed a lifetime from Last-Modified
+      # and kept showing the previous deploy's pages. The CDN does not keep these at the edge and
+      # fetches them from OSS each time; the steps below give hashed files their year back.
       - name: Sync site to Aliyun OSS
         run: |
           "$RUNNER_TEMP/aliyun-3.5.1/aliyun" oss sync dist/ oss://zhuoqidev/ \
+            --meta "Cache-Control:public, max-age=0, must-revalidate" \
             --endpoint oss-cn-shenzhen.aliyuncs.com \
             --region cn-shenzhen \
             --exclude "_headers" \
@@ -147,11 +152,12 @@ jobs:
           # OSS omits the charset (and has no type for .md), so upload those files again with an
           # explicit type. cp needs only PutObject, the permission sync already uses. The sync
           # above already made the directory objects; without --disable-dir-object each pass
-          # wrote all 470 of them again for a handful of files (about 40 s a pass).
+          # wrote all 470 of them again for a handful of files (about 40 s a pass). An upload
+          # replaces all metadata, so these files carry the revalidate header from the sync again.
           set_type() {
             "$RUNNER_TEMP/aliyun-3.5.1/aliyun" oss cp dist/ oss://zhuoqidev/ \
               --include "$1" \
-              --meta "Content-Type:$2" \
+              --meta "Content-Type:$2#Cache-Control:public, max-age=0, must-revalidate" \
               --endpoint oss-cn-shenzhen.aliyuncs.com \
               --region cn-shenzhen \
               --recursive \
@@ -284,6 +290,26 @@ jobs:
             exit 1
           fi
           echo "$oss/pagefind/pagefind.js → Content-Encoding: gzip"
+
+      - name: Verify pages are revalidated on both providers
+        run: |
+          check_fresh() {
+            local url=$1 got
+            got=$(curl --fail --silent --show-error --head "$url" \
+              | tr -d '\r' | awk 'tolower($1)=="cache-control:" {sub(/^[^:]*: */, ""); print}')
+            if [[ $got != "public, max-age=0, must-revalidate" ]]; then
+              echo "$url answered Cache-Control '$got', expected 'public, max-age=0, must-revalidate'" >&2
+              exit 1
+            fi
+            echo "$url → $got"
+          }
+          oss=https://zhuoqidev.oss-cn-shenzhen.aliyuncs.com
+          for path in index.html about/index.html en/index.html index.xml sitemap.xml llms.txt images/avatar.jpg; do
+            check_fresh "$oss/$path"
+          done
+          for path in "" about/ en/ index.xml sitemap.xml llms.txt images/avatar.jpg; do
+            check_fresh "https://zhuoqidev.pages.dev/$path"
+          done
 
       - name: Verify hashed files are cached for a year on both providers
         run: |
