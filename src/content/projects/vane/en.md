@@ -1,6 +1,6 @@
 ---
-title: Vane — A Production-Grade AI Personalized Feed System
-description: 'A self-built AI Agent system: multi-source ingestion → LLM personalized scoring → Feishu push, with a user-profile feedback loop. Go + Temporal + A2A protocol + React, full-stack.'
+title: Vane — An AI Personalized Feed System (Paused)
+description: 'A self-built AI Agent system that ran in production from 2026-07 to 09 and is now paused: multi-source ingestion → LLM personalized scoring → Feishu push, with a user-profile feedback loop. Go + Temporal + A2A protocol + React, full-stack.'
 date: 2026-07-19
 glyph: vane-scores
 ---

@@ -70,6 +70,16 @@ if (wechat) {
   });
 }
 
+// The email chip carries the address in two halves so scrapers reading the HTML find nothing to
+// harvest; here it becomes a real mailto link with the address shown.
+for (const link of document.querySelectorAll<HTMLAnchorElement>("a[data-mail]")) {
+  const [user, domain] = (link.dataset.mail ?? "").split(" ");
+  if (!user || !domain) continue;
+  const address = `${user}@${domain}`;
+  link.href = `mailto:${address}`;
+  link.textContent = `${link.dataset.label ?? ""} · ${address}`;
+}
+
 // The goodbye terminal at the bottom of every page plays its session the first time it scrolls
 // into view. Pages short enough to show it on arrival keep it still, as does reduced motion. The
 // observer's first report tells whether it is on screen on arrival; asking the element itself here
