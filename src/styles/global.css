@@ -141,7 +141,9 @@ a { color: inherit; }
   position: fixed; left: 50%; bottom: 18px; z-index: 50;
   transform: translateX(-50%);
   display: flex; gap: 4px; padding: 6px;
-  background: color-mix(in srgb, var(--card) 82%, transparent); border: 1px solid var(--line);
+  /* 88%, not 82%: over a code block (light theme) or a sticky note (dark) the see-through dock
+     dropped the labels under 4.5:1; at 88% the worst case is 6.1 (light) and 5.5 (dark) */
+  background: color-mix(in srgb, var(--card) 88%, transparent); border: 1px solid var(--line);
   -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
   border-radius: 999px; box-shadow: 0 8px 32px rgba(28, 34, 48, .12);
 }
@@ -151,7 +153,7 @@ a { color: inherit; }
   font: 500 14px/1 var(--f-sans); text-decoration: none; color: var(--ink-2); white-space: nowrap;
   transition: background .25s var(--ease), color .25s var(--ease);
 }
-.dock a .k { font: 400 10px/1 var(--f-mono); color: var(--ink-3); }
+.dock a .k { font: 400 10px/1 var(--f-mono); color: var(--ink-2); }
 .dock a:hover { color: var(--ink); background: var(--paper-2); }
 .dock a[aria-current] { background: var(--blue); color: var(--on-blue); }
 .dock a[aria-current] .k { color: var(--on-blue); opacity: .85; }
