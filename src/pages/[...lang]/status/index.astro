@@ -1,7 +1,8 @@
 ---
+import { Font } from "astro:assets";
 import { type Lang, langParams, t } from "../../../i18n";
 import Base from "../../../layouts/Base.astro";
-import { LEVELS, VENDORS } from "../../../../server/ai-status";
+import { VENDORS } from "../../../../server/ai-status";
 
 export const getStaticPaths = langParams;
 interface Props {
@@ -10,83 +11,208 @@ interface Props {
 const { lang } = Astro.props;
 const L = t[lang];
 const S = L.st;
+const N = S.np;
 const regions = ["intl", "cn"] as const;
+const host = (u: string) => new URL(u).host;
+
+const strings = (v: unknown): string[] =>
+  typeof v === "string" ? [v] : v && typeof v === "object" ? Object.values(v).flatMap(strings) : [];
+const ascii = Array.from({ length: 95 }, (_, i) => String.fromCharCode(32 + i)).join("");
+const names = VENDORS.map((v) => v.name).join("");
+const words = [S.levels, S.weather, S.stages, S.intl, S.cn].flatMap(strings).join("");
+const typeCase = {
+  text: [...strings(N), words, names, ascii].join(""),
+  bold: [words, names, ascii].join(""),
+  display: (
+    [N.hedLasting, N.hedMaint, N.hedComps, N.hedPlain, N.hedUnknown, N.hedOk, N.hedFail, L.aiStatus] as string[]
+  )
+    .concat(N.wxTitle, N.clTitle, N.durM, N.durH, N.durHM, N.durD, N.durDH, N.dur0, words, names, ascii)
+    .join(""),
+};
 ---
 
 <Base lang={lang} title={L.aiStatus} description={S.description} path="/status/" bodyClass="dotgrid">
-  <main class="shelf ai-status" id="main" data-st data-lang={lang} data-msg={JSON.stringify(S)}>
-    <header class="shelf-head">
-      <div class="crumb">
-        ~/status/ <b>curl status.json</b>
-      </div>
-      <h1>✦ {L.aiStatus}</h1>
-      <p>{S.intro}</p>
-    </header>
-
-    <div class="st-bar">
-      <p class="st-summary" role="status" aria-live="polite" data-summary>
-        {S.loading}
-      </p>
-      <p class="st-updated" data-updated></p>
-      <button class="chip-btn" type="button" data-refresh>
-        {S.refresh}
-      </button>
+  <Font cssVariable="--font-news" slot="head" />
+  <main class="shelf np-shelf" id="main" data-np data-lang={lang} data-msg={JSON.stringify(S)}>
+    <div class="crumb">
+      ~/status/ <b>curl status.json</b>
     </div>
-    <noscript>
-      <p class="st-nojs card">{S.noJs}</p>
-    </noscript>
-
-    {regions.map((r) => (
-      <section class="st-region" aria-labelledby={`st-${r}`}>
-        <h2 class="vis-h" id={`st-${r}`}>
-          {S[r]}
-        </h2>
-        <ul class="st-list">
-          {VENDORS.filter((v) => v.region === r).map((v) => (
-            <li class="st-vendor card" data-vendor={v.id} data-level={v.source === "link" ? "none" : "loading"}>
-              <div class="st-row">
-                <span class="st-dot" aria-hidden="true" />
-                <h3 class="st-name">{v.name}</h3>
-                <span class="st-level" data-level-text>
-                  {v.source === "link" ? S.levels.none : ""}
-                </span>
-                <a class="st-link" href={v.page} rel="noopener" target="_blank">
-                  {v.note === "noPage" ? S.notice : S.official} ↗
-                </a>
+    <div class="np-stack">
+      <article class="np-sheet">
+        <header class="np-mast">
+          <div class="np-ears">
+            <div class="np-ear np-ear-l" data-ear>
+              <p class="np-ear-k">{N.earWeather}</p>
+              <span class="np-ear-g" data-ear-glyph></span>
+              <p class="np-ear-w" data-ear-word>
+                —
+              </p>
+              <p class="np-ear-s" data-ear-sub></p>
+            </div>
+            <div class="np-plate">
+              <p class="np-over">
+                <span class="np-day">{N.over}</span>
+                <span class="np-night">{N.overNight}</span>
+              </p>
+              <h1>{L.aiStatus}</h1>
+              <p class="np-motto">
+                <span>{S.intro}</span>
+              </p>
+            </div>
+            <div class="np-ear np-ear-r">
+              <p class="np-ear-k">{N.earNext}</p>
+              <p class="np-cd" role="timer" data-cd>
+                01:00
+              </p>
+              <div class="np-cd-bar" aria-hidden="true">
+                <i data-cd-bar></i>
               </div>
-              {v.note && <p class="st-note">{S.notes[v.note]}</p>}
-              <p class="st-headline" data-headline hidden />
-              {v.source !== "link" && (
-                <details class="st-more" data-more hidden>
-                  <summary>{S.components}</summary>
-                  <div class="st-body">
-                    <ul class="st-incidents" data-incidents />
-                    <ul class="st-components" data-components />
-                  </div>
-                </details>
-              )}
-            </li>
-          ))}
-        </ul>
-      </section>
-    ))}
+              <p class="np-ear-s">{N.earEvery}</p>
+            </div>
+          </div>
+          <p class="np-folio">
+            <span data-date>—</span>
+            <span>
+              <span class="np-ed" data-ed></span> · <span data-time></span>
+            </span>
+            <span>
+              {N.every} · <span class="np-day">{N.day}</span>
+              <span class="np-night">{N.night}</span>
+            </span>
+          </p>
+          <p class="np-stamp" aria-hidden="true" data-stamp>
+            {N.stamp}
+            <small data-stamp-ed></small>
+          </p>
+        </header>
 
-    <aside class="st-method card">
-      <h2>{S.legend}</h2>
-      <ul class="st-legend">
-        {[...LEVELS, "unknown" as const, "none" as const].map((l) => (
-          <li data-level={l}>
-            <span class="st-dot" aria-hidden="true" />
-            {S.levels[l]}
-          </li>
-        ))}
-      </ul>
-      <ul>
-        {S.method.map((m) => (
-          <li>{m}</li>
-        ))}
-      </ul>
-    </aside>
+        <section class="np-top" aria-labelledby="np-hed">
+          <p class="np-kicker" data-kicker></p>
+          <h2 class="np-hed" id="np-hed" data-hed>
+            {S.loading}
+          </h2>
+          <p class="np-deck" data-deck></p>
+          <p class="np-byline" data-byline></p>
+        </section>
+        <noscript>
+          <p class="np-nojs">{S.noJs}</p>
+        </noscript>
+
+        <div class="np-front">
+          <div class="np-lead" data-lead></div>
+          <aside class="np-rail" aria-labelledby="np-wx">
+            <h2 class="np-box-h" id="np-wx">
+              {N.wxTitle}
+              <i>{N.wxSub}</i>
+            </h2>
+            <p class="np-note" aria-hidden="true">
+              {N.wxNote}
+              <svg
+                viewBox="0 0 30 22"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M3 3c9 1 16 6 19 15"></path>
+                <path d="M17.5 15.5l4.6 3 1.2-5.3"></path>
+              </svg>
+            </p>
+            <div data-wx></div>
+            <ul class="np-legend" data-legend></ul>
+            <p class="np-fine">{N.railFine}</p>
+          </aside>
+        </div>
+
+        <section class="np-cl" aria-labelledby="np-cl">
+          <header class="np-cl-head">
+            <h2 id="np-cl">
+              {N.clTitle}
+              <i>{N.clSub}</i>
+            </h2>
+            <p data-cl-note></p>
+          </header>
+          <div class="np-cl-cols" data-cols>
+            {regions.map((r) => {
+              const list = VENDORS.filter((v) => v.region === r);
+              return [
+                <p class="np-cat" data-cat={r}>
+                  <span>{S[r]}</span>
+                  <small data-cat-count>{N.catCount.replace("{n}", String(list.length))}</small>
+                </p>,
+                ...list.map((v) => (
+                  <article
+                    class="np-ad"
+                    id={`v-${v.id}`}
+                    data-vendor={v.id}
+                    data-level={v.source === "link" ? "none" : "loading"}
+                  >
+                    <h3 class="np-ad-h">
+                      <button class="np-ad-btn" type="button" aria-expanded="false" aria-controls={`v-${v.id}-d`}>
+                        <span class="np-ad-row">
+                          <span class="np-ad-g" data-glyph></span>
+                          <span class="np-nm">{v.name}</span>
+                          <span class="np-ldr" aria-hidden="true"></span>
+                          <span class="np-cond" data-cond>
+                            {v.source === "link" ? S.levels.none : "—"}
+                          </span>
+                        </span>
+                        <span class="np-ad-meta">
+                          <span data-meta>{v.source === "link" ? N.metaLink : N.metaWait}</span>
+                          <span class="np-tog" aria-hidden="true" data-open={N.open} data-close={N.close}></span>
+                        </span>
+                      </button>
+                    </h3>
+                    <p class="np-ad-link">
+                      <a href={v.page} rel="noopener" target="_blank">
+                        {v.note === "noPage" ? S.notice : S.official} · {host(v.page)} ↗
+                      </a>
+                    </p>
+                    <div class="np-drawer" id={`v-${v.id}-d`} role="region" aria-label={v.name}>
+                      <div class="np-drawer-in">
+                        <div class="np-dt">
+                          <div data-detail></div>
+                          {v.note && (
+                            <p class="np-dt-note">
+                              <b>{N.dtNote}</b>
+                              {S.notes[v.note]}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                )),
+              ];
+            })}
+          </div>
+        </section>
+
+        <section class="np-method" aria-labelledby="np-method">
+          <h2 id="np-method">{N.method}</h2>
+          <ul>
+            {S.method.map((m) => (
+              <li>{m}</li>
+            ))}
+          </ul>
+        </section>
+
+        <footer class="np-colophon">
+          <span>{N.colophon}</span>
+          <span class="np-pg">{N.page}</span>
+          <span>
+            <span class="np-sign">{N.sign}</span> {N.signed}
+          </span>
+        </footer>
+      </article>
+    </div>
+    <p class="sr-only" aria-live="polite" data-live></p>
+    <div class="np-case" hidden>
+      <span class="np-case-text">{typeCase.text}</span>
+      <b class="np-case-bold">{typeCase.bold}</b>
+      <b class="np-case-display">{typeCase.display}</b>
+    </div>
   </main>
 </Base>
 
