@@ -31,7 +31,7 @@ export type VendorStatus = {
 
 /**
  * `statuspage`: Atlassian Statuspage's /api/v2/summary.json (incident.io pages serve the same shape).
- * `google`: Google Cloud's incidents.json, filtered to the Gemini products.
+ * `google`: Google Cloud's incidents.json, filtered to one product (Vertex Gemini API).
  * `flashduty`: a Flashduty status page, read from the data inlined in its HTML.
  * `link`: no status page a program can read; the page shows a grey light and the link.
  */
@@ -46,7 +46,7 @@ export type Vendor = {
   /** What the program reads; defaults to `page`. */
   feed?: string;
   /** Why a `link` vendor has no light, or what a partial source covers (a key in the page's messages). */
-  note?: "noPage" | "blocked" | "vertexOnly";
+  note?: "noPage" | "blocked" | "browserOnly" | "vertexOnly";
 };
 
 export const VENDORS: Vendor[] = [
@@ -58,14 +58,25 @@ export const VENDORS: Vendor[] = [
     source: "statuspage",
     page: "https://status.claude.com",
   },
+  // Two lines for Gemini, because Google publishes two status pages. Google Cloud's covers Gemini on
+  // Vertex AI and has a public JSON feed. AI Studio's covers the Gemini API (AI Studio keys) but is
+  // drawn in the browser from an internal Google RPC, which this page does not call.
   {
     id: "gemini",
-    name: "Google Gemini",
+    name: "Google Gemini (Vertex AI)",
     region: "intl",
     source: "google",
-    page: "https://aistudio.google.com/status",
+    page: "https://status.cloud.google.com/products/Z0FZJAMvEB4j3NbCJs6B/history",
     feed: "https://status.cloud.google.com/incidents.json",
     note: "vertexOnly",
+  },
+  {
+    id: "aistudio",
+    name: "Google AI Studio / Gemini API",
+    region: "intl",
+    source: "link",
+    page: "https://aistudio.google.com/status",
+    note: "browserOnly",
   },
   { id: "mistral", name: "Mistral AI", region: "intl", source: "statuspage", page: "https://status.mistral.ai" },
   { id: "cohere", name: "Cohere", region: "intl", source: "statuspage", page: "https://status.cohere.com" },
@@ -192,7 +203,7 @@ export type GcIncident = {
   status_impact?: string;
   uri: string;
   most_recent_update?: { text?: string; status?: string };
-  affected_products?: { title: string }[];
+  affected_products?: { title: string; id?: string }[];
 };
 
 const GC_IMPACT: Record<string, Level> = {
@@ -200,10 +211,12 @@ const GC_IMPACT: Record<string, Level> = {
   SERVICE_DISRUPTION: "partial",
   SERVICE_OUTAGE: "major",
 };
-const GEMINI = /gemini/i;
+/** Google Cloud's product id for Vertex Gemini API (now titled "Gemini on Agent Platform"): matched by
+ * id, since the title changes and other products (Gemini Enterprise, Code Assist) also say Gemini. */
+export const VERTEX_GEMINI = "Z0FZJAMvEB4j3NbCJs6B";
 
 export function fromGoogle(id: string, list: GcIncident[]): VendorStatus {
-  const open = list.filter((i) => !i.end && (i.affected_products ?? []).some((p) => GEMINI.test(p.title)));
+  const open = list.filter((i) => !i.end && (i.affected_products ?? []).some((p) => p.id === VERTEX_GEMINI));
   const incidents = open.map<Incident>((i) => ({
     title: i.external_desc,
     level: GC_IMPACT[i.status_impact ?? ""] ?? "degraded",

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { fromFlashduty, fromGoogle, fromStatuspage, VENDORS, worst } from "./ai-status.ts";
+import { fromFlashduty, fromGoogle, fromStatuspage, VENDORS, VERTEX_GEMINI, worst } from "./ai-status.ts";
 
 test("the worst level wins, and nothing at all is fine", () => {
   assert.equal(worst([]), "ok");
@@ -62,11 +62,11 @@ test("Statuspage: a major outage on one component turns the light red", () => {
   assert.equal(s.level, "major");
 });
 
-test("Google: only open incidents that touch a Gemini product", () => {
+test("Google: only open incidents that touch Vertex Gemini API, matched by product id", () => {
   const base = {
     modified: "2026-10-27T02:00:00Z",
     uri: "incidents/abc",
-    affected_products: [{ title: "Vertex Gemini API" }],
+    affected_products: [{ title: "Gemini on Agent Platform", id: VERTEX_GEMINI }],
   };
   const s = fromGoogle("gemini", [
     { ...base, id: "1", begin: "2026-10-27T01:00:00Z", external_desc: "Errors", status_impact: "SERVICE_DISRUPTION" },
@@ -76,7 +76,14 @@ test("Google: only open incidents that touch a Gemini product", () => {
       id: "3",
       begin: "2026-10-27T01:00:00Z",
       external_desc: "BigQuery",
-      affected_products: [{ title: "BigQuery" }],
+      affected_products: [{ title: "BigQuery", id: "x" }],
+    },
+    {
+      ...base,
+      id: "4",
+      begin: "2026-10-27T01:00:00Z",
+      external_desc: "Gemini Enterprise",
+      affected_products: [{ title: "Gemini Enterprise", id: "cxUh24jPxEXgyRlaVhuk" }],
     },
   ]);
   assert.equal(s.level, "partial");

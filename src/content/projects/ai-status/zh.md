@@ -17,7 +17,8 @@ glyph: status-board
 | --- | --- |
 | OpenAI、Claude、Mistral、Cohere、Kimi、MiniMax | 状态页的标准接口（`/api/v2/summary.json`） |
 | DeepSeek | 状态页没有接口，从页面里带的数据读出组件和进行中的事件 |
-| Gemini | Google Cloud 的故障列表里涉及 Gemini 的条目（Vertex AI） |
+| Gemini（Vertex AI） | Google Cloud 故障列表里 Vertex Gemini API 的条目 |
+| Google AI Studio / Gemini API | 状态页只能在浏览器里看（数据走 Google 内部接口），只放链接 |
 | xAI | 状态页拒绝程序读取，只放链接 |
 | 智谱、阿里云百炼、火山方舟 | 没有公开的模型状态页，只放公告入口 |
 

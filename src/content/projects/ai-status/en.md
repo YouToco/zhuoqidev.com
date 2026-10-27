@@ -17,7 +17,8 @@ Only what the vendors publish themselves; it doesn't measure them:
 | --- | --- |
 | OpenAI, Claude, Mistral, Cohere, Kimi, MiniMax | The status page's standard API (`/api/v2/summary.json`) |
 | DeepSeek | Its status page has no API, so components and open events are read from the data the page carries |
-| Gemini | Google Cloud's incident list, keeping entries that touch Gemini (Vertex AI) |
+| Gemini (Vertex AI) | Google Cloud's incident list, keeping the Vertex Gemini API entries |
+| Google AI Studio / Gemini API | Its status page only renders in a browser (the data comes from an internal Google API), so it is a link only |
 | xAI | Its status page refuses automated reads, so it is a link only |
 | Zhipu, Alibaba Model Studio, Volcengine Ark | No public status page for their models, so a link to their notices only |
 
