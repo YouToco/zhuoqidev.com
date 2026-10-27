@@ -1,0 +1,95 @@
+---
+import { type Lang, langParams, t } from "../../../i18n";
+import Base from "../../../layouts/Base.astro";
+import { LEVELS, VENDORS } from "../../../../server/ai-status";
+
+export const getStaticPaths = langParams;
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const L = t[lang];
+const S = L.st;
+const regions = ["intl", "cn"] as const;
+---
+
+<Base lang={lang} title={L.aiStatus} description={S.description} path="/status/" bodyClass="dotgrid">
+  <main class="shelf ai-status" id="main" data-st data-lang={lang} data-msg={JSON.stringify(S)}>
+    <header class="shelf-head">
+      <div class="crumb">
+        ~/status/ <b>curl status.json</b>
+      </div>
+      <h1>✦ {L.aiStatus}</h1>
+      <p>{S.intro}</p>
+    </header>
+
+    <div class="st-bar">
+      <p class="st-summary" role="status" aria-live="polite" data-summary>
+        {S.loading}
+      </p>
+      <p class="st-updated" data-updated></p>
+      <button class="chip-btn" type="button" data-refresh>
+        {S.refresh}
+      </button>
+    </div>
+    <noscript>
+      <p class="st-nojs card">{S.noJs}</p>
+    </noscript>
+
+    {regions.map((r) => (
+      <section class="st-region" aria-labelledby={`st-${r}`}>
+        <h2 class="vis-h" id={`st-${r}`}>
+          {S[r]}
+        </h2>
+        <ul class="st-list">
+          {VENDORS.filter((v) => v.region === r).map((v) => (
+            <li class="st-vendor card" data-vendor={v.id} data-level={v.source === "link" ? "none" : "loading"}>
+              <div class="st-row">
+                <span class="st-dot" aria-hidden="true" />
+                <h3 class="st-name">{v.name}</h3>
+                <span class="st-level" data-level-text>
+                  {v.source === "link" ? S.levels.none : ""}
+                </span>
+                <a class="st-link" href={v.page} rel="noopener" target="_blank">
+                  {v.note === "noPage" ? S.notice : S.official} ↗
+                </a>
+              </div>
+              {v.note && <p class="st-note">{S.notes[v.note]}</p>}
+              <p class="st-headline" data-headline hidden />
+              {v.source !== "link" && (
+                <details class="st-more" data-more hidden>
+                  <summary>{S.components}</summary>
+                  <div class="st-body">
+                    <ul class="st-incidents" data-incidents />
+                    <ul class="st-components" data-components />
+                  </div>
+                </details>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))}
+
+    <aside class="st-method card">
+      <h2>{S.legend}</h2>
+      <ul class="st-legend">
+        {[...LEVELS, "unknown" as const, "none" as const].map((l) => (
+          <li data-level={l}>
+            <span class="st-dot" aria-hidden="true" />
+            {S.levels[l]}
+          </li>
+        ))}
+      </ul>
+      <ul>
+        {S.method.map((m) => (
+          <li>{m}</li>
+        ))}
+      </ul>
+    </aside>
+  </main>
+</Base>
+
+<script>
+  import "../../../scripts/ai-status";
+</script>
