@@ -1529,6 +1529,70 @@ html.booting .board > .pin { animation-play-state: paused; }
   .vis-stage.china { aspect-ratio: 4 / 3; }
 }
 
+/* AI vendor status (/status/): one card per vendor with a light; `data-level` on the card (and on
+   each component, incident and legend item) picks the light's color. The level word is ink, so it
+   reads in both themes whatever the light's color. */
+.ai-status {
+  --st-ok: var(--green); --st-maintenance: var(--blue); --st-degraded: #b98500; --st-partial: #d4610f;
+  --st-major: var(--seal); --st-none: var(--ink-3);
+}
+:root[data-theme="dark"] .ai-status { --st-degraded: #e2b54a; --st-partial: #f39a5f; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ai-status { --st-degraded: #e2b54a; --st-partial: #f39a5f; }
+}
+.ai-status [data-level] { --st: var(--st-none); }
+.ai-status [data-level="ok"] { --st: var(--st-ok); }
+.ai-status [data-level="maintenance"] { --st: var(--st-maintenance); }
+.ai-status [data-level="degraded"] { --st: var(--st-degraded); }
+.ai-status [data-level="partial"] { --st: var(--st-partial); }
+.ai-status [data-level="major"] { --st: var(--st-major); }
+.st-dot { flex: none; display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--st); box-shadow: 0 0 0 3px color-mix(in srgb, var(--st) 22%, transparent); }
+[data-level="unknown"] > .st-row .st-dot, .st-legend [data-level="unknown"] .st-dot { background: transparent; border: 2px dashed var(--st-none); box-shadow: none; }
+[data-level="loading"] .st-dot { animation: st-pulse 1.2s ease-in-out infinite alternate; }
+@keyframes st-pulse { to { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { [data-level="loading"] .st-dot { animation: none; } }
+.st-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: -12px 0 28px; }
+.st-summary { margin: 0; font: 600 15px/1.4 var(--f-sans); color: var(--ink); }
+.st-summary[data-level="bad"] { color: var(--seal); }
+.st-updated { margin: 0; font: 400 13px/1.4 var(--f-mono); color: var(--ink-3); }
+.st-bar .chip-btn { margin-left: auto; }
+.ai-status.loading [data-refresh] { opacity: .5; }
+.st-nojs { padding: 12px 16px; font-size: 14px; }
+.st-region { margin: 0 0 36px; }
+.st-region .vis-h { margin-bottom: 12px; }
+.st-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.st-vendor { padding: 12px 16px; margin: 0; border-left: 4px solid var(--st); }
+.st-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.st-name { margin: 0; font: 600 16px/1.3 var(--f-sans); color: var(--ink); }
+.st-level { font: 400 13px/1.3 var(--f-sans); color: var(--ink-2); }
+.st-link { margin-left: auto; font: 400 13px/1.3 var(--f-sans); color: var(--blue); }
+.st-note, .st-headline { margin: 6px 0 0 20px; font: 400 13px/1.5 var(--f-sans); color: var(--ink-3); }
+.st-headline { color: var(--ink); font-weight: 500; }
+.st-more { margin: 8px 0 0 20px; }
+.st-more summary { cursor: pointer; width: fit-content; font: 400 13px/1.5 var(--f-sans); color: var(--ink-2); }
+.st-body { padding-top: 8px; }
+.st-incidents { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.st-incidents:empty { display: none; }
+.st-incident { padding: 8px 12px; border-radius: 8px; background: var(--paper-2); }
+.st-inc-head { display: flex; align-items: baseline; gap: 8px; margin: 0; font: 500 14px/1.4 var(--f-sans); }
+.st-inc-head a { color: var(--ink); }
+.st-inc-meta { margin: 2px 0 0 18px; font: 400 12.5px/1.4 var(--f-sans); color: var(--ink-3); }
+.st-inc-text { margin: 4px 0 0 18px; font: 400 13px/1.55 var(--f-sans); color: var(--ink-2); white-space: pre-line; overflow-wrap: anywhere; }
+.st-components { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px 16px; }
+.st-components li { display: flex; align-items: center; gap: 8px; min-width: 0; font: 400 13px/1.4 var(--f-sans); color: var(--ink-2); }
+.st-components li > span:nth-child(2) { overflow-wrap: anywhere; }
+.st-components .st-dot { width: 8px; height: 8px; box-shadow: none; }
+.st-method { padding: 16px 20px; font: 400 13px/1.6 var(--f-sans); color: var(--ink-2); }
+.st-method h2 { margin: 0 0 8px; font: 600 14px/1.3 var(--f-sans); color: var(--ink-2); }
+.st-method ul { margin: 0; padding-left: 18px; }
+.st-method li + li { margin-top: 6px; }
+.st-method .st-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 0; margin: 0 0 14px; list-style: none; }
+.st-legend li { display: flex; align-items: center; gap: 6px; margin: 0 !important; }
+@media (max-width: 640px) {
+  .st-link { margin-left: 20px; flex-basis: 100%; }
+  .st-bar .chip-btn { margin-left: 0; }
+}
+
 /* Scroll-driven: a reading progress bar, a top bar that lifts off the page, blocks that rise into
    view, the goodbye laptop opening its lid, desk stars drifting slower than the page. Browsers
    without scroll timelines just show everything as it is. Written as longhands on purpose: the CSS

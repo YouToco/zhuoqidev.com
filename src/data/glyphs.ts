@@ -490,6 +490,25 @@ export const GLYPHS = {
       D("M40 74 l-3 6 M40 74 l5 4", thin),
     ],
   },
+  // The status page itself: a board of vendors, one light each, and one of them is red.
+  "status-board": {
+    label: { zh: "一块状态板，一行一盏灯，其中一盏是红的", en: "A status board, one light per row, one of them red" },
+    tile: 2,
+    sparks: [[8, 12, 1.1], [94, 90, 0.7]],
+    shapes: [
+      R(12, 10, 76, 82, paper),
+      T(50, 25, "status", 11),
+      L(20, 32, 80, 32, thin),
+      E(25, 44, 7, 7, { ...ink, small: true }),
+      L(35, 44, 78, 44),
+      E(25, 58, 7, 7, { ...ink, small: true }),
+      L(35, 58, 70, 58),
+      E(25, 72, 8, 8, { ...hatch, ...red, small: true }),
+      L(35, 72, 76, 72, red),
+      E(25, 84, 7, 7, { ...ink, small: true }),
+      L(35, 84, 64, 84),
+    ],
+  },
 } satisfies Record<string, Glyph>;
 
 export type GlyphName = keyof typeof GLYPHS;
