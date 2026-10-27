@@ -31,6 +31,14 @@ function init(root: HTMLElement) {
     const d = new Date(iso);
     return Number.isNaN(d.getTime()) ? iso : time.format(d);
   };
+  /** "2 小时 5 分钟" / "2 h 5 min" since an ISO time; empty when the time can't be read. */
+  const since = (iso: string) => {
+    const ms = Date.now() - new Date(iso).getTime();
+    if (!Number.isFinite(ms) || ms < 0) return "";
+    const m = Math.max(1, Math.round(ms / 60_000));
+    const h = Math.floor(m / 60);
+    return [h ? s("hours", { n: h }) : "", m % 60 ? s("minutes", { n: m % 60 }) : ""].filter(Boolean).join(" ");
+  };
   const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string) => {
     const e = document.createElement(tag);
     if (cls) e.className = cls;
@@ -59,6 +67,8 @@ function init(root: HTMLElement) {
         i.maintenance ? s("maintenance") : M.levels[i.level],
         M.stages[i.stage] ?? i.stage,
         s("started", { t: when(i.started) }),
+        i.maintenance || !since(i.started) ? "" : s("lasting", { d: since(i.started) }),
+        i.updated && i.updated !== i.started ? s("lastUpdate", { t: when(i.updated) }) : "",
       ]
         .filter(Boolean)
         .join(" · "),
@@ -104,6 +114,18 @@ function init(root: HTMLElement) {
     );
   };
 
+  // Vendors in trouble first, then the ones that couldn't be read, then the fine ones, then the grey
+  // link-only rows; the page's own order (data-order) breaks ties, so the list doesn't shuffle.
+  const ORDER = ["major", "partial", "degraded", "maintenance", "unknown", "loading", "ok", "none"];
+  const sortCards = () => {
+    for (const list of root.querySelectorAll<HTMLElement>(".st-list")) {
+      const cards = [...list.querySelectorAll<HTMLElement>(":scope > .st-vendor")];
+      cards.forEach((c, i) => (c.dataset.order ??= String(i)));
+      const key = (c: HTMLElement) => ORDER.indexOf(c.dataset.level ?? "ok") * 1000 + Number(c.dataset.order);
+      list.append(...cards.sort((a, b) => key(a) - key(b)));
+    }
+  };
+
   const load = async () => {
     if (busy) return;
     busy = true;
@@ -113,6 +135,7 @@ function init(root: HTMLElement) {
       if (!res.ok) throw new Error(String(res.status));
       const data = (await res.json()) as { updated: string; vendors: VendorStatus[] };
       data.vendors.forEach(paint);
+      sortCards();
       const read = data.vendors.filter((v) => v.level);
       const bad = read.filter((v) => v.level !== "ok" && v.level !== "maintenance").length;
       const unread = data.vendors.filter((v) => v.error).length;

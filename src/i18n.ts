@@ -194,7 +194,9 @@ export const t = {
       },
       notes: {
         noPage: "官方没有公开的模型状态页，故障一般发在控制台公告里",
-        blocked: "官方状态页拒绝程序读取，只能点进去看",
+        xaiApiOnly: "读状态页的 RSS，只看 api.x.ai 的条目（这个状态页也发 Cursor 和 Grok 应用的故障）",
+        bedrockRegions: "读 AWS 健康看板 6 个区域的 Bedrock RSS：美东、美西、法兰克福、爱尔兰、东京、新加坡",
+        azureFeed: "读 Azure 状态 RSS 里提到 Azure OpenAI / AI Foundry 的条目；Azure 只在出事时才发",
         vertexOnly:
           "数据来自 Google Cloud 状态页的 Vertex Gemini API 一项；用 AI Studio 的 key 调 Gemini API，看下面一行",
         browserOnly: "状态页只能在浏览器里看，没有公开的数据接口；Gemini API（AI Studio 的 key）出问题看这里",
@@ -205,13 +207,17 @@ export const t = {
       incidents: "进行中的故障与维护",
       noIncidents: "没有进行中的故障",
       started: "开始于 {t}",
+      lasting: "已持续 {d}",
+      lastUpdate: "官方最后更新 {t}",
+      hours: "{n} 小时",
+      minutes: "{n} 分钟",
       maintenance: "维护",
       originalText: "原文",
       failedAt: "这次没读到（{e}），点官方页看",
       noJs: "这一页要靠 JavaScript 取实时状态。没开的话，下面每家都有官方状态页的链接。",
       legend: "灯的意思",
       method: [
-        "数据：每家官方状态页公开的数据。OpenAI、Claude、Mistral、Cohere、Kimi、MiniMax 读状态页的标准接口；DeepSeek 的状态页没有接口，从页面里带的数据读；Gemini（Vertex AI）读 Google Cloud 故障列表里 Vertex Gemini API 的条目；AI Studio 的状态页只能在浏览器里看，只放链接。",
+        "数据：每家官方状态页公开的数据。OpenAI、Claude、Mistral、Cohere、Groq、Fireworks、Cerebras、Perplexity、Kimi、MiniMax 读状态页的标准接口；xAI、Amazon Bedrock、Azure OpenAI 读官方 RSS；DeepSeek 的状态页没有接口，从页面里带的数据读，读不到再读它的 RSS；Gemini（Vertex AI）读 Google Cloud 故障列表里 Vertex Gemini API 的条目；AI Studio 的状态页只能在浏览器里看，只放链接。",
         "频率：服务器每分钟最多读一次各家页面，大家看到的是同一份；这一页开着时每分钟自动刷新。",
         "局限：状态页只写厂商自己承认的故障，通常比用户感觉到的晚 10–30 分钟，也不覆盖某个地区、某个账号的问题。灯是绿的不等于你的请求一定成功。",
         "故障描述保留厂商原文，不做翻译，以免译错。",
@@ -458,7 +464,12 @@ export const t = {
       },
       notes: {
         noPage: "No public status page for its models; outages are usually posted as console notices",
-        blocked: "Its status page refuses automated reads; open it to check",
+        xaiApiOnly:
+          "From the status page's RSS, keeping api.x.ai items only (the page also posts Cursor and Grok app incidents)",
+        bedrockRegions:
+          "From the AWS Health Dashboard Bedrock RSS for 6 regions: N. Virginia, Oregon, Frankfurt, Ireland, Tokyo, Singapore",
+        azureFeed:
+          "From Azure's status RSS, keeping items that mention Azure OpenAI / AI Foundry; Azure only posts while something is wrong",
         vertexOnly:
           "From the Vertex Gemini API entry on Google Cloud's status page; for the Gemini API with an AI Studio key, see the next row",
         browserOnly:
@@ -470,13 +481,17 @@ export const t = {
       incidents: "Incidents and maintenance in progress",
       noIncidents: "No open incidents",
       started: "Started {t}",
+      lasting: "ongoing for {d}",
+      lastUpdate: "last official update {t}",
+      hours: "{n} h",
+      minutes: "{n} min",
       maintenance: "Maintenance",
       originalText: "Original",
       failedAt: "Couldn't read it this time ({e}); open the status page",
       noJs: "This page needs JavaScript to fetch the live status. Without it, every vendor below links to its official status page.",
       legend: "What the lights mean",
       method: [
-        "Data: what each vendor publishes on its official status page. OpenAI, Claude, Mistral, Cohere, Kimi and MiniMax are read through the status page's standard API; DeepSeek's page has no API, so it is read from the data the page carries; Gemini on Vertex AI is read from Google Cloud's incident list, keeping the Vertex Gemini API entries; AI Studio's status page only renders in a browser, so it is a link only.",
+        "Data: what each vendor publishes on its official status page. OpenAI, Claude, Mistral, Cohere, Groq, Fireworks, Cerebras, Perplexity, Kimi and MiniMax are read through the status page's standard API; xAI, Amazon Bedrock and Azure OpenAI through their official RSS; DeepSeek's page has no API, so it is read from the data the page carries, falling back to its RSS; Gemini on Vertex AI is read from Google Cloud's incident list, keeping the Vertex Gemini API entries; AI Studio's status page only renders in a browser, so it is a link only.",
         "Freshness: the server reads each vendor at most once a minute and everyone sees the same copy; while this page is open it refreshes every minute.",
         "Limits: status pages only list incidents the vendor admits to, usually 10–30 minutes after users notice, and they don't cover problems in one region or one account. A green light doesn't promise your request will succeed.",
         "Incident text is the vendor's own words, untranslated.",

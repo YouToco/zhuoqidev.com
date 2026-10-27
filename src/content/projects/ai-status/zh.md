@@ -1,6 +1,6 @@
 ---
 title: AI 厂商状态 — 一页看各家官方状态页
-description: 把 OpenAI、Claude、Gemini、Mistral、Cohere、DeepSeek、Kimi、MiniMax 等官方状态页的当前状态汇到一页：每家一盏灯，点开看组件和进行中的故障；没有状态页的厂商也列出来、写明为什么。Cloudflare Pages 函数每分钟最多读一次各家，不调用任何模型。
+description: 把 OpenAI、Claude、Gemini、xAI、Mistral、Groq、Amazon Bedrock、DeepSeek、Kimi、MiniMax 等官方状态页的当前状态汇到一页：每家一盏灯，点开看组件和进行中的故障；没有状态页的厂商也列出来、写明为什么。Cloudflare Pages 函数每分钟最多读一次各家，不调用任何模型。
 date: 2026-10-27
 glyph: status-board
 ---
@@ -15,11 +15,13 @@ glyph: status-board
 
 | 厂商 | 数据从哪来 |
 | --- | --- |
-| OpenAI、Claude、Mistral、Cohere、Kimi、MiniMax | 状态页的标准接口（`/api/v2/summary.json`） |
-| DeepSeek | 状态页没有接口，从页面里带的数据读出组件和进行中的事件 |
+| OpenAI、Claude、Mistral、Cohere、Groq、Fireworks、Cerebras、Perplexity、Kimi、MiniMax | 状态页的标准接口（`/api/v2/summary.json`） |
+| xAI | 状态页的 RSS，只看 api.x.ai 的条目（同一个页面也发 Cursor、Grok 应用的故障） |
+| Amazon Bedrock | AWS 健康看板 6 个区域的 RSS |
+| Azure OpenAI | Azure 状态 RSS 里提到 Azure OpenAI / AI Foundry 的条目 |
+| DeepSeek | 状态页没有接口，从页面里带的数据读出组件和进行中的事件，读不到再读它的 RSS |
 | Gemini（Vertex AI） | Google Cloud 故障列表里 Vertex Gemini API 的条目 |
 | Google AI Studio / Gemini API | 状态页只能在浏览器里看（数据走 Google 内部接口），只放链接 |
-| xAI | 状态页拒绝程序读取，只放链接 |
 | 智谱、阿里云百炼、火山方舟 | 没有公开的模型状态页，只放公告入口 |
 
 每家的灯取它所有组件和进行中故障里最坏的那一档：正常、维护中、性能下降、部分故障、重大故障。读不到的显示「读取失败」，不会默认成绿灯。

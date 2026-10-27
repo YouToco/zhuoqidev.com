@@ -1,6 +1,6 @@
 ---
 title: AI vendor status — every official status page on one page
-description: What the official status pages of OpenAI, Claude, Gemini, Mistral, Cohere, DeepSeek, Kimi, MiniMax and others say right now, on one page — one light per vendor, open it for components and incidents in progress; vendors without a status page are listed too, with the reason. A Cloudflare Pages Function reads each vendor at most once a minute and never calls a model.
+description: What the official status pages of OpenAI, Claude, Gemini, xAI, Mistral, Groq, Amazon Bedrock, DeepSeek, Kimi, MiniMax and others say right now, on one page — one light per vendor, open it for components and incidents in progress; vendors without a status page are listed too, with the reason. A Cloudflare Pages Function reads each vendor at most once a minute and never calls a model.
 date: 2026-10-27
 glyph: status-board
 ---
@@ -15,11 +15,13 @@ Only what the vendors publish themselves; it doesn't measure them:
 
 | Vendor | Where the data comes from |
 | --- | --- |
-| OpenAI, Claude, Mistral, Cohere, Kimi, MiniMax | The status page's standard API (`/api/v2/summary.json`) |
-| DeepSeek | Its status page has no API, so components and open events are read from the data the page carries |
+| OpenAI, Claude, Mistral, Cohere, Groq, Fireworks, Cerebras, Perplexity, Kimi, MiniMax | The status page's standard API (`/api/v2/summary.json`) |
+| xAI | The status page's RSS, keeping api.x.ai items only (the same page posts Cursor and Grok app incidents) |
+| Amazon Bedrock | AWS Health Dashboard RSS for 6 regions |
+| Azure OpenAI | Azure's status RSS, keeping items that mention Azure OpenAI / AI Foundry |
+| DeepSeek | Its status page has no API, so components and open events are read from the data the page carries, falling back to its RSS |
 | Gemini (Vertex AI) | Google Cloud's incident list, keeping the Vertex Gemini API entries |
 | Google AI Studio / Gemini API | Its status page only renders in a browser (the data comes from an internal Google API), so it is a link only |
-| xAI | Its status page refuses automated reads, so it is a link only |
 | Zhipu, Alibaba Model Studio, Volcengine Ark | No public status page for their models, so a link to their notices only |
 
 Each vendor's light is the worst level among its components and open incidents: operational, maintenance, degraded, partial outage, major outage. A vendor that can't be read shows "Couldn't read", never a green light by default.
