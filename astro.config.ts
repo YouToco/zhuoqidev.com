@@ -72,6 +72,16 @@ export default defineConfig({
       subsets: ["latin"],
       fallbacks: ["ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "PingFang SC", "Microsoft YaHei", "monospace"],
     },
+    // Latin text face of the /status/ front page only (that page loads it): English running text,
+    // headlines and every vendor quote, which Noto Serif SC would set with full-width quotes.
+    {
+      provider: fontProviders.google(),
+      name: "Newsreader",
+      cssVariable: "--font-news",
+      weights: [400, 700, 800],
+      subsets: ["latin"],
+      fallbacks: ["ZQ Serif Text", "Songti SC", "STSong", "Noto Serif CJK SC", "serif"],
+    },
     // Noto Serif SC, Long Cang and Caveat are subset per page after the build (scripts/subset-fonts.mjs).
     // Caveat moved there because the full Latin file (73 KB) loaded on every page for a few words.
   ],

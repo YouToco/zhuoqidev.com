@@ -105,9 +105,12 @@
   exposes declared packages: import nothing that is not in `package.json`.
 - Fonts: Inter and JetBrains Mono (Latin) come from Astro's font API and
   are inlined by `src/components/Fonts.astro`. The display faces are not:
-  `"ZQ Serif"` (Noto Serif SC, weights 700/900), `"ZQ Hand"` (Long Cang) and
+  `"ZQ Serif"` (Noto Serif SC, weights 700/900; `"ZQ Serif Text"` is its 400
+  weight, used only by `/status/`), `"ZQ Hand"` (Long Cang) and
   `"ZQ Caveat"` (Caveat, weights 500/700) are cut per page to the characters
-  that page draws in them and inlined as `<style data-zq-fonts>`. Caveat moved
+  that page draws in them and inlined as `<style data-zq-fonts>`. Text a page
+  only sets at run time needs its characters drawn somewhere at build time:
+  `/status/` keeps them in a hidden type case (`.np-case`). Caveat moved
   there because its full Latin file (73 KB) loaded on every page for a few words
   and held back first paint on mobile; it goes first in the hand stacks, so Latin
   letters draw in Caveat and CJK ones fall through to Long Cang. `"ZQ Comic"`

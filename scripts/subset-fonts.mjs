@@ -34,6 +34,18 @@ const FACES = {
     weight: (w) => (w >= 800 ? 900 : 700),
     variable: true,
   },
+  // Running text in the serif, for the one page set as a newspaper (/status/); a family of its own
+  // so the pages that ask the serif for 400–600 keep drawing the 700 instance as before.
+  "ZQ Serif Text": {
+    slug: "serif-text",
+    source: {
+      file: "NotoSerifSC-VF.ttf",
+      url: `${GOOGLE_FONTS}/8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5/ofl/notoserifsc/NotoSerifSC%5Bwght%5D.ttf`,
+      sha256: "050080d9255a86808f2945bffac582b31ef32bc36411ce29563b4961670c66f9",
+    },
+    weight: () => 400,
+    variable: true,
+  },
   "ZQ Hand": {
     slug: "hand",
     source: {
