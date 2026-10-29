@@ -509,6 +509,36 @@ export const GLYPHS = {
       L(35, 84, 64, 84),
     ],
   },
+  "tensor-dial": {
+    // A speed dial over a graphics card. The arc runs from zero on the left to full on the right,
+    // with the half mark at its top: the needle has swung past it to full, and the ×2 says what the
+    // unlock does to the tensor issue rate. The card below (board, fan, gold edge connector)
+    // grounds it as a GPU.
+    label: { zh: "一张显卡上的转速表，指针越过顶上的「½」甩到右端满格，旁边写着 ×2", en: "A speed dial over a GPU, needle swung past the half mark at the top to full, marked ×2" },
+    tile: 3,
+    sparks: [[90, 14, 1.1], [10, 54, 0.8]],
+    shapes: [
+      D("M12 50 A 38 38 0 0 1 88 50", thin),
+      L(50, 12, 50, 18, thin),
+      T(50, 9, "½", 11),
+      L(88, 50, 82, 50, thin),
+      T(92, 40, "1×", 12, red),
+      E(50, 50, 6, 6, ink),
+      L(50, 50, 82, 44, red),
+      T(30, 40, "×2", 14, red),
+      R(10, 58, 80, 34, paper),
+      E(34, 75, 26, 26, paper),
+      E(34, 75, 7, 7, ink),
+      L(34, 62, 34, 68, thin),
+      L(34, 82, 34, 88, thin),
+      L(21, 75, 27, 75, thin),
+      L(41, 75, 47, 75, thin),
+      R(66, 66, 18, 18, { ...ink }),
+      L(68, 92, 68, 96, { ...red, small: true }),
+      L(74, 92, 74, 96, { ...red, small: true }),
+      L(80, 92, 80, 96, { ...red, small: true }),
+    ],
+  },
 } satisfies Record<string, Glyph>;
 
 export type GlyphName = keyof typeof GLYPHS;
