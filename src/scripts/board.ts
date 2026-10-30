@@ -1,10 +1,11 @@
-// The desk: cards can be dragged on wide screens and remember where they were put.
-// Without JS (or on narrow screens) the same cards render as a plain column.
+// The desk: cards can be dragged on wide screens and remember where they were put, as an offset
+// (left / top on a relatively positioned card) from their spot in the column, so a card that grows
+// still pushes the ones under it down. Without JS (or on narrow screens) the cards stay in place.
 import { store } from "./store";
 
 type Spot = { x: number; y: number };
-// v2: the desk was rearranged around the portrait (2026-10-07); older saved spots no longer fit.
-const KEY = "zq-board-v2";
+// v3: spots became offsets when the desk turned into columns (2026-10-30); v2 held absolute spots.
+const KEY = "zq-board-v3";
 const board = document.getElementById("board");
 
 if (board) {
@@ -12,6 +13,7 @@ if (board) {
   const pins = [...board.querySelectorAll<HTMLElement>(".pin[data-drag]")];
   let z = 10;
 
+  store.del("zq-board-v2");
   const saved = store.get<Record<string, Spot>>(KEY) ?? {};
   if (wide()) {
     for (const p of pins) {
@@ -28,8 +30,11 @@ if (board) {
       if (!wide() || e.button !== 0 || (e.target as Element).closest("a, button")) return;
       const startX = e.clientX;
       const startY = e.clientY;
-      const ox = p.offsetLeft;
-      const oy = p.offsetTop;
+      const ox = parseFloat(p.style.left) || 0;
+      const oy = parseFloat(p.style.top) || 0;
+      // Where the card sits in its column; the offset keeps it inside the desk.
+      const homeX = p.offsetLeft - ox;
+      const homeY = p.offsetTop - oy;
       let moved = false;
       // Lean into the drag: the faster the card moves sideways, the more it tilts (CSS --tilt).
       let lastX = e.clientX;
@@ -48,9 +53,10 @@ if (board) {
         lastX = ev.clientX;
         lastT = ev.timeStamp;
         p.style.setProperty("--tilt", tilt.toFixed(2));
-        const maxX = board.clientWidth - p.offsetWidth;
-        p.style.left = `${Math.max(0, Math.min(maxX, ox + dx))}px`;
-        p.style.top = `${Math.max(0, oy + dy)}px`;
+        const x = Math.max(0, Math.min(board.clientWidth - p.offsetWidth, homeX + ox + dx));
+        const y = Math.max(0, Math.min(board.clientHeight - p.offsetHeight, homeY + oy + dy));
+        p.style.left = `${x - homeX}px`;
+        p.style.top = `${y - homeY}px`;
       };
       const up = () => {
         p.removeEventListener("pointermove", move);
@@ -58,7 +64,7 @@ if (board) {
         p.style.removeProperty("--tilt");
         if (moved) {
           const all = store.get<Record<string, Spot>>(KEY) ?? {};
-          all[p.id] = { x: p.offsetLeft, y: p.offsetTop };
+          all[p.id] = { x: parseFloat(p.style.left) || 0, y: parseFloat(p.style.top) || 0 };
           store.set(KEY, all);
         }
       };

@@ -1,23 +1,24 @@
 import type { Lang } from "../i18n";
 
-/** Where each card sits on the desk (wide screens). Narrow screens stack them in source order. */
+/** How each card sits on the desk (wide screens): its tilt, width and nudge inside its column, and
+ *  `--d`, when it lands. The columns themselves are in index.astro; narrow screens stack the cards. */
 export const layout: Record<string, string> = {
-  hero: "left:2.5%;top:28px;width:620px;z-index:2",
-  portrait: "left:calc(74% + 41px);top:52px;width:150px;transform:rotate(4deg);z-index:5",
-  doodle: "left:41%;top:146px;z-index:3",
-  sticky: "left:74%;top:262px;width:232px;transform:rotate(3deg);z-index:6",
-  term: "left:2.5%;top:222px;width:340px;z-index:5",
-  feature: "left:38.5%;top:216px;width:330px;z-index:7",
-  "series-0": "left:73%;top:520px;width:250px;z-index:4",
-  robot: "left:44%;top:1222px;z-index:8",
-  "note-0": "left:3%;top:586px;width:310px;transform:rotate(-2deg);z-index:4",
-  "note-1": "left:38.5%;top:660px;width:290px;transform:rotate(1.5deg);z-index:4",
-  "series-1": "left:73%;top:900px;width:250px;transform:rotate(-1deg);z-index:4",
-  projects: "left:3%;top:822px;width:320px;z-index:4",
-  "note-2": "left:38.5%;top:890px;width:300px;transform:rotate(-1deg);z-index:4",
-  stamps: "left:73%;top:1150px;width:250px;z-index:4",
-  coffee: "left:62%;top:1080px;z-index:8",
-  icons: "left:3%;top:1112px;z-index:3",
+  hero: "",
+  portrait: "width:150px;margin:6px auto 0;transform:rotate(4deg);--d:.04s",
+  sticky: "width:232px;margin-left:6px;transform:rotate(3deg);--d:.08s",
+  "series-0": "--d:.2s",
+  "series-1": "transform:rotate(-1deg);--d:.28s",
+  stamps: "--d:.36s",
+  term: "--d:.08s",
+  projects: "width:94%;margin-left:3%;--d:.24s",
+  coffee: "margin-left:62%;--d:.4s",
+  doodle: "margin:0 0 -16px calc(50% - 126px);--d:.12s",
+  feature: "--d:.12s",
+  "note-0": "width:92%;margin-left:1%;transform:rotate(-1.5deg);--d:.2s",
+  "note-1": "width:90%;margin-left:9%;transform:rotate(1.2deg);--d:.28s",
+  "note-2": "width:92%;margin-left:3%;transform:rotate(-.8deg);--d:.36s",
+  robot: "align-self:flex-end;margin-right:8%;--d:.44s",
+  icons: "--d:.44s",
 };
 
 type Note = { slug: string; label: string; blurb: string };
