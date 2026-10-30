@@ -14,6 +14,8 @@ tags:
   - llama.cpp
   - 内存带宽
   - 实测
+series: 本地 AI 硬件实测
+seriesOrder: 1
 categories:
   - 深度调研
 ---
