@@ -1,5 +1,6 @@
 import { other } from "../i18n";
 import { type ChartSpec, chartMarkdown } from "./markdown/chart";
+import { type StepsSpec, stepsMarkdown } from "./markdown/steps";
 import { type OpenerSpec, openerMarkdown } from "./markdown/opener";
 import { imageUrl, langOf, plainMd, postImage, postUrl, type Post, slugOf, ymd } from "./content";
 import { SITE_URL, site } from "../site";
@@ -34,6 +35,10 @@ export async function postMarkdown(post: Post) {
   // Charts are JSON in the source; an agent reads them better as tables.
   body = body.replace(/^```chart\n([\s\S]*?)\n```$/gm, (_, json: string) =>
     chartMarkdown(JSON.parse(json) as ChartSpec, lang),
+  );
+  // A walk-through is one stage at a time on the page; an agent gets the stages as a numbered list.
+  body = body.replace(/^```steps\n([\s\S]*?)\n```$/gm, (_, json: string) =>
+    stepsMarkdown(JSON.parse(json) as StepsSpec, lang),
   );
   // An opening scene is an animation on the page; an agent gets its headline and readouts.
   body = body.replace(/^```opener\n([\s\S]*?)\n```$/gm, (_, json: string) =>

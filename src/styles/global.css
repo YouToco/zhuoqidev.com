@@ -545,6 +545,47 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 .ct-in:nth-of-type(2):focus-visible ~ .ct > label:nth-child(2),
 .ct-in:nth-of-type(3):focus-visible ~ .ct > label:nth-child(3),
 .ct-in:nth-of-type(4):focus-visible ~ .ct > label:nth-child(4) { outline: 2px solid var(--blue); outline-offset: 1px; }
+/* walk-throughs (```steps, src/lib/markdown/steps.ts): one stage at a time behind radio buttons, no script;
+   without CSS every stage shows in order. Up to 8 stages (MAX_STEPS). */
+.chart-steps .st-in { position: absolute; opacity: 0; pointer-events: none; }
+.st-dots { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 14px; }
+.st-dots label { display: grid; place-items: center; width: 28px; height: 28px; border: 1.5px solid var(--ink-3); border-radius: 50%; font: 600 12.5px/1 var(--f-mono); color: var(--ink-2); cursor: pointer; }
+.st-dots label:hover { color: var(--ink); border-color: var(--ink); }
+.st-panel { display: none; }
+.st-of { margin: 0 0 4px; font: 500 12px/1.4 var(--f-mono); color: var(--ink-3); letter-spacing: .04em; }
+.st-t { margin: 0 0 8px; font: 600 17px/1.4 var(--f-sans); color: var(--ink); }
+.st-x { margin: 0; font: 400 15px/1.75 var(--f-sans); color: var(--ink-2); }
+.st-x strong { color: var(--ink); }
+.st-panel .chart { margin: 14px 0 0; padding: 0; border: 0; }
+.st-nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 16px; }
+.st-nav label { font: 500 13px/1 var(--f-sans); color: var(--ink-2); padding: 9px 14px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+.st-nav label:hover { color: var(--ink); background: var(--paper-2); }
+.st-nav .st-next { color: var(--paper); background: var(--ink); border-color: var(--ink); }
+.st-nav .st-next:hover { color: var(--paper); background: var(--ink-2); }
+.st-in:nth-of-type(1):checked ~ .st-panels > .st-panel:nth-child(1),
+.st-in:nth-of-type(2):checked ~ .st-panels > .st-panel:nth-child(2),
+.st-in:nth-of-type(3):checked ~ .st-panels > .st-panel:nth-child(3),
+.st-in:nth-of-type(4):checked ~ .st-panels > .st-panel:nth-child(4),
+.st-in:nth-of-type(5):checked ~ .st-panels > .st-panel:nth-child(5),
+.st-in:nth-of-type(6):checked ~ .st-panels > .st-panel:nth-child(6),
+.st-in:nth-of-type(7):checked ~ .st-panels > .st-panel:nth-child(7),
+.st-in:nth-of-type(8):checked ~ .st-panels > .st-panel:nth-child(8) { display: block; }
+.st-in:nth-of-type(1):checked ~ .st-dots > label:nth-child(1),
+.st-in:nth-of-type(2):checked ~ .st-dots > label:nth-child(2),
+.st-in:nth-of-type(3):checked ~ .st-dots > label:nth-child(3),
+.st-in:nth-of-type(4):checked ~ .st-dots > label:nth-child(4),
+.st-in:nth-of-type(5):checked ~ .st-dots > label:nth-child(5),
+.st-in:nth-of-type(6):checked ~ .st-dots > label:nth-child(6),
+.st-in:nth-of-type(7):checked ~ .st-dots > label:nth-child(7),
+.st-in:nth-of-type(8):checked ~ .st-dots > label:nth-child(8) { color: var(--paper); background: var(--seal); border-color: var(--seal); }
+.st-in:nth-of-type(1):focus-visible ~ .st-dots > label:nth-child(1),
+.st-in:nth-of-type(2):focus-visible ~ .st-dots > label:nth-child(2),
+.st-in:nth-of-type(3):focus-visible ~ .st-dots > label:nth-child(3),
+.st-in:nth-of-type(4):focus-visible ~ .st-dots > label:nth-child(4),
+.st-in:nth-of-type(5):focus-visible ~ .st-dots > label:nth-child(5),
+.st-in:nth-of-type(6):focus-visible ~ .st-dots > label:nth-child(6),
+.st-in:nth-of-type(7):focus-visible ~ .st-dots > label:nth-child(7),
+.st-in:nth-of-type(8):focus-visible ~ .st-dots > label:nth-child(8) { outline: 2px solid var(--blue); outline-offset: 2px; }
 /* lines: an SVG stretched over the plot (strokes keep their width), labels and ticks are HTML */
 .cl { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 8px; }
 .cl-ylab { grid-column: 1 / -1; margin-bottom: 8px; font: 400 12px/1.4 var(--f-sans); color: var(--ink-3); }
@@ -563,6 +604,30 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 .cl-mark b { position: absolute; left: 14px; bottom: 8px; padding: 1px 5px; border-radius: 4px; font: 600 12px/1.35 var(--f-sans); color: var(--ink); background: var(--card); white-space: nowrap; }
 .cl-mark.left b { left: auto; right: 14px; }
 @container (max-width: 520px) { .cl-mark b, .cl-mark.left b { left: 50%; right: auto; bottom: 12px; transform: translateX(-50%); } }
+/* number cards: the few numbers a section is about, each as one big value */
+.cst-grid { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 12px; }
+@container (max-width: 480px) { .cst-grid { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); } }
+.cst { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper-2); }
+.cst-l { display: inline-flex; align-items: center; gap: 6px; font: 400 13px/1.4 var(--f-sans); color: var(--ink-2); }
+.cst-l .sw { flex: none; width: 10px; height: 10px; border-radius: 2px; background: var(--cc); }
+.cst-v { font: 600 26px/1.15 var(--f-sans); color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.cst-v small { font-size: 13px; font-weight: 500; color: var(--ink-2); letter-spacing: 0; }
+.cst-grid.n4 .cst-v { font-size: 22px; }
+.cst-n { font: 400 12.5px/1.45 var(--f-sans); color: var(--ink-3); }
+/* dumbbells and meters: label, a track, then the numbers in words ("25.4 → 41.9 +65%") */
+.cd { display: grid; grid-template-columns: minmax(4.5em, max-content) minmax(0, 1fr) max-content; gap: 10px 12px; align-items: center; }
+.cd-val { font: 500 12.5px/1.35 var(--f-mono); color: var(--ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.cd-val b { margin-left: 4px; color: var(--seal); font-weight: 600; }
+.cd-track { position: relative; height: 22px; }
+.cd-track::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px dashed var(--line); }
+.cd-seg { position: absolute; top: calc(50% - 2px); height: 4px; left: calc(var(--a) * (100% - 14px) + 7px); width: calc((var(--b) - var(--a)) * (100% - 14px)); background: var(--ink-3); border-radius: 2px; opacity: .45; }
+.cd-dot { position: absolute; top: calc(50% - 7px); left: calc(var(--p) * (100% - 14px)); width: 14px; height: 14px; border-radius: 50%; background: var(--cc); box-shadow: 0 0 0 2px var(--card); }
+.cm-track { position: relative; height: 14px; border-radius: 7px; background: var(--paper-2); box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; }
+.cm-fill { position: absolute; inset: 0 auto 0 0; width: calc(var(--v) * 100%); background: var(--cc); border-radius: 7px; }
+@container (max-width: 440px) {
+  .cd { grid-template-columns: minmax(4em, max-content) minmax(0, 1fr); }
+  .cd-val { grid-column: 2; margin-top: -8px; }
+}
 @media (max-width: 640px) {
   .chart { padding: 14px 12px 12px; }
   .cl-plot { aspect-ratio: 5 / 4; }
@@ -593,7 +658,7 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 .figure figcaption, .demo figcaption { margin-top: 10px; text-align: center; font: 400 13px/1.6 var(--f-sans); color: var(--ink-3); }
 .figure figcaption::before, .demo figcaption::before { content: "↑ "; color: var(--seal); }
 .demo { margin: 1.6em 0; }
-.demo iframe { display: block; box-sizing: content-box; width: calc(100% - 2px); border: 1px solid var(--line); border-radius: 12px; background: #faf8f5; }
+.demo iframe { display: block; box-sizing: content-box; width: calc(100% - 2px); border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
 
 .footnotes { margin-top: 3em; padding-top: 1.2em; border-top: 1px dashed var(--line); font-size: 14px; color: var(--ink-2); }
 .footnotes h2 { font: 500 12px/1 var(--f-mono); letter-spacing: .12em; text-decoration: none; }

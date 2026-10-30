@@ -8,6 +8,7 @@ import { remarkAlerts } from "./src/lib/markdown/remark-alerts";
 import { remarkChart } from "./src/lib/markdown/remark-chart";
 import { remarkOpener } from "./src/lib/markdown/remark-opener";
 import { remarkComic } from "./src/lib/markdown/remark-comic";
+import { remarkSteps } from "./src/lib/markdown/remark-steps";
 import { remarkDemo } from "./src/lib/markdown/remark-demo";
 import { remarkFigure } from "./src/lib/markdown/remark-figure";
 import { legacyRedirects } from "./src/lib/redirects";
@@ -86,7 +87,7 @@ export default defineConfig({
     // Caveat moved there because the full Latin file (73 KB) loaded on every page for a few words.
   ],
   markdown: {
-    syntaxHighlight: { type: "shiki", excludeLangs: ["mermaid", "math", "chart", "comic", "opener"] },
+    syntaxHighlight: { type: "shiki", excludeLangs: ["mermaid", "math", "chart", "comic", "opener", "steps"] },
     shikiConfig: {
       theme: "github-dark-dimmed",
       wrap: false,
@@ -102,7 +103,7 @@ export default defineConfig({
       ],
     },
     processor: unified({
-      remarkPlugins: [remarkAlerts, remarkFigure, remarkDemo, remarkChart, remarkOpener, remarkComic],
+      remarkPlugins: [remarkAlerts, remarkFigure, remarkDemo, remarkChart, remarkOpener, remarkComic, remarkSteps],
       rehypePlugins: [
         // Hand-drawn versions first (`pnpm run diagrams`); rehype-mermaid draws whatever is left.
         rehypeHandDiagrams,
