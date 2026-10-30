@@ -539,6 +539,30 @@ export const GLYPHS = {
       L(80, 92, 80, 96, { ...red, small: true }),
     ],
   },
+  "plugin-box": {
+    // The two plugin articles say a plugin adds no new ability: it is a box that packs the parts an
+    // agent already had. So: an open carton with a skill page, an MCP plug and a hook sticking out,
+    // and the manifest's braces on the label.
+    label: { zh: "一个打开的纸箱，露出一页说明书、一个插头和一个钩子，箱子标签上写着 { }", en: "An open carton with a manual page, a plug and a hook sticking out, braces on its label" },
+    tile: 2,
+    sparks: [[92, 10, 1.1], [8, 26, 0.8]],
+    shapes: [
+      R(24, 16, 24, 40, paper),
+      L(29, 24, 43, 24, thin),
+      L(29, 31, 43, 31, thin),
+      L(29, 38, 39, 38, thin),
+      D("M62 44 C62 50 62 52 62 56", thin),
+      L(58, 26, 58, 17, { ...red, small: true }),
+      L(66, 26, 66, 17, { ...red, small: true }),
+      R(54, 26, 16, 18, ink),
+      D("M84 14 v20 a6 6 0 0 1 -12 0 v-3", {}),
+      P([[16, 54], [4, 42], [28, 42], [38, 54]], paper),
+      P([[84, 54], [96, 42], [72, 42], [62, 54]], paper),
+      R(16, 54, 68, 38, hatch),
+      R(36, 64, 28, 18, paper),
+      T(50, 77, "{ }", 13, red),
+    ],
+  },
 } satisfies Record<string, Glyph>;
 
 export type GlyphName = keyof typeof GLYPHS;
