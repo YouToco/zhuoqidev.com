@@ -49,7 +49,11 @@
   fences for live CSS demos. The same source is served to agents as `index.md`.
 - Numbers that compare things go in a chart, not in prose or a wall of table cells:
   a ```` ```chart ```` fence holds JSON for `bars` (with `panels` behind tabs),
-  `stack` or `line`; the types and fields are in `src/lib/markdown/chart.ts`. It is
+  `stack`, `line`, `stats` (a row of number cards for the few headline numbers),
+  `dumbbell` (before → after per row on one scale, with the change in words) or
+  `meter` (how much of a limit is used); the types and fields are in
+  `src/lib/markdown/chart.ts`. Pick by the shape of the claim: one or a few numbers →
+  `stats`, before / after → `dumbbell`, share of a limit → `meter`. It is
   drawn at build time as plain HTML (an SVG only for lines) with no script, and
   `index.md` shows it as a Markdown table. Keep prose to one or two numbers per
   paragraph, name scales in plain words ("1 billion requests a month") rather than
@@ -60,6 +64,15 @@
   reader must see it without a click, or `fold` to fold a short one; `index.md` drops the
   mark. When the first line is a comment it becomes the bar's title, so begin a long block
   with a one-line comment that says what it shows.
+- Walk-throughs: a ```` ```steps ```` fence holds JSON (`steps` of `{ title, text, chart? }`, `loop`,
+  `caption`; `src/lib/markdown/steps.ts`) for a process read one stage at a time, and for a loop,
+  which a ring diagram draws badly. 2 to 8 stages, each with an optional `chart` spec. Built from
+  radio buttons like the chart tabs, so it needs no script; `index.md` gets a numbered list.
+- Live demos (```` ```html demo ````) get the site colours as CSS variables (`--paper`, `--card`,
+  `--ink`, `--ink-2`, `--ink-3`, `--line`, `--seal`, `--blue`, `--green`, `--gold`, `--gray`,
+  copied from `global.css` into `remark-demo.ts`; keep the two in step) and follow the day / night
+  switch: the page posts its theme into each frame (`src/scripts/site.ts`). Draw with those
+  variables, not fixed colours, so a demo works in both themes.
 - Comics: a ```` ```comic ```` fence holds a script (optional `# title` first, `---` between
   panels, one `> narration` per panel, `[Name] line` bubbles, `[Name!]` highlighted, `cols=N` panels
   per row at most). It is drawn at build time as HTML panels (`src/lib/markdown/comic.ts` parses,

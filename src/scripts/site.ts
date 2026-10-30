@@ -16,6 +16,11 @@ function paintToggle() {
   toggle.title = toggle.getAttribute("aria-label")!;
   toggle.firstElementChild!.textContent = dark ? "☀" : "☾";
 }
+// Live demos (```html demo) are sandboxed frames that only see the system setting: tell them ours.
+const demos = [...document.querySelectorAll<HTMLIFrameElement>(".demo iframe")];
+const tellDemo = (f: HTMLIFrameElement) => f.contentWindow?.postMessage({ zqTheme: current() }, "*");
+for (const f of demos) f.addEventListener("load", () => tellDemo(f));
+const tellDemos = () => demos.forEach(tellDemo);
 if (toggle) {
   toggle.hidden = false;
   paintToggle();
@@ -24,8 +29,12 @@ if (toggle) {
     root.dataset.theme = next;
     store.set("zq-theme", next);
     paintToggle();
+    tellDemos();
   });
-  systemDark.addEventListener("change", paintToggle);
+  systemDark.addEventListener("change", () => {
+    paintToggle();
+    tellDemos();
+  });
 }
 
 // Inside a window on the desk, links that leave the site open in a new tab rather than in the window.

@@ -7,6 +7,9 @@
  *   bars   one value per row; `panels` gives several sets behind tabs (each with its own scale)
  *   stack  several parts per row, laid end to end
  *   line   y against a numeric x for a few series, with optional marked points
+ *   stats  a row of number cards: one big value each, for the few numbers a section is about
+ *   dumbbell  before → after per row, two dots on one scale and the change in words
+ *   meter  how much of a limit is used: a filled track per row with "value / max"
  */
 import type { Lang } from "./lang";
 
@@ -57,7 +60,31 @@ export interface LineSpec {
   marks?: { x: number; y: number; label: string; color?: Color; side?: "left" | "right" }[];
   caption?: string;
 }
-export type ChartSpec = BarsSpec | StackSpec | LineSpec;
+export interface StatsSpec {
+  type: "stats";
+  fmt?: Fmt;
+  /** `value` is formatted with `fmt` when it is a number and shown as written when it is text. */
+  items: { label: string; value: number | string; note?: string; color?: Color }[];
+  caption?: string;
+}
+export interface DumbbellSpec {
+  type: "dumbbell";
+  fmt?: Fmt;
+  /** What the two dots stand for, e.g. "解锁前" / "解锁后". */
+  from: string;
+  to: string;
+  rows: { label: string; sub?: string; from: number; to: number }[];
+  /** The right end of the scale; the left end is always 0 so the gap between dots is honest. */
+  max?: number;
+  caption?: string;
+}
+export interface MeterSpec {
+  type: "meter";
+  fmt?: Fmt;
+  rows: { label: string; sub?: string; value: number; max: number; color?: Color }[];
+  caption?: string;
+}
+export type ChartSpec = BarsSpec | StackSpec | LineSpec | StatsSpec | DumbbellSpec | MeterSpec;
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const num = (v: number, digits = 0) =>
@@ -227,6 +254,74 @@ function renderLine(spec: LineSpec, lang: Lang) {
   );
 }
 
+const statValue = (v: number | string, f: Fmt) => (typeof v === "number" ? fmtValue(v, f) : v);
+/** The big number with its unit in small type, so four cards still fit one row of a narrow column. */
+const statHtml = (v: number | string, f: Fmt) =>
+  typeof v === "number"
+    ? `${esc(f.pre ?? "")}${num(v, f.digits ?? 0)}${f.suf ? `<small>${esc(f.suf)}</small>` : ""}`
+    : esc(v);
+
+function renderStats(spec: StatsSpec) {
+  const f = spec.fmt ?? {};
+  const tiles = spec.items
+    .map(
+      (it) =>
+        `<div class="cst"><span class="cst-l"><i class="sw c-${it.color ?? "gray"}" aria-hidden="true"></i>${esc(it.label)}</span>` +
+        `<b class="cst-v">${statHtml(it.value, f)}</b>` +
+        (it.note ? `<span class="cst-n">${esc(it.note)}</span>` : "") +
+        "</div>",
+    )
+    .join("");
+  const cols = Math.min(spec.items.length, 4);
+  return `<figure class="chart chart-stats"><div class="cst-grid${cols === 4 ? " n4" : ""}" style="--n:${cols}">${tiles}</div>${caption(spec)}</figure>`;
+}
+
+/** "+65%", "−12%", or "unchanged" when the two ends are within half a percent. */
+function change(from: number, to: number, lang: Lang) {
+  if (from === 0) return "";
+  const pct = ((to - from) / Math.abs(from)) * 100;
+  if (Math.abs(pct) < 0.5) return lang === "zh" ? "不变" : "unchanged";
+  return `${pct > 0 ? "+" : "−"}${Math.round(Math.abs(pct))}%`;
+}
+
+function renderDumbbell(spec: DumbbellSpec, lang: Lang) {
+  const f = spec.fmt ?? {};
+  const max = spec.max ?? Math.max(...spec.rows.flatMap((r) => [r.from, r.to]));
+  const body = spec.rows
+    .map((r) => {
+      const lo = Math.min(r.from, r.to);
+      const hi = Math.max(r.from, r.to);
+      const delta = change(r.from, r.to, lang);
+      return (
+        `<span class="cb-label">${esc(r.label)}${r.sub ? `<small>${esc(r.sub)}</small>` : ""}</span>` +
+        `<span class="cd-track" style="--a:${share(lo, max)};--b:${share(hi, max)}" aria-hidden="true">` +
+        `<span class="cd-seg"></span><i class="cd-dot c-gray" style="--p:${share(r.from, max)}"></i>` +
+        `<i class="cd-dot c-seal" style="--p:${share(r.to, max)}"></i></span>` +
+        `<span class="cd-val">${fmtValue(r.from, f)} → ${fmtValue(r.to, f)}` +
+        (delta ? ` <b>${delta}</b>` : "") +
+        "</span>"
+      );
+    })
+    .join("");
+  return `<figure class="chart chart-dumbbell">${legend([
+    { color: "gray", label: spec.from },
+    { color: "seal", label: spec.to },
+  ])}<div class="cd">${body}</div>${caption(spec)}</figure>`;
+}
+
+function renderMeter(spec: MeterSpec) {
+  const f = spec.fmt ?? {};
+  const body = spec.rows
+    .map(
+      (r) =>
+        `<span class="cb-label">${esc(r.label)}${r.sub ? `<small>${esc(r.sub)}</small>` : ""}</span>` +
+        `<span class="cm-track" aria-hidden="true"><span class="cm-fill c-${r.color ?? "seal"}" style="--v:${share(r.value, r.max)}"></span></span>` +
+        `<span class="cd-val">${fmtValue(r.value, f)} / ${fmtValue(r.max, f)} <b>${Math.round((r.value / r.max) * 100)}%</b></span>`,
+    )
+    .join("");
+  return `<figure class="chart chart-meter"><div class="cd">${body}</div>${caption(spec)}</figure>`;
+}
+
 export function renderChart(spec: ChartSpec, id: string, lang: Lang): string {
   switch (spec.type) {
     case "bars":
@@ -235,6 +330,12 @@ export function renderChart(spec: ChartSpec, id: string, lang: Lang): string {
       return renderStack(spec);
     case "line":
       return renderLine(spec, lang);
+    case "stats":
+      return renderStats(spec);
+    case "dumbbell":
+      return renderDumbbell(spec, lang);
+    case "meter":
+      return renderMeter(spec);
   }
 }
 
@@ -266,6 +367,24 @@ export function chartMarkdown(spec: ChartSpec, lang: Lang): string {
     }
     const refs = [spec.ref, ...(spec.panels ?? []).map((p) => p.ref)].filter(Boolean) as Ref[];
     if (refs.length) out += "\n\n" + refs.map((r) => `- ${r.label}: ${fmtValue(r.value, f)}`).join("\n");
+  } else if (spec.type === "stats") {
+    const notes = spec.items.some((it) => it.note);
+    out = [
+      head(notes ? ["", "", ""] : ["", ""]),
+      ...spec.items.map((it) => row([it.label, statValue(it.value, f), ...(notes ? [it.note ?? ""] : [])])),
+    ].join("\n");
+  } else if (spec.type === "dumbbell") {
+    out = [
+      head(["", spec.from, spec.to, lang === "zh" ? "变化" : "Change"]),
+      ...spec.rows.map((r) => row([label(r), fmtValue(r.from, f), fmtValue(r.to, f), change(r.from, r.to, lang)])),
+    ].join("\n");
+  } else if (spec.type === "meter") {
+    out = [
+      head(["", lang === "zh" ? "用量" : "Used", lang === "zh" ? "上限" : "Limit", "%"]),
+      ...spec.rows.map((r) =>
+        row([label(r), fmtValue(r.value, f), fmtValue(r.max, f), `${Math.round((r.value / r.max) * 100)}%`]),
+      ),
+    ].join("\n");
   } else if (spec.type === "stack") {
     out = [
       head(["", ...spec.series.map((s) => s.label), lang === "zh" ? "合计" : "Total"]),
