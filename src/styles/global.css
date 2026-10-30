@@ -61,7 +61,7 @@
   --ink: #ece7dc; --ink-2: #bab6ac; --ink-3: #959aa8;
   --line: #31353f; --dot: #2c3039;
   --blue: #8eaaff; --blue-soft: #1f2a47; --blue-deep: #4f74ef; --seal: #f0694e;
-  --hi: #7d6416; --note: #ecd77e; --term: #0d0f13; --tile-1: #c3bae6; --tile-2: #a9c6ea; --tile-3: #e7b2a4; --tile-4: #e6cf84;
+  --hi: #7d6416; --note: #d8c46e; --term: #0d0f13; --tile-1: #c3bae6; --tile-2: #a9c6ea; --tile-3: #e7b2a4; --tile-4: #e6cf84;
   --topbar: rgba(20, 22, 27, .86); --seal-soft: #3b211b; --prose: #dcd8ce;
   --hi-strong: rgba(255, 214, 90, .26); --blue-line: rgba(142, 170, 255, .45); --code-ink: #f4957f;
   --callout-seal: #2a1915; --callout-blue: #172038; --callout-green: #14261b; --green: #5cc189; --on-blue: #14161b;
@@ -74,7 +74,7 @@
     --ink: #ece7dc; --ink-2: #bab6ac; --ink-3: #959aa8;
     --line: #31353f; --dot: #2c3039;
     --blue: #8eaaff; --blue-soft: #1f2a47; --blue-deep: #4f74ef; --seal: #f0694e;
-    --hi: #7d6416; --note: #ecd77e; --term: #0d0f13; --tile-1: #c3bae6; --tile-2: #a9c6ea; --tile-3: #e7b2a4; --tile-4: #e6cf84;
+    --hi: #7d6416; --note: #d8c46e; --term: #0d0f13; --tile-1: #c3bae6; --tile-2: #a9c6ea; --tile-3: #e7b2a4; --tile-4: #e6cf84;
     --topbar: rgba(20, 22, 27, .86); --seal-soft: #3b211b; --prose: #dcd8ce;
     --hi-strong: rgba(255, 214, 90, .26); --blue-line: rgba(142, 170, 255, .45); --code-ink: #f4957f;
     --callout-seal: #2a1915; --callout-blue: #172038; --callout-green: #14261b; --green: #5cc189; --on-blue: #14161b;
@@ -207,8 +207,24 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 .index .agent-links a { color: var(--ink-2); }
 
 .board-wrap { position: relative; overflow: hidden; }
-.board { position: relative; height: 1290px; min-width: 980px; }
-.pin { position: absolute; touch-action: none; user-select: none; transition: box-shadow .25s var(--ease), scale .55s var(--spring), rotate .7s var(--spring); }
+/* Three columns that grow with their cards, so a longer card pushes the next one down instead of
+   landing on it; the tilt and nudges per card are in src/data/board.ts. The desk stops widening at
+   1240px so a wide screen gets margins, not gaps between the columns. */
+.board {
+  position: relative; display: grid; max-width: 1240px; min-width: 980px; margin: 0 auto; padding: 30px 36px 120px;
+  grid-template-columns: minmax(280px, 340px) minmax(310px, 390px) minmax(232px, 262px);
+  grid-template-rows: auto auto 1fr; grid-template-areas: "hero hero right" "left mid right" "icons icons right";
+  justify-content: space-between; column-gap: 40px; align-items: start;
+}
+.board > .hero { grid-area: hero; }
+.board > .desk-icons { grid-area: icons; margin-top: 36px; }
+.desk-col { display: flex; flex-direction: column; gap: 30px; min-width: 0; }
+.desk-col.left { grid-area: left; margin-top: 44px; }
+.desk-col.mid { grid-area: mid; }
+.desk-col.right { grid-area: right; gap: 40px; }
+.desk-col > .folder { margin-top: 10px; }
+/* Dragged cards keep their offset from this spot in left / top (board.ts). */
+.pin { position: relative; touch-action: none; user-select: none; transition: box-shadow .25s var(--ease), scale .55s var(--spring), rotate .7s var(--spring); }
 .pin.dragging { cursor: grabbing; z-index: 30 !important; box-shadow: 0 24px 48px -18px rgba(28, 34, 48, .45); }
 .pin[data-drag] { cursor: grab; }
 .pin a { cursor: pointer; }
@@ -310,7 +326,7 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 .pin.polaroid { transition: scale .55s var(--spring), rotate .7s var(--spring), box-shadow .25s var(--ease); }
 .pin.polaroid:hover { scale: 1.04; }
 .about-portrait { position: relative; width: 170px; margin: 0 auto 34px; rotate: -3deg; text-align: center; }
-.doodle { pointer-events: none; }
+.doodle { display: block; pointer-events: none; }
 .doodle text { font-family: var(--f-hand); font-size: 22px; fill: var(--seal); }
 
 /* Frosted strip on the desk's top edge: hint, clock, tidy-up. */
@@ -324,6 +340,9 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 .board-tools .hint { font: 400 11px/1 var(--f-mono); color: var(--ink-3); }
 .board-tools .clock { padding-left: 10px; border-left: 1px dashed var(--line); font: 600 12px/1 var(--f-mono); color: var(--ink); font-variant-numeric: tabular-nums; }
 .board-tools .chip-btn { padding: 5px 11px; border-radius: 999px; font-size: 12px; }
+/* On the desk the cards get a faint solid edge; only the series folders keep the dashed outline, so the
+   eye goes to the cards' content rather than to a dozen dashed frames. */
+.board .card:not(.folder) { border: 1px solid var(--line); }
 
 /* ---------- 文章页 ---------- */
 .progress { position: fixed; top: 0; left: 0; right: 0; height: 3px; background: var(--seal); z-index: 60; transform: scaleX(0); transform-origin: 0 50%; }
@@ -913,10 +932,14 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 }
 @media (max-width: 1000px) {
   .board-wrap { overflow: visible; }
-  .board { height: auto; min-width: 0; display: flex; flex-direction: column; gap: 28px; padding: 28px 16px 40px; }
+  .board { height: auto; min-width: 0; max-width: none; display: flex; flex-direction: column; gap: 28px; padding: 28px 16px 40px; }
+  /* The columns dissolve and the cards stack in reading order. */
+  .desk-col { display: contents; }
+  #sticky { order: 1; } #term { order: 2; } #series-0 { order: 3; } #series-1 { order: 4; }
+  #note-0 { order: 5; } #note-1 { order: 6; } #note-2 { order: 7; } #projects { order: 8; } #stamps { order: 9; }
   /* Cards only drag on wide screens (board.ts); here touch-action: none would only stop a finger
      on a card from scrolling the page, and the column is almost all cards. */
-  .pin { position: relative !important; left: auto !important; top: auto !important; width: auto !important; max-width: 560px; transform: none !important; touch-action: auto; }
+  .pin { position: relative !important; left: auto !important; top: auto !important; width: auto !important; max-width: 560px; margin: 0 !important; transform: none !important; touch-action: auto; }
   .pin.sticky { transform: rotate(-1deg) !important; }
   #hero { order: -2; }
   #feature { order: -1; }
@@ -1181,13 +1204,7 @@ dialog.wechat h2 { margin: 0 0 16px; font: 400 30px/1.15 var(--f-hand-zh); color
 /* Cards land on the desk one after another (the headline stays put: it is the largest paint).
    `translate` composes with each card's own rotate. */
 @media (min-width: 1001px) {
-  .board > .pin:not(#hero) { animation: pin-in .5s var(--ease) both; }
-  .board > .pin:nth-child(2) { animation-delay: .04s; } .board > .pin:nth-child(3) { animation-delay: .08s; }
-  .board > .pin:nth-child(4) { animation-delay: .12s; } .board > .pin:nth-child(5) { animation-delay: .16s; }
-  .board > .pin:nth-child(6) { animation-delay: .2s; } .board > .pin:nth-child(7) { animation-delay: .24s; }
-  .board > .pin:nth-child(8) { animation-delay: .28s; } .board > .pin:nth-child(9) { animation-delay: .32s; }
-  .board > .pin:nth-child(10) { animation-delay: .36s; } .board > .pin:nth-child(11) { animation-delay: .4s; }
-  .board > .pin:nth-child(12) { animation-delay: .44s; } .board > .pin:nth-child(n + 13) { animation-delay: .48s; }
+  .board .pin:not(#hero) { animation: pin-in .5s var(--ease) both; animation-delay: var(--d, 0s); }
 }
 @keyframes pin-in { from { opacity: 0; translate: 0 16px; } }
 
@@ -1265,7 +1282,7 @@ html.booting .boot {
   /* the hole grows from the logo with a 70px soft edge, like ink soaking through paper */
   mask: radial-gradient(circle at var(--ox) var(--oy), transparent var(--hole), #000 calc(var(--hole) + 70px));
 }
-html.booting .board > .pin { animation-play-state: paused; }
+html.booting .board .pin { animation-play-state: paused; }
 .boot-stage { position: absolute; inset: 0; display: grid; place-items: center; }
 .boot-sig { position: relative; display: grid; justify-items: start; gap: 6px; translate: calc(var(--S) * -.55) 0; }
 .boot-hanzi { display: block; width: calc(var(--H) * 1.92); height: var(--H); overflow: visible; filter: url(#boot-brush); }
@@ -1349,6 +1366,9 @@ html.booting .board > .pin { animation-play-state: paused; }
   background: repeating-linear-gradient(180deg, rgba(255, 255, 255, .028) 0 1px, transparent 1px 3px);
 }
 .desk-stars { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+/* At night the stars and the dashed lines compete with the cards; dim the stars. */
+:root[data-theme="dark"] .desk-stars { opacity: .55; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .desk-stars { opacity: .55; } }
 .desk-stars span {
   position: absolute; line-height: 1; color: var(--blue-line);
   transition: translate .6s var(--ease); animation: twinkle 3.6s ease-in-out infinite;
