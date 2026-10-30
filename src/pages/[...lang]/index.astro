@@ -17,7 +17,10 @@ const posts = await getPosts(lang);
 const projects = await getProjects(lang);
 const bySlug = new Map(posts.map((p) => [slugOf(p), p]));
 const latest = posts[0]!;
-const series = terms(posts, "series").slice(0, 2);
+const newest = (s: { posts: typeof posts }) => Math.max(...s.posts.map((p) => p.data.date.valueOf()));
+const series = terms(posts, "series")
+  .sort((a, b) => newest(b) - newest(a))
+  .slice(0, 2);
 const notes = B.notes.map((n) => ({ ...n, post: bySlug.get(n.slug)! }));
 const stickyPost = bySlug.get(B.sticky.slug)!;
 const years = [...new Set(posts.map((p) => p.data.date.getUTCFullYear()))];
