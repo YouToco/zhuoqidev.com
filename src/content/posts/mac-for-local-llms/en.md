@@ -15,6 +15,8 @@ tags:
   - llama.cpp
   - Memory Bandwidth
   - Benchmarks
+series: Local AI Hardware, Tested
+seriesOrder: 1
 categories:
   - Deep Dives
 ---

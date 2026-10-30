@@ -15,6 +15,8 @@ tags:
   - RTX
   - CUDA
   - Benchmarks
+series: Local AI Hardware, Tested
+seriesOrder: 3
 categories:
   - Deep Dives
 ---
@@ -32,6 +34,9 @@ categories:
   "note": "RTX 3060 Laptop 6GB · kernel 7.0.0-38 · driver 595.99.02 · 4096³ dense GEMM · measured 2026-10-29"
 }
 ```
+
+> [!TIP]
+> New to GPUs and only after the backstory and what it means? Start with the illustrated beginner edition, [Same Chip, Half the Speed](/en/posts/nvidia-tensor-half-speed-explained/); no registers needed.
 
 *This post is for anyone with a consumer NVIDIA card who uses it for local training, fine-tuning or image generation, and for anyone curious why one piece of silicon gets sorted into tiers. You do not need to know GPU microarchitecture: I build the mental model first, then the details. The performance numbers come from one of my own machines, an RTX 3060 Laptop (6GB), measured on 2026-10-29. Numbers from the project README, the community and third parties carry their source and should be read as reference. The post is based on gpu-unlock upstream commit [`7eb51bc`](https://github.com/Zagitta/gpu-unlock/tree/7eb51bc) (2026-10-28), plus the 3060 Laptop device ID I added locally; checked on 2026-10-29. The details of the exploit the unlock relies on are out of scope; I link the author's write-up for those.*
 

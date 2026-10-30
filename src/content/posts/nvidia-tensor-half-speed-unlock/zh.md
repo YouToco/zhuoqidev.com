@@ -15,6 +15,8 @@ tags:
   - RTX
   - CUDA
   - 实测
+series: 本地 AI 硬件实测
+seriesOrder: 3
 categories:
   - 深度调研
 ---
@@ -32,6 +34,9 @@ categories:
   "note": "RTX 3060 Laptop 6GB · 内核 7.0.0-38 · 驱动 595.99.02 · 4096³ 稠密 GEMM · 2026-10-29 本机实测"
 }
 ```
+
+> [!TIP]
+> 刚接触显卡、只想知道这件事的来龙去脉和影响？先看入门图解版[《同一块芯片，为什么你的显卡只给一半》](/posts/nvidia-tensor-half-speed-explained/)，不用懂寄存器。
 
 *这篇写给手上有消费级 N 卡、用它做本地训练、微调或出图的人，也写给好奇「同一块芯片凭什么分三六九等」的人。不需要你懂显卡微架构，我先搭心智模型再讲细节。性能数字来自我自己的一台 RTX 3060 Laptop（6GB），2026-10-29 实测；项目 README、社区和第三方的数字会标明出处，当参考看。本文基于 gpu-unlock 上游提交 [`7eb51bc`](https://github.com/Zagitta/gpu-unlock/tree/7eb51bc)（2026-10-28），外加我本地补上的 3060 Laptop 型号；检查日期 2026-10-29。解锁所依赖的漏洞细节不在这篇展开，想看的我会给原文链接。*
 
