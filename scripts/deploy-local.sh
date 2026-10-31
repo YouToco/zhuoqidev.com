@@ -126,6 +126,16 @@ aliyun oss ls "oss://${oss_bucket}/" \
 wrangler pages deployment list \
   --project-name "$cloudflare_project" >/dev/null
 
+# The mainland line serves a copy of the "popular lately" list (/hot.json; Aliyun runs no Functions,
+# stats-cn.yml refreshes it each morning). The sync below deletes what dist/ lacks, so carry the
+# current copy; an empty list just leaves the pages' static lists in place.
+if ! curl --fail --silent --show-error --connect-timeout 10 --max-time 30 --retry 2 \
+  -o dist/hot.json https://api.zhuoqidev.com/hot.json ||
+  ! python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert isinstance(d.get("slugs"), list)' dist/hot.json; then
+  echo "warning: could not fetch /hot.json; the mainland line gets an empty list until the next import" >&2
+  printf '{"updated":null,"slugs":[]}\n' >dist/hot.json
+fi
+
 # Every file goes up with Cloudflare Pages' default header so browsers ask again before reusing a
 # page (with no Cache-Control they kept old pages); the passes below give hashed files their year.
 fresh_cache="Cache-Control:public, max-age=0, must-revalidate"
@@ -148,7 +158,8 @@ aliyun oss sync dist/ "oss://${oss_bucket}/" \
 # OSS gzips application/javascript but not the text/javascript it picks for .js. An upload replaces
 # all metadata, so these carry the revalidate header again.
 for rule in "*.md|text/markdown; charset=utf-8" "*.txt|text/plain; charset=utf-8" \
-  "*.webmanifest|application/manifest+json" "*.js|application/javascript; charset=utf-8"; do
+  "*.webmanifest|application/manifest+json" "*.js|application/javascript; charset=utf-8" \
+  "hot.json|application/json; charset=utf-8"; do
   aliyun oss cp dist/ "oss://${oss_bucket}/" \
     --include "${rule%%|*}" \
     --meta "Content-Type:${rule#*|}#${fresh_cache}" \
@@ -183,6 +194,8 @@ for rule in "_astro|--exclude|*.js|${long_cache}" \
     --output-dir "$tool_root/ossutil-output"
 done
 
+# Cloudflare answers /hot.json from the Function (functions/hot.json.ts); keep the copy off that line.
+rm -f dist/hot.json
 commit_message=$(git log -1 --pretty=%s)
 wrangler pages deploy dist/ \
   --project-name "$cloudflare_project" \
