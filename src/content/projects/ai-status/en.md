@@ -1,6 +1,6 @@
 ---
 title: AI vendor status — every official status page on one page
-description: What the official status pages of OpenAI, Claude, Gemini, xAI, Mistral, Groq, Amazon Bedrock, DeepSeek, Kimi, MiniMax and others say right now, set as a newspaper front page — the worst one makes the headline, every vendor gets a weather, open one for components and incidents in progress; vendors without a status page are listed too, with the reason. A Cloudflare Pages Function reads each vendor at most once a minute and never calls a model.
+description: What the official status pages of OpenAI, Claude, Gemini, xAI, Mistral, Amazon Bedrock, DeepSeek, Kimi, MiniMax and others say right now, set as a newspaper front page — the worst one makes the headline, every vendor gets a weather, open one for components and incidents in progress; vendors without a status page are listed too, with the reason. A Cloudflare Pages Function reads each vendor at most once a minute and never calls a model.
 date: 2026-10-27
 glyph: status-board
 ---
@@ -15,7 +15,7 @@ Only what the vendors publish themselves; it doesn't measure them:
 
 | Vendor | Where the data comes from |
 | --- | --- |
-| OpenAI, Claude, Mistral, Cohere, Groq, Fireworks, Cerebras, Perplexity, Kimi, MiniMax | The status page's standard API (`/api/v2/summary.json`) |
+| OpenAI, Claude, Mistral, Kimi, MiniMax | The status page's standard API (`/api/v2/summary.json`) |
 | xAI | The status page's RSS, keeping api.x.ai items only (the same page posts Cursor and Grok app incidents) |
 | Amazon Bedrock | AWS Health Dashboard RSS for 6 regions |
 | Azure OpenAI | Azure's status RSS, keeping items that mention Azure OpenAI / AI Foundry |
