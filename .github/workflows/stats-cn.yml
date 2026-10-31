@@ -4,8 +4,9 @@ name: Mainland crawler counts
 # crawler visits and readers' page views there are counted from Aliyun's hourly CDN access logs
 # (scripts/stats-cn.ts) and sent to the stats database behind https://api.zhuoqidev.com/admin/.
 # Readers are placed by IP with ip2region on the runner; only per-crawler, per-place and per-article
-# counts leave it. Afterwards the "popular lately" ranking (/hot.json) is copied to the mainland line. Re-importing a day replaces it, so the day before yesterday is redone to pick up logs that
-# Aliyun published late.
+# counts leave it. Afterwards the "popular lately" ranking (/hot.json) is copied to the mainland line,
+# and the run summary records that upload and GET /api/admin/health. Re-importing a day replaces that day,
+# so the day before yesterday is redone to pick up logs that Aliyun published late.
 on:
   schedule:
     # 09:23 Beijing time: each hour's log appears a few hours late, so yesterday is complete by then.
@@ -124,3 +125,50 @@ jobs:
           else
             echo "::warning::could not publish /hot.json to the mainland line; it keeps the previous copy"
           fi
+
+      # A record any agent can read later, with no notifications: the run summary keeps when the
+      # mainland copy of /hot.json last changed on OSS and what GET /api/admin/health answered right
+      # after the import (server/health.ts; AGENTS.md "Guestbook and visit counts"). It runs even when
+      # an earlier step failed, and nothing in it can fail the job.
+      - name: Record the hot list upload and the counts' health
+        if: always()
+        env:
+          ALIYUN_BIN: ${{ runner.temp }}/aliyun-3.5.1/aliyun
+          STATS_ADMIN_TOKEN: ${{ secrets.STATS_ADMIN_TOKEN }}
+        run: |
+          set +e +o pipefail
+          {
+            echo "## Mainland /hot.json on OSS"
+            echo
+            echo '```'
+            stat=$("$ALIYUN_BIN" oss stat oss://zhuoqidev/hot.json \
+              --endpoint oss-cn-shenzhen.aliyuncs.com \
+              --region cn-shenzhen 2>&1)
+            if [[ $? -eq 0 ]]; then
+              grep -iE '^(Last-Modified|Content-Length|Content-Type|Cache-Control)[[:space:]]*:' <<<"$stat" || echo "$stat"
+            else
+              echo "oss stat failed: $stat"
+            fi
+            echo '```'
+            echo
+            echo "## Counts health (GET /api/admin/health)"
+            echo
+            if [[ -z $STATS_ADMIN_TOKEN ]]; then
+              echo "STATS_ADMIN_TOKEN is not set, so the health check was skipped."
+            else
+              health="$RUNNER_TEMP/health.json"
+              if curl --fail-with-body --silent --show-error --connect-timeout 10 --max-time 30 --retry 2 \
+                -H "Authorization: Bearer $STATS_ADMIN_TOKEN" \
+                -o "$health" https://api.zhuoqidev.com/api/admin/health; then
+                python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print("**ok: %s**" % str(d.get("ok")).lower()); print(); print("```json"); print(json.dumps(d, indent=2, ensure_ascii=False)); print("```")' "$health" \
+                  || { echo '```'; cat "$health"; echo; echo '```'; }
+              else
+                echo "The health request failed:"
+                echo '```'
+                cat "$health" 2>/dev/null
+                echo
+                echo '```'
+              fi
+            fi
+          } >>"$GITHUB_STEP_SUMMARY"
+          exit 0
