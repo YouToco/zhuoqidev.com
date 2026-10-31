@@ -79,6 +79,17 @@ const typeCase = {
               {N.every} · <span class="np-day">{N.day}</span>
               <span class="np-night">{N.night}</span>
             </span>
+            <span class="np-save" role="group" aria-label={N.saveAria} data-save hidden>
+              <button class="np-save-btn" type="button" data-save-kind="png">
+                <span aria-hidden="true">↓</span>
+                <span data-save-label>{N.savePng}</span>
+              </button>
+              <button class="np-save-btn" type="button" data-save-kind="pdf">
+                <span aria-hidden="true">↓</span>
+                <span data-save-label>{N.savePdf}</span>
+              </button>
+              <span class="np-save-msg" role="status" data-save-msg></span>
+            </span>
           </p>
           <p class="np-stamp" aria-hidden="true" data-stamp>
             {N.stamp}

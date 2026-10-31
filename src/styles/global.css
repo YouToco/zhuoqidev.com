@@ -1734,6 +1734,20 @@ html.booting .board .pin { animation-play-state: paused; }
 }
 .np-folio { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 18px; margin: 18px 0 0; padding: 11px 0 7px; font: 400 11.5px/1.5 var(--f-mono); letter-spacing: .05em; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .np-ed { color: var(--seal); }
+/* "Save image" / "Save PDF": two quiet type-set controls at the end of the folio, left out of the
+   picture they make (src/scripts/status-save.ts). Shown once the first edition is printed. */
+.np-save { display: inline-flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 0 14px; }
+.np-save[hidden] { display: none; }
+.np-save-btn {
+  display: inline-flex; align-items: baseline; gap: .35em; min-height: 24px; padding: 3px 1px 2px;
+  border: 0; border-bottom: 1px solid var(--np-hair); background: none; letter-spacing: inherit; color: var(--ink-2); cursor: pointer;
+  transition: color .2s, border-color .2s;
+}
+.np-save-btn:hover:not(:disabled) { color: var(--seal); border-color: var(--seal); }
+.np-save-btn:disabled { cursor: progress; }
+.np-save-btn[aria-busy] { color: var(--seal); border-bottom-style: dashed; }
+.np-save-msg { color: var(--seal); }
+.np-save-msg:empty { display: none; }
 .np-stamp {
   position: absolute; top: 18px; right: clamp(0px, 14vw, 210px); margin: 0; padding: 5px 12px 4px;
   border: 2px solid var(--seal); outline: 1px solid var(--seal); outline-offset: 2px; color: var(--seal);
