@@ -86,6 +86,16 @@ export default defineConfig({
     // Noto Serif SC, Long Cang and Caveat are subset per page after the build (scripts/subset-fonts.mjs).
     // Caveat moved there because the full Latin file (73 KB) loaded on every page for a few words.
   ],
+  vite: {
+    build: {
+      rolldownOptions: {
+        // jspdf (the /status/ "Save PDF" button) imports these on demand for html(), SVG and
+        // sanitising, which the site never calls; they are not installed (ignoredOptionalDependencies
+        // in pnpm-workspace.yaml), so the build leaves the imports as they are instead of failing.
+        external: ["canvg", "dompurify", "html2canvas"],
+      },
+    },
+  },
   markdown: {
     syntaxHighlight: { type: "shiki", excludeLangs: ["mermaid", "math", "chart", "comic", "opener", "steps"] },
     shikiConfig: {

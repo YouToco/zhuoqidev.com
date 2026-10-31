@@ -30,6 +30,8 @@ Each vendor's weather is the worst level among its components and open incidents
 
 The page is static: the vendor list and links are in the HTML, so it works without JavaScript. Once open, the browser asks `api.zhuoqidev.com/api/ai-status`, a Cloudflare Pages Function that reads every vendor at once, turns the answers into one shape and keeps the result in Cloudflare's cache for a minute. However many people are looking, each data centre reads each vendor at most once a minute; readers on the mainland line use the same endpoint instead of reaching overseas status pages themselves.
 
+The date line ends with "↓ Save image" and "↓ Save PDF": the edition you are looking at (day or night) as a PNG at twice the screen resolution, or as a one-page PDF of the same picture. Your browser draws it, no server is involved, and the drawing code loads only when you click (compressed, about 9 KB for the image and another 130 KB for the PDF), never with the page.
+
 ## Limits
 
 - Status pages only list incidents the vendor admits to, usually 10–30 minutes after users notice.

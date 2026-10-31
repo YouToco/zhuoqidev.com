@@ -4,6 +4,7 @@
 // ear, the headline and deck, the lead story, the incident timeline and the weather box. It is
 // "reprinted" every minute while the page is visible. Vendor text is set with textContent only.
 import type { Incident, Level, VendorStatus } from "../../server/ai-status";
+import { dayOf, editionOf, snapshotName } from "../../server/status-file";
 import { apiBase } from "../site";
 
 type Kind = Level | "unknown" | "none";
@@ -282,9 +283,11 @@ function init(root: HTMLElement) {
   };
 
   /** Edition number = minute of the day the data was read, as a daily paper counts its runs. */
+  let shown = { day: "", ed: 0 };
   const setEdition = (read: number) => {
     const d = new Date(read);
-    const ed = d.getHours() * 60 + d.getMinutes() + 1;
+    const ed = editionOf(d);
+    shown = { day: dayOf(d), ed };
     q("[data-date]").textContent = date.format(d);
     q("[data-ed]").textContent = f("edition", { n: ed });
     q("[data-time]").textContent = f("updated", { t: hm(read) });
@@ -730,6 +733,7 @@ function init(root: HTMLElement) {
         stampTimer = window.setTimeout(() => stamp.classList.remove("on"), 2600);
       }
       q("[data-live]").textContent = f("reprinted", { n: ed, t: hm(printed) });
+      saveBox.hidden = false;
     } catch {
       setTop(true);
       for (const r of rows) if (!r.link && !r.status) r.ad.querySelector("[data-meta]")!.textContent = N.metaUnknown!;
@@ -739,6 +743,37 @@ function init(root: HTMLElement) {
       root.classList.remove("loading");
     }
   };
+
+  // ---- take the edition away: the sheet as a PNG or a one-page PDF ------------------------------
+  // The capture code (and its libraries) loads on the first click only. While it runs the press
+  // is held (`busy`), so a reprint can't swap the page under it; a reprint already under way is
+  // waited for. The buttons are left out of the picture; nothing else on the sheet floats.
+  const saveBox = q("[data-save]");
+  const saveMsg = q("[data-save-msg]");
+  const saveBtns = [...saveBox.querySelectorAll<HTMLButtonElement>("[data-save-kind]")];
+  const save = async (btn: HTMLButtonElement) => {
+    const kind = btn.dataset.saveKind === "pdf" ? "pdf" : "png";
+    const label = btn.querySelector("[data-save-label]")!;
+    const idle = label.textContent;
+    for (const b of saveBtns) b.disabled = true;
+    btn.setAttribute("aria-busy", "true");
+    label.textContent = N.saving!;
+    saveMsg.textContent = "";
+    while (busy) await new Promise((r) => setTimeout(r, 100));
+    busy = true;
+    try {
+      const { saveSheet } = await import("./status-save");
+      await saveSheet(q(".np-sheet"), kind, snapshotName(lang, shown.day, shown.ed, kind));
+    } catch {
+      saveMsg.textContent = N.saveFailed!;
+    } finally {
+      busy = false;
+      label.textContent = idle;
+      btn.removeAttribute("aria-busy");
+      for (const b of saveBtns) b.disabled = false;
+    }
+  };
+  for (const b of saveBtns) b.addEventListener("click", () => void save(b));
 
   // One clock for the countdown ear, the running durations and the reprint; a hidden tab doesn't
   // fetch, and catches up when it is shown again.

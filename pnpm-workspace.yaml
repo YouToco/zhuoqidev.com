@@ -20,6 +20,15 @@ allowBuilds:
   esbuild: false # postinstall only verifies and swaps in the native binary; the package works without it
   workerd: false # same as esbuild: the binary comes from the @cloudflare/workerd-<platform> optional dependency
 
+# Optional dependencies never installed. jspdf (the /status/ "Save PDF" button) lists these for
+# html(), SVG and HTML sanitising, which the site never calls; core-js would also need a build
+# script. astro.config.mjs marks the three it imports as external so the build doesn't look for them.
+ignoredOptionalDependencies:
+  - canvg
+  - core-js
+  - dompurify
+  - html2canvas
+
 # Security fixes a dependency's own pin keeps out. Drop each one once the parent ships the fix.
 overrides:
   # miniflare (via wrangler, local Pages dev only) pins undici 7.29.1 exactly, up to wrangler

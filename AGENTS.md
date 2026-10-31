@@ -314,6 +314,15 @@ one carrying four unexplained terms.
   an install stops on one of these, check the package before adding an exception, and
   write the reason next to it as the existing entries do. The strict `node_modules` only
   exposes declared packages: import nothing that is not in `package.json`.
+- `/status/` "Save image" / "Save PDF" (`src/scripts/status-save.ts`, file names from
+  `server/status-file.ts`) draw the newspaper sheet with modern-screenshot at 2x and wrap the PNG in
+  a one-page PDF with jspdf. Both load on click through dynamic `import()`, never with the page and
+  never from a CDN. jspdf's optional dependencies (html2canvas, canvg, dompurify, core-js) are not
+  installed (`ignoredOptionalDependencies` in `pnpm-workspace.yaml`) and its imports of them are
+  `external` in `astro.config.ts`, so don't use `jsPDF.html()` or its SVG support. The clone copies
+  computed styles and `::before` / `::after` only: the capture drops `[data-save]` and `<noscript>`
+  and redraws the lead's `::first-letter` drop cap itself; new `::first-letter` / `::first-line`
+  styling on the sheet needs the same. The paper grain makes a desktop PNG about 12 MB (3 MB without).
 - Fonts: Inter and JetBrains Mono (Latin) come from Astro's font API and
   are inlined by `src/components/Fonts.astro`. The display faces are not:
   `"ZQ Serif"` (Noto Serif SC, weights 700/900; `"ZQ Serif Text"` is its 400
