@@ -1,13 +1,15 @@
 // Owner-only API behind `Authorization: Bearer <ADMIN_TOKEN>`, used by /admin/ and scripts/stats-cn.ts.
 //   GET    /api/admin/stats?from=YYYY-MM-DD&to=YYYY-MM-DD   counts for a range of Beijing days
+//   GET    /api/admin/health                                 whether the counting still works (server/health.ts)
 //   GET    /api/admin/notes?status=pending|approved          guestbook notes, newest first
 //   POST   /api/admin/notes/<id>/approve                     put a note on the wall
 //   DELETE /api/admin/notes/<id>                             delete a note
 //   POST   /api/admin/ingest {day, line: "cn", rows, visits?, pages?}
 //                                                            replace a day of mainland crawler (visit, article) counts
 import { beijingDay, CATEGORIES, type Category } from "../../../server/bots.ts";
+import { health, type HealthData, WINDOWS } from "../../../server/health.ts";
 import { isAdmin, json, readJson } from "../../../server/http.ts";
-import { validPages } from "../../../server/pages.ts";
+import { daysBefore, HOT_LIST, validPages } from "../../../server/pages.ts";
 import { ALL_VISITS, validVisits } from "../../../server/stats.ts";
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -60,6 +62,51 @@ export const onRequest: PagesFunction<Env, "path"> = async ({ request, env, para
       pending: (pending!.results[0] as { n: number } | undefined)?.n ?? 0,
       cnLatestDay: (cnLatest!.results[0] as { day: string | null } | undefined)?.day ?? null,
     });
+  }
+
+  if (m === "GET" && path === "health") {
+    const today = beijingDay();
+    const recent = daysBefore(today, Math.max(WINDOWS.cfCrawlers, WINDOWS.cfVisitors) - 1);
+    const [cnVisits, cnCrawler, cfCrawlers, cfVisits] = await db.batch([
+      // Aggregates without GROUP BY always answer one row: nulls when the table is empty.
+      db.prepare(
+        "SELECT MAX(day) AS day, SUM(visitors) AS visitors FROM visit_daily_cn WHERE day = (SELECT MAX(day) FROM visit_daily_cn)",
+      ),
+      db.prepare("SELECT MAX(day) AS day FROM crawler_daily WHERE line = 'cn'"),
+      db
+        .prepare("SELECT day, SUM(hits) AS n FROM crawler_daily WHERE line = 'cf' AND day >= ?1 GROUP BY day")
+        .bind(recent),
+      db.prepare("SELECT day, SUM(visitors) AS n FROM visit_daily WHERE day >= ?1 GROUP BY day").bind(recent),
+    ]);
+    // page_daily comes from a later migration: read it on its own, so a missing table is reported
+    // as a failed check instead of failing the whole answer.
+    let pages: HealthData["pages"];
+    let hotRows: HealthData["hotRows"] = [];
+    try {
+      const [latest, hot] = await db.batch([
+        db.prepare("SELECT line, MAX(day) AS day FROM page_daily GROUP BY line"),
+        db
+          .prepare(
+            "SELECT day, slug, SUM(visitors) AS visitors FROM page_daily WHERE day BETWEEN ?1 AND ?2 GROUP BY day, slug",
+          )
+          .bind(daysBefore(today, HOT_LIST.days - 1), today),
+      ]);
+      const byLine = new Map((latest!.results as { line: string; day: string }[]).map((r) => [r.line, r.day]));
+      pages = { cn: byLine.get("cn") ?? null, cf: byLine.get("cf") ?? null };
+      hotRows = hot!.results as HealthData["hotRows"];
+    } catch (e) {
+      pages = { error: e instanceof Error ? e.message : String(e) };
+    }
+    const cn = cnVisits!.results[0] as { day: string | null; visitors: number | null } | undefined;
+    const data: HealthData = {
+      cnVisits: { day: cn?.day ?? null, visitors: cn?.visitors ?? null },
+      cnCrawlerDay: (cnCrawler!.results[0] as { day: string | null } | undefined)?.day ?? null,
+      cfCrawlers: cfCrawlers!.results as HealthData["cfCrawlers"],
+      cfVisits: cfVisits!.results as HealthData["cfVisits"],
+      pages,
+      hotRows,
+    };
+    return json(health(data, today), 200, { "Cache-Control": "no-store" });
   }
 
   if (m === "GET" && path === "notes") {

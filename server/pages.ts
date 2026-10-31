@@ -37,6 +37,9 @@ export function validPages(input: unknown): PageCount[] | null {
 
 export type HotOptions = { days?: number; limit?: number; minDays?: number };
 
+/** What /hot.json serves (functions/hot.json.ts): eight slugs, so a page can skip the ones it shows. */
+export const HOT_LIST = { days: 30, limit: 8, minDays: 7 } as const;
+
 /** The Beijing day `n` days before `day` (both YYYY-MM-DD). */
 export function daysBefore(day: string, n: number): string {
   return new Date(Date.parse(`${day}T12:00:00Z`) - n * 86_400_000).toISOString().slice(0, 10);

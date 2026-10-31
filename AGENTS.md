@@ -469,6 +469,19 @@ one carrying four unexplained terms.
   the guestbook review queue; it and `/api/admin/*` need the `ADMIN_TOKEN` Pages secret. Guestbook
   notes are text only, stay `pending` until approved there, and are rendered with `textContent` on
   both the wall and the admin page. Keep it that way.
+- Whether the counting still works is a question to ask, not a notification (the owner wants none):
+  `GET /api/admin/health` (same bearer token, `no-store`) answers `{checkedAt, ok, checks: [{name, ok,
+  detail}]}` from `server/health.ts`, with windows in Beijing days, today included:
+  `cn-import` — the latest day in `visit_daily_cn` and in `crawler_daily` line `cn` is at most 2 days
+  old (the mainland import runs once a day for the day before); `cn-visitors` — that latest mainland
+  day has visitors; `cf-crawlers` — overseas crawler hits today or yesterday; `cf-visitors` — overseas
+  visitors in `visit_daily` over 3 days (a few a day, so one quiet day is no alarm); `page-counts` —
+  `page_daily` has `cn` rows within 2 days and `cf` rows within 3 (each line in `detail`; "no data yet"
+  is fine until a window reaches back to 2026-10-31, when per-article counting started, and an
+  unreadable table says migration 0003 may be missing); `hot` — informational, never fails: how many
+  slugs `/hot.json` would serve and whether the counts cover its 7 days. `ok` is every other check.
+  To read it: `curl -fsS -H "Authorization: Bearer $ADMIN_TOKEN" https://api.zhuoqidev.com/api/admin/health`
+  (the `ADMIN_TOKEN` Pages secret, the same value as the `STATS_ADMIN_TOKEN` Actions secret).
 - Local run: `pnpm run build`, put `ADMIN_TOKEN=<32+ random characters>` in `.dev.vars` (git-ignored),
   then `pnpm run dev:functions` (`wrangler` from devDependencies; applies migrations to a local D1 under `.wrangler/`)
   and open http://localhost:8788/. `node scripts/stats-cn.ts --day YYYY-MM-DD --dry-run` prints a
