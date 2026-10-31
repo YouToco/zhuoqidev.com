@@ -426,6 +426,26 @@ one carrying four unexplained terms.
   data files pinned by commit and hash in the workflow) and replaces that day in `visit_daily_cn`.
   Everything that reads visits sums both tables (`ALL_VISITS` in `server/stats.ts`). Browsers without
   `serverTiming` always send the beacon.
+- Articles are counted one by one too, for the "popular lately" lists (`migrations/0003_page_counts.sql`):
+  `page_daily` holds views and visitors per day, line and article slug, `page_seen` today's visitor
+  hashes per slug (deleted with `visitor_seen`). Only the slug is kept, never the path or the IP, and
+  both languages count toward the same slug (`slugOf` in `server/pages.ts` accepts only
+  `/posts/<slug>/` and `/en/posts/<slug>/`). The beacon posts `/api/hit?p=<path>` and `recordView` adds
+  the article under the same daily cap (line `cf`); on the mainland line the page that fetched `/hit.gif`
+  is the request's Referer in the CDN log, so `scripts/stats-cn.ts` (`aggregatePages`, same
+  corroboration and cap as visits) sends `pages` with the daily import, which replaces that day's
+  `cn` rows (imports without `pages` still work).
+- `/hot.json` is the ranking: article slugs by visitors over the last 30 Beijing days, both lines
+  summed, empty until the counts cover 7 days (`hotSlugs` in `server/pages.ts`), never a count. On
+  Cloudflare it is `functions/hot.json.ts` (cached an hour; also answered on `api.zhuoqidev.com`).
+  Aliyun runs no Functions, so `stats-cn.yml` copies it to OSS after each import and refreshes both CDN
+  domains (a failure is only a warning), and `deploy.yml` / `scripts/deploy-local.sh` write
+  `dist/hot.json` before the OSS sync (whose `--delete` would remove it) and drop it before the
+  Cloudflare upload. Pages read it from their own origin (`src/components/HotScript.astro`) and keep
+  their built cards when it is empty or fails. The featured articles are `src/data/featured.ts`.
+- The owner's own browser stays out of the site's counts: open any page with `?nocount=1` once (sets
+  `zq-nocount` in localStorage; `?nocount=0` clears it) and `Analytics.astro` sends neither the beacon
+  nor `/hit.gif`; the third-party trackers still load. This is for the owner only; readers are not told.
 - The published pages call the API on `https://api.zhuoqidev.com` (`api` / `apiBase` in `src/site.ts`):
   a CNAME to `zhuoqidev.pages.dev` on every DNS line plus a custom domain on the Pages project, so
   readers on the mainland line reach it too. Local previews and `*.pages.dev` call their own origin.
@@ -449,7 +469,9 @@ one carrying four unexplained terms.
   and open http://localhost:8788/. `node scripts/stats-cn.ts --day YYYY-MM-DD --dry-run` prints a
   mainland day's crawler counts (and, with `IP2REGION_DIR` set, its visits) without storing them.
 - New migrations go in `migrations/` and are applied to the real database with
-  `wrangler d1 migrations apply DB --remote` before the deploy that needs them.
+  `wrangler d1 migrations apply DB --remote` before the deploy that needs them. `0003_page_counts.sql`
+  must be applied before the per-article counts deploy: until then article views are lost (the place
+  count still lands) and every mainland import fails as a whole.
 - Anything that changes what is collected or shown must update both privacy pages.
 
 ## GitHub Actions dependency policy
