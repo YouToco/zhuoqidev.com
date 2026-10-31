@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { aggregate, aggregateVisits, corroborated, crawlerHit, viewHit } from "./stats-cn.ts";
+import { aggregate, aggregatePages, aggregateVisits, corroborated, crawlerHit, viewHit } from "./stats-cn.ts";
 
 // Aliyun CDN log lines (addresses replaced with documentation ranges).
-const log = (time: string, url: string, ua: string, type = "text/html", ip = "203.0.113.7") =>
-  `[${time} +0800] ${ip} - 12 "-" "GET ${url}" 200 512 20480 HIT "${ua}" "${type}" 198.51.100.9`;
+const log = (time: string, url: string, ua: string, type = "text/html", ip = "203.0.113.7", referer = "-") =>
+  `[${time} +0800] ${ip} - 12 "${referer}" "GET ${url}" 200 512 20480 HIT "${ua}" "${type}" 198.51.100.9`;
 const claude =
   "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ClaudeBot/1.0; +claudebot@anthropic.com)";
 const person =
@@ -100,4 +100,59 @@ test("caps one visitor's views like the beacon does", () => {
     aggregateVisits(lines, "2026-10-07", () => ({ country: "CN", region: "", city: "" })),
     [{ country: "CN", region: "", city: "", views: 300, visitors: 1 }],
   );
+});
+
+test("counts people's page view signals by the article in their Referer", () => {
+  const phone =
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1";
+  const page = (path: string, ip: string, ua = person) =>
+    log("7/Oct/2026:09:00:00", `https://zhuoqidev.com${path}`, ua, "text/html", ip);
+  const hit = (from: string, ip: string, ua = person) =>
+    log("7/Oct/2026:09:00:01", "https://zhuoqidev.com/hit.gif", ua, "image/gif", ip, from);
+  const lines = [
+    page("/posts/a/", "203.0.113.7"),
+    hit("https://zhuoqidev.com/posts/a/", "203.0.113.7"),
+    hit("https://zhuoqidev.com/posts/a/?from=feed", "203.0.113.7"), // same reader, again
+    hit("https://www.zhuoqidev.com/en/posts/a/", "203.0.113.7"), // English edition, same article
+    hit("https://zhuoqidev.com/posts/b/", "203.0.113.7"),
+    page("/en/posts/a/", "2001:db8::1", phone),
+    hit("https://zhuoqidev.com/en/posts/a", "2001:db8::1", phone),
+    hit("https://zhuoqidev.com/", "2001:db8::1", phone), // not an article
+    hit("https://zhuoqidev.com/posts/a/index.md", "2001:db8::1", phone), // not an article page
+    hit("https://evil.example/posts/a/", "2001:db8::1", phone), // another site
+    hit("-", "2001:db8::1", phone), // no Referer
+    hit("https://zhuoqidev.com/posts/a/", "203.0.113.30"), // a signal with nothing else behind it
+    page("/posts/a/", "203.0.113.31", claude),
+    hit("https://zhuoqidev.com/posts/a/", "203.0.113.31", claude), // a crawler that runs scripts
+    log(
+      "8/Oct/2026:00:00:01",
+      "https://zhuoqidev.com/hit.gif",
+      person,
+      "image/gif",
+      "203.0.113.7",
+      "https://zhuoqidev.com/posts/c/",
+    ), // next day
+  ];
+  assert.deepEqual(aggregatePages(lines, "2026-10-07"), [
+    { slug: "a", views: 4, visitors: 2 },
+    { slug: "b", views: 1, visitors: 1 },
+  ]);
+  assert.deepEqual(aggregatePages([], "2026-10-07"), []);
+});
+
+test("caps one visitor's views of an article like the beacon does", () => {
+  const lines = [
+    log("7/Oct/2026:08:59:59", "https://zhuoqidev.com/posts/a/", person),
+    ...Array.from({ length: 400 }, () =>
+      log(
+        "7/Oct/2026:09:00:00",
+        "https://zhuoqidev.com/hit.gif",
+        person,
+        "image/gif",
+        "203.0.113.7",
+        "https://zhuoqidev.com/posts/a/",
+      ),
+    ),
+  ];
+  assert.deepEqual(aggregatePages(lines, "2026-10-07"), [{ slug: "a", views: 300, visitors: 1 }]);
 });

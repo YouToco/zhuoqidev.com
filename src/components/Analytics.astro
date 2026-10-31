@@ -19,6 +19,15 @@ import { analytics, api } from "../site";
     };
     gtag("js", new Date());
     gtag("config", a.google);
+    // The owner's opt-out: opening any page with ?nocount=1 stops this browser from adding to the
+    // site's own counts (zq-nocount in localStorage), ?nocount=0 starts it again. Not shown to readers.
+    var noCount = false;
+    try {
+      var flag = new URLSearchParams(location.search).get("nocount");
+      if (flag === "1") localStorage.setItem("zq-nocount", "1");
+      else if (flag === "0") localStorage.removeItem("zq-nocount");
+      noCount = localStorage.getItem("zq-nocount") === "1";
+    } catch (e) {}
     // The trackers (about 200 KB) wait until the page has loaded and drawn its first content, so
     // they never compete with it. Lab tools (Lighthouse / PageSpeed) sometimes record the first
     // paint well after load; trackers started at load then land on the simulated LCP path and
@@ -34,14 +43,18 @@ import { analytics, api } from "../site";
       // same CDN instead, whose logs scripts/stats-cn.ts reads each day: a beacon from there to
       // Cloudflare is often lost on its way across the border. Browsers that cannot tell which line
       // they are on send the beacon.
+      // The beacon carries the page's path (`?p=`) so articles are counted one by one; /hit.gif
+      // needs none, because the CDN log records the page as the request's Referer.
       try {
         var nav = performance.getEntriesByType("navigation")[0];
         var timing = nav && nav.serverTiming;
         var cf = timing && timing.some(function (t) {
           return t.name === "line" && t.description === "cf";
         });
-        if (timing && !cf) fetch("/hit.gif", { cache: "no-store", keepalive: true }).catch(function () {});
-        else navigator.sendBeacon(api + "/api/hit");
+        if (noCount) {
+          // the owner's own browser: no count, trackers as usual
+        } else if (timing && !cf) fetch("/hit.gif", { cache: "no-store", keepalive: true }).catch(function () {});
+        else navigator.sendBeacon(api + "/api/hit?p=" + encodeURIComponent(location.pathname));
       } catch (e) {}
       add("https://www.googletagmanager.com/gtag/js?id=" + a.google);
       add("https://hm.baidu.com/hm.js?" + a.baidu);

@@ -3,9 +3,11 @@
 //   GET    /api/admin/notes?status=pending|approved          guestbook notes, newest first
 //   POST   /api/admin/notes/<id>/approve                     put a note on the wall
 //   DELETE /api/admin/notes/<id>                             delete a note
-//   POST   /api/admin/ingest {day, line: "cn", rows, visits?} replace a day of mainland crawler (and visit) counts
+//   POST   /api/admin/ingest {day, line: "cn", rows, visits?, pages?}
+//                                                            replace a day of mainland crawler (visit, article) counts
 import { beijingDay, CATEGORIES, type Category } from "../../../server/bots.ts";
 import { isAdmin, json, readJson } from "../../../server/http.ts";
+import { validPages } from "../../../server/pages.ts";
 import { ALL_VISITS, validVisits } from "../../../server/stats.ts";
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -91,10 +93,12 @@ export const onRequest: PagesFunction<Env, "path"> = async ({ request, env, para
       line?: unknown;
       rows?: unknown;
       visits?: unknown;
+      pages?: unknown;
     } | null;
     const rows = Array.isArray(body?.rows) ? (body.rows as Record<string, unknown>[]) : null;
-    // Older callers send crawlers only; then the day's visits are left alone.
+    // Older callers send crawlers only (or no articles); then the day's visits (articles) are left alone.
     const visits = body?.visits === undefined ? undefined : validVisits(body.visits);
+    const pages = body?.pages === undefined ? undefined : validPages(body.pages);
     if (
       !body ||
       typeof body.day !== "string" ||
@@ -116,7 +120,7 @@ export const onRequest: PagesFunction<Env, "path"> = async ({ request, env, para
         Number.isInteger(r.hits) &&
         (r.hits as number) > 0,
     );
-    if (!valid || visits === null) return json({ error: "bad-rows" }, 400);
+    if (!valid || visits === null || pages === null) return json({ error: "bad-rows" }, 400);
     const day = body.day;
     await db.batch([
       ...(visits
@@ -128,6 +132,16 @@ export const onRequest: PagesFunction<Env, "path"> = async ({ request, env, para
                   "INSERT INTO visit_daily_cn (day, country, region, city, views, visitors) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
                 )
                 .bind(day, v.country, v.region, v.city, v.views, v.visitors),
+            ),
+          ]
+        : []),
+      ...(pages
+        ? [
+            db.prepare("DELETE FROM page_daily WHERE day = ?1 AND line = 'cn'").bind(day),
+            ...pages.map((p) =>
+              db
+                .prepare("INSERT INTO page_daily (day, line, slug, views, visitors) VALUES (?1, 'cn', ?2, ?3, ?4)")
+                .bind(day, p.slug, p.views, p.visitors),
             ),
           ]
         : []),
@@ -145,6 +159,7 @@ export const onRequest: PagesFunction<Env, "path"> = async ({ request, env, para
       rows: rows.length,
       hits: rows.reduce((n, r) => n + (r.hits as number), 0),
       ...(visits && { places: visits.length, visitors: visits.reduce((n, v) => n + v.visitors, 0) }),
+      ...(pages && { articles: pages.length }),
     });
   }
 
