@@ -482,6 +482,10 @@ one carrying four unexplained terms.
   slugs `/hot.json` would serve and whether the counts cover its 7 days. `ok` is every other check.
   To read it: `curl -fsS -H "Authorization: Bearer $ADMIN_TOKEN" https://api.zhuoqidev.com/api/admin/health`
   (the `ADMIN_TOKEN` Pages secret, the same value as the `STATS_ADMIN_TOKEN` Actions secret).
+  Every `stats-cn.yml` run also writes a record to its run summary, even when a step failed and
+  without ever failing the job: `aliyun oss stat` of `oss://zhuoqidev/hot.json` (last-modified time and
+  size of the mainland copy) and the health answer right after the import. Read past runs with
+  `gh run list -w stats-cn.yml` and the run page's summary.
 - Local run: `pnpm run build`, put `ADMIN_TOKEN=<32+ random characters>` in `.dev.vars` (git-ignored),
   then `pnpm run dev:functions` (`wrangler` from devDependencies; applies migrations to a local D1 under `.wrangler/`)
   and open http://localhost:8788/. `node scripts/stats-cn.ts --day YYYY-MM-DD --dry-run` prints a
