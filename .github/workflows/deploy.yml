@@ -110,6 +110,20 @@ jobs:
             "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             > dist/deploy-manifest.json
 
+      # The "popular lately" lists fetch /hot.json from the page's own origin. On Cloudflare it is a
+      # Function (functions/hot.json.ts); Aliyun runs none, so the mainland line serves a copy that
+      # stats-cn.yml refreshes each morning. The sync below deletes what dist/ lacks, so every deploy
+      # carries the current copy too; pages keep their static lists when the list is empty.
+      - name: Write the hot list for the mainland line
+        run: |
+          if ! curl --fail --silent --show-error --connect-timeout 10 --max-time 30 --retry 2 \
+              -o dist/hot.json https://api.zhuoqidev.com/hot.json \
+            || ! python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert isinstance(d.get("slugs"), list)' dist/hot.json; then
+            echo "::warning::could not fetch /hot.json; the mainland line gets an empty list until the next import"
+            printf '{"updated":null,"slugs":[]}\n' > dist/hot.json
+          fi
+          cat dist/hot.json
+
       - name: Install pinned Alibaba Cloud CLI
         run: bash scripts/install-aliyun.sh
 
@@ -169,6 +183,7 @@ jobs:
           set_type "*.md" "text/markdown; charset=utf-8"
           set_type "*.txt" "text/plain; charset=utf-8"
           set_type "*.webmanifest" "application/manifest+json"
+          set_type "hot.json" "application/json; charset=utf-8"
           # OSS labels .js as text/javascript, which is missing from the fixed list of types it
           # gzips (application/javascript is on it), so every script reached the CDN uncompressed,
           # three.js at 568 KB. The CDN passes a gzipped response through as it is; its own brotli
@@ -196,6 +211,10 @@ jobs:
           put _astro --exclude "*.js" --meta "$long"
           put _astro --include "*.js" --meta "Content-Type:application/javascript; charset=utf-8#$long"
           put _fonts --meta "$long"
+
+      # Cloudflare answers /hot.json from the Function; keep the static copy off that line.
+      - name: Keep the mainland hot list off Cloudflare Pages
+        run: rm -f dist/hot.json
 
       - name: Deploy to Cloudflare Pages
         # wrangler is a pinned devDependency, so the action finds `pnpm exec wrangler` at this

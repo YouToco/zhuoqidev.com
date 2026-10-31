@@ -3,8 +3,8 @@ name: Mainland crawler counts
 # Readers in mainland China are served by Aliyun CDN, where the Pages middleware never runs, so
 # crawler visits and readers' page views there are counted from Aliyun's hourly CDN access logs
 # (scripts/stats-cn.ts) and sent to the stats database behind https://api.zhuoqidev.com/admin/.
-# Readers are placed by IP with ip2region on the runner; only per-crawler and per-place counts leave
-# it. Re-importing a day replaces it, so the day before yesterday is redone to pick up logs that
+# Readers are placed by IP with ip2region on the runner; only per-crawler, per-place and per-article
+# counts leave it. Afterwards the "popular lately" ranking (/hot.json) is copied to the mainland line. Re-importing a day replaces it, so the day before yesterday is redone to pick up logs that
 # Aliyun published late.
 on:
   schedule:
@@ -91,3 +91,36 @@ jobs:
           for day in "${days[@]}"; do
             node scripts/stats-cn.ts --day "$day"
           done
+
+      # The "popular lately" lists read /hot.json from the page's own origin. Aliyun never runs
+      # Functions, so the mainland line serves a copy: fetched from the overseas line after the
+      # import, put on OSS beside the pages and refreshed on both CDN domains. Deploys write the same
+      # file (deploy.yml), so the sync there never deletes it. Pages keep their static lists when the
+      # file is stale or missing, so a failure here is a warning, not a failed import.
+      - name: Publish the hot list to the mainland line
+        env:
+          ALIYUN_BIN: ${{ runner.temp }}/aliyun-3.5.1/aliyun
+        run: |
+          hot="$RUNNER_TEMP/hot.json"
+          publish() {
+            curl --fail --silent --show-error --connect-timeout 10 --max-time 30 --retry 2 \
+              -o "$hot" https://api.zhuoqidev.com/hot.json || return 1
+            python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert isinstance(d.get("slugs"), list)' "$hot" \
+              || return 1
+            "$ALIYUN_BIN" oss cp "$hot" oss://zhuoqidev/hot.json \
+              --meta "Content-Type:application/json; charset=utf-8#Cache-Control:public, max-age=0, must-revalidate" \
+              --endpoint oss-cn-shenzhen.aliyuncs.com \
+              --region cn-shenzhen \
+              --force || return 1
+            refresh_paths=$(printf '%s/hot.json\n%s/hot.json\n' "https://zhuoqidev.com" "https://www.zhuoqidev.com")
+            "$ALIYUN_BIN" cdn RefreshObjectCaches \
+              --profile default \
+              --ObjectPath "$refresh_paths" \
+              --ObjectType File \
+              --Force true || return 1
+          }
+          if publish; then
+            echo "published $(cat "$hot")"
+          else
+            echo "::warning::could not publish /hot.json to the mainland line; it keeps the previous copy"
+          fi
