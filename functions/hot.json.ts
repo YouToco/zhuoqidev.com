@@ -6,10 +6,9 @@
 // question, so the answer is kept in Cloudflare's cache for an hour.
 import { beijingDay } from "../server/bots.ts";
 import { json } from "../server/http.ts";
-import { daysBefore, hotSlugs } from "../server/pages.ts";
+import { daysBefore, HOT_LIST, hotSlugs } from "../server/pages.ts";
 
 const MAX_AGE = 3600;
-const DAYS = 30;
 
 export const onRequestGet: PagesFunction<Env> = async ({ request, env, waitUntil }) => {
   const today = beijingDay();
@@ -24,9 +23,9 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env, waitUntil
       `SELECT day, slug, SUM(visitors) AS visitors FROM page_daily
        WHERE day BETWEEN ?1 AND ?2 GROUP BY day, slug`,
     )
-      .bind(daysBefore(today, DAYS - 1), today)
+      .bind(daysBefore(today, HOT_LIST.days - 1), today)
       .all<{ day: string; slug: string; visitors: number }>();
-    slugs = hotSlugs(results, today, { days: DAYS, limit: 8 });
+    slugs = hotSlugs(results, today, HOT_LIST);
   } catch (e) {
     // Pages keep their static lists when this fails; nothing is cached.
     console.error("hot list failed", e);
