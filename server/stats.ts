@@ -110,30 +110,25 @@ export async function recordView(db: D1Database, request: Request, path: string 
   const views = seen?.views ?? 1;
   if (views > MAX_VIEWS_PER_VISITOR) return;
   const p = placeOf(request);
-  const writes = [
-    db
-      .prepare(
-        `INSERT INTO visit_daily (day, country, region, city, views, visitors) VALUES (?1, ?2, ?3, ?4, 1, ?5)
+  await db
+    .prepare(
+      `INSERT INTO visit_daily (day, country, region, city, views, visitors) VALUES (?1, ?2, ?3, ?4, 1, ?5)
        ON CONFLICT (day, country, region, city) DO UPDATE SET views = views + 1, visitors = visitors + excluded.visitors`,
-      )
-      .bind(day, p.country, p.region, p.city, views === 1 ? 1 : 0),
-  ];
+    )
+    .bind(day, p.country, p.region, p.city, views === 1 ? 1 : 0)
+    .run();
+  // The place is written first and on its own, so a failing article write never costs the visit.
   const slug = path === null ? null : slugOf(path);
-  if (slug) {
-    const first = await db
-      .prepare(
-        "INSERT INTO page_seen (day, hash, slug) VALUES (?1, ?2, ?3) ON CONFLICT DO NOTHING RETURNING 1 AS first",
-      )
-      .bind(day, hash, slug)
-      .first<{ first: number }>();
-    writes.push(
-      db
-        .prepare(
-          `INSERT INTO page_daily (day, line, slug, views, visitors) VALUES (?1, 'cf', ?2, 1, ?3)
-         ON CONFLICT (day, line, slug) DO UPDATE SET views = views + 1, visitors = visitors + excluded.visitors`,
-        )
-        .bind(day, slug, first ? 1 : 0),
-    );
-  }
-  await db.batch(writes);
+  if (!slug) return;
+  const first = await db
+    .prepare("INSERT INTO page_seen (day, hash, slug) VALUES (?1, ?2, ?3) ON CONFLICT DO NOTHING RETURNING 1 AS first")
+    .bind(day, hash, slug)
+    .first<{ first: number }>();
+  await db
+    .prepare(
+      `INSERT INTO page_daily (day, line, slug, views, visitors) VALUES (?1, 'cf', ?2, 1, ?3)
+       ON CONFLICT (day, line, slug) DO UPDATE SET views = views + 1, visitors = visitors + excluded.visitors`,
+    )
+    .bind(day, slug, first ? 1 : 0)
+    .run();
 }
