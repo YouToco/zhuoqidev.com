@@ -29,10 +29,9 @@ export const social = {
   email: { user: "zz3752203", domain: "163.com" },
 } as const;
 
-// Kept identical to the Hugo site so traffic history stays continuous.
+// Cloudflare Web Analytics is the only third-party tracker (no cookies, no local storage); the
+// token is kept identical to the Hugo site so traffic history stays continuous.
 export const analytics = {
-  google: "G-8T5T6HPCBC",
-  baidu: "aa6b84e568c3e766775514c4305f9e41",
   cloudflare: "b0f04d4943724cd895def6aa7251580e",
 } as const;
 
