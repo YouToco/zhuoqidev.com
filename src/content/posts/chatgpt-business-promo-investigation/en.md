@@ -192,6 +192,7 @@ The first statement stays within the evidence. The second remains an unverified 
 4. Keep “one code failed,” “one checkout trick failed,” and “the entire channel was canceled” separate.
 5. Do not bypass eligibility or payment controls with region spoofing, console scripts, or dubious payment tools.
 6. Mark first appearance, leaker identity, and funding source as unknown unless primary evidence establishes them.
+7. Cheap APIs and accounts deserve the same check: verify the source before paying. How to tell whether a relay sells the real model: [Check the Goods Before You Buy a Relay API](/en/posts/verify-llm-relay-api/).
 
 ## Final assessment
 
@@ -202,3 +203,5 @@ The accurate version is:
 **ChatGPT Business benefits come through multiple OpenAI or partner campaigns. Stripe supplies some of the payment and promotion-code machinery but is not a proven campaign source. Some partners moved to reviewed email delivery, while public offer pages and `/p/...` links still existed in July 2026. Audience, funding, expiration, and renewal rules must be verified for each campaign.**
 
 *Research checked through July 29, 2026. OpenAI and partners can change offers at any time; the issuer's latest terms and the final checkout page govern.*
+
+**Read next**: looking for a cheaper way to use models like GPT or Claude? Many people buy from a "relay", a business that resells model access. I have tested more than 30, and the most common problem is not a fake model but the wrong channel or price: [Check the Goods Before You Buy a Relay API: Six Questions That Tell You Whether It Sells the Real Model](/en/posts/verify-llm-relay-api/).
