@@ -3,6 +3,7 @@ import { getCollection, render } from "astro:content";
 import { type Lang, LANGS, other, t, url } from "../../../../i18n";
 import Base from "../../../../layouts/Base.astro";
 import PostSticker from "../../../../components/PostSticker.astro";
+import ReadNext from "../../../../components/ReadNext.astro";
 import ZoomDialog from "../../../../components/ZoomDialog.astro";
 import { numberedByAuthor } from "../../../../lib/markdown/numbering";
 import {
@@ -233,6 +234,7 @@ const jsonLd = {
             {L.copyMd}
           </button>
         </div>
+        <ReadNext lang={lang} post={post} posts={posts} />
         {(older || newer) && (
           <nav class="series-nav" data-pagefind-ignore aria-label={post.data.series ?? L.posts}>
             {older ? (

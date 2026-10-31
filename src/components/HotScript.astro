@@ -1,0 +1,72 @@
+---
+import type { Lang } from "../i18n";
+import type { Post } from "../lib/content";
+import { hotCards } from "../lib/picks";
+
+interface Props {
+  lang: Lang;
+  posts: Post[];
+}
+const { lang, posts } = Astro.props;
+const cards = JSON.stringify(hotCards(lang, posts)).replace(/</g, "\\u003c");
+---
+
+<script type="application/json" id="hot-cards" set:html={cards} />
+<script is:inline>
+  (() => {
+    const data = document.getElementById("hot-cards");
+    const slots = document.querySelectorAll("[data-hot-slot]");
+    const lists = document.querySelectorAll("[data-hot-list]");
+    if (!data || !("fetch" in window) || (!slots.length && !lists.length)) return;
+    let cards;
+    try {
+      cards = JSON.parse(data.textContent);
+    } catch {
+      return;
+    }
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 4000);
+    const el = (tag, cls, text) => {
+      const e = document.createElement(tag);
+      if (cls) e.className = cls;
+      if (text) e.textContent = text;
+      return e;
+    };
+    fetch("/hot.json", { signal: ctl.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((hot) => {
+        clearTimeout(timer);
+        const slugs = (hot && Array.isArray(hot.slugs) ? hot.slugs : []).filter(
+          (s) => typeof s === "string" && Object.hasOwn(cards, s),
+        );
+        if (!slugs.length) return;
+        for (const a of slots) {
+          const skip = (a.getAttribute("data-hot-slot") || "").split(" ");
+          const slug = slugs.find((s) => !skip.includes(s));
+          if (!slug) continue;
+          const c = cards[slug];
+          const k = a.querySelector("[data-hot-label]");
+          a.href = c.u;
+          a.querySelector("[data-t]").textContent = c.t;
+          a.querySelector("[data-d]").textContent = c.d;
+          if (k) k.textContent = k.getAttribute("data-hot-label");
+          a.classList.replace("featured", "hot");
+        }
+        for (const box of lists) {
+          const ol = box.querySelector("ol");
+          ol.textContent = "";
+          slugs.slice(0, Number(box.getAttribute("data-hot-list")) || 3).forEach((s, i) => {
+            const c = cards[s];
+            const a = el("a");
+            const text = el("span", "pick-text");
+            a.href = c.u;
+            a.append(el("span", "n", String(i + 1).padStart(2, "0")), text);
+            text.append(el("b", "", c.t), el("span", "d", c.d));
+            ol.appendChild(el("li")).appendChild(a);
+          });
+          box.hidden = false;
+        }
+      })
+      .catch(() => {});
+  })();
+</script>

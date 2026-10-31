@@ -1,4 +1,5 @@
 ---
+import Picks from "../../../components/Picks.astro";
 import PostList from "../../../components/PostList.astro";
 import { type Lang, langParams, t, url } from "../../../i18n";
 import Base from "../../../layouts/Base.astro";
@@ -45,6 +46,7 @@ const intro =
         </a>
       </nav>
     </header>
+    <Picks lang={lang} posts={posts} />
     <PostList lang={lang} posts={posts} byYear />
   </main>
 </Base>
