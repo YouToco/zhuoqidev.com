@@ -341,7 +341,7 @@ export const t = {
         reprinted: "已加印第 {n} 版，数据截至 {t}。",
       },
       method: [
-        "数据：每家官方状态页公开的数据。OpenAI、Claude、Mistral、Cohere、Groq、Fireworks、Cerebras、Perplexity、Kimi、MiniMax 读状态页的标准接口；xAI、Amazon Bedrock、Azure OpenAI 读官方 RSS；DeepSeek 的状态页没有接口，从页面里带的数据读，读不到再读它的 RSS；Gemini（Vertex AI）读 Google Cloud 故障列表里 Vertex Gemini API 的条目；AI Studio 的状态页只能在浏览器里看，只放链接。",
+        "数据：每家官方状态页公开的数据。OpenAI、Claude、Mistral、Kimi、MiniMax 读状态页的标准接口；xAI、Amazon Bedrock、Azure OpenAI 读官方 RSS；DeepSeek 的状态页没有接口，从页面里带的数据读，读不到再读它的 RSS；Gemini（Vertex AI）读 Google Cloud 故障列表里 Vertex Gemini API 的条目；AI Studio 的状态页只能在浏览器里看，只放链接。",
         "频率：服务器每分钟最多读一次各家页面，大家看到的是同一份；这一页开着时每分钟加印一次。",
         "局限：状态页只写厂商自己承认的故障，通常比用户感觉到的晚 10–30 分钟，也不覆盖某个地区、某个账号的问题。天气晴不等于你的请求一定成功。",
         "故障描述保留厂商原文，不做翻译，以免译错。",
@@ -748,7 +748,7 @@ export const t = {
         reprinted: "Edition {n} printed, data as of {t}.",
       },
       method: [
-        "Data: what each vendor publishes on its official status page. OpenAI, Claude, Mistral, Cohere, Groq, Fireworks, Cerebras, Perplexity, Kimi and MiniMax are read through the status page's standard API; xAI, Amazon Bedrock and Azure OpenAI through their official RSS; DeepSeek's page has no API, so it is read from the data the page carries, falling back to its RSS; Gemini on Vertex AI is read from Google Cloud's incident list, keeping the Vertex Gemini API entries; AI Studio's status page only renders in a browser, so it is a link only.",
+        "Data: what each vendor publishes on its official status page. OpenAI, Claude, Mistral, Kimi and MiniMax are read through the status page's standard API; xAI, Amazon Bedrock and Azure OpenAI through their official RSS; DeepSeek's page has no API, so it is read from the data the page carries, falling back to its RSS; Gemini on Vertex AI is read from Google Cloud's incident list, keeping the Vertex Gemini API entries; AI Studio's status page only renders in a browser, so it is a link only.",
         "Freshness: the server reads each vendor at most once a minute and everyone sees the same copy; while this page is open it is reprinted every minute.",
         "Limits: status pages only list incidents the vendor admits to, usually 10–30 minutes after users notice, and they don't cover problems in one region or one account. Sunny doesn't promise your request will succeed.",
         "Incident text is the vendor's own words, untranslated.",

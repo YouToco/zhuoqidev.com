@@ -82,7 +82,6 @@ export const VENDORS: Vendor[] = [
     note: "browserOnly",
   },
   { id: "mistral", name: "Mistral AI", region: "intl", source: "statuspage", page: "https://status.mistral.ai" },
-  { id: "cohere", name: "Cohere", region: "intl", source: "statuspage", page: "https://status.cohere.com" },
   {
     id: "xai",
     name: "xAI (Grok)",
@@ -92,10 +91,6 @@ export const VENDORS: Vendor[] = [
     feed: "https://status.x.ai/feed.xml",
     note: "xaiApiOnly",
   },
-  { id: "groq", name: "Groq", region: "intl", source: "statuspage", page: "https://groqstatus.com" },
-  { id: "fireworks", name: "Fireworks AI", region: "intl", source: "statuspage", page: "https://status.fireworks.ai" },
-  { id: "cerebras", name: "Cerebras", region: "intl", source: "statuspage", page: "https://status.cerebras.ai" },
-  { id: "perplexity", name: "Perplexity", region: "intl", source: "statuspage", page: "https://status.perplexity.com" },
   {
     id: "bedrock",
     name: "Amazon Bedrock",

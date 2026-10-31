@@ -1,6 +1,6 @@
 ---
 title: AI 厂商状态 — 一页看各家官方状态页
-description: 把 OpenAI、Claude、Gemini、xAI、Mistral、Groq、Amazon Bedrock、DeepSeek、Kimi、MiniMax 等官方状态页的当前状态排成一张报纸：头条写最严重的那家，每家一个天气，点开看组件和进行中的故障；没有状态页的厂商也列出来、写明为什么。Cloudflare Pages 函数每分钟最多读一次各家，不调用任何模型。
+description: 把 OpenAI、Claude、Gemini、xAI、Mistral、Amazon Bedrock、DeepSeek、Kimi、MiniMax 等官方状态页的当前状态排成一张报纸：头条写最严重的那家，每家一个天气，点开看组件和进行中的故障；没有状态页的厂商也列出来、写明为什么。Cloudflare Pages 函数每分钟最多读一次各家，不调用任何模型。
 date: 2026-10-27
 glyph: status-board
 ---
@@ -15,7 +15,7 @@ glyph: status-board
 
 | 厂商 | 数据从哪来 |
 | --- | --- |
-| OpenAI、Claude、Mistral、Cohere、Groq、Fireworks、Cerebras、Perplexity、Kimi、MiniMax | 状态页的标准接口（`/api/v2/summary.json`） |
+| OpenAI、Claude、Mistral、Kimi、MiniMax | 状态页的标准接口（`/api/v2/summary.json`） |
 | xAI | 状态页的 RSS，只看 api.x.ai 的条目（同一个页面也发 Cursor、Grok 应用的故障） |
 | Amazon Bedrock | AWS 健康看板 6 个区域的 RSS |
 | Azure OpenAI | Azure 状态 RSS 里提到 Azure OpenAI / AI Foundry 的条目 |
