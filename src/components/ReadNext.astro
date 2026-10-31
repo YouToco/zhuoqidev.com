@@ -1,0 +1,39 @@
+---
+import { type Lang, t } from "../i18n";
+import type { Post } from "../lib/content";
+import { readNext } from "../lib/picks";
+import HotScript from "./HotScript.astro";
+
+interface Props {
+  lang: Lang;
+  post: Post;
+  posts: Post[];
+}
+const { lang, post, posts } = Astro.props;
+const L = t[lang];
+const { cards, shown } = readNext(lang, post, posts);
+const label = (c: (typeof cards)[number]) =>
+  c.kind === "series" ? (c.dir === "next" ? L.seriesNextCard : L.seriesPrevCard) : L.featuredCard;
+---
+
+{cards.length > 0 && (
+  <section class="read-next" data-pagefind-ignore aria-labelledby="read-next-h">
+    <h2 class="read-next-h" id="read-next-h">
+      {L.readNext}
+    </h2>
+    <div class="rn-cards">
+      {cards.map((c) => (
+        <a class:list={["card", "rn-card", c.kind]} href={c.url} data-hot-slot={c.hot ? shown.join(" ") : undefined}>
+          <span class="kicker rn-k" data-hot-label={c.hot ? L.hotCard : undefined}>
+            {label(c)}
+          </span>
+          <b data-t>{c.title}</b>
+          <span class="rn-d" data-d>
+            {c.description}
+          </span>
+        </a>
+      ))}
+    </div>
+    <HotScript lang={lang} posts={posts} />
+  </section>
+)}

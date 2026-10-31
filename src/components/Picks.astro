@@ -1,0 +1,42 @@
+---
+import { type Lang, t } from "../i18n";
+import type { Post } from "../lib/content";
+import { cardOf, featuredPosts } from "../lib/picks";
+import HotScript from "./HotScript.astro";
+
+interface Props {
+  lang: Lang;
+  posts: Post[];
+}
+const { lang, posts } = Astro.props;
+const L = t[lang];
+const featured = featuredPosts(posts).map((p) => cardOf(lang, p));
+---
+
+<div class="picks" data-pagefind-ignore>
+  <section class="card pick-box start" aria-labelledby="picks-start">
+    <h2 class="pick-h" id="picks-start">
+      {L.startHere}
+    </h2>
+    <ol>
+      {featured.map((c, i) => (
+        <li>
+          <a href={c.url}>
+            <span class="n">{String(i + 1).padStart(2, "0")}</span>
+            <span class="pick-text">
+              <b>{c.title}</b>
+              <span class="d">{c.description}</span>
+            </span>
+          </a>
+        </li>
+      ))}
+    </ol>
+  </section>
+  <section class="card pick-box hot" aria-labelledby="picks-hot" data-hot-list="3" hidden>
+    <h2 class="pick-h" id="picks-hot">
+      {L.hotBox}
+    </h2>
+    <ol></ol>
+  </section>
+  <HotScript lang={lang} posts={posts} />
+</div>

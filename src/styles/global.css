@@ -1084,6 +1084,33 @@ a.card:hover, .post-item:hover, .search-hit:hover, .writing li:hover { border-st
 .series-all a { color: var(--ink-3); }
 .series-all a:hover { color: var(--blue); }
 
+/* What to read next (src/components/ReadNext.astro, Picks.astro): the kicker's colour says why a
+   card is there: blue for the same series, seal red for the featured ones, green for popular lately. */
+.read-next { margin-top: 22px; }
+.read-next-h { margin: 0 0 10px; font: 500 12px/1.4 var(--f-mono); letter-spacing: .12em; color: var(--ink-3); }
+.rn-cards { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 14px; }
+.rn-card { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; text-decoration: none; transition: transform .6s var(--spring); }
+.rn-card:hover { transform: translateY(-2px); }
+.rn-card b { font: 700 15px/1.5 var(--f-serif); }
+.rn-card:hover b { color: var(--blue); }
+.rn-d, .pick-text .d { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; line-height: 1.6; color: var(--ink-2); }
+.rn-card.series .rn-k { color: var(--blue); }
+.rn-card.featured .rn-k, .pick-box.start .pick-h { color: var(--seal); }
+.rn-card.hot .rn-k, .pick-box.hot .pick-h { color: var(--green); }
+.picks { display: flex; gap: 14px; }
+.pick-box { flex: 3 1 0; min-width: 0; padding: 16px 20px 8px; }
+.pick-box.hot { flex: 2 1 0; }
+.pick-h { margin: 0 0 4px; font: 500 12px/1.4 var(--f-mono); letter-spacing: .12em; }
+.pick-box ol { list-style: none; margin: 0; padding: 0; }
+.pick-box li + li { border-top: 1px dashed var(--line); }
+.pick-box a { display: flex; gap: 12px; align-items: baseline; padding: 9px 0; text-decoration: none; }
+.pick-box .n { flex: none; font: 400 12px/1 var(--f-mono); color: var(--ink-3); }
+.pick-text { display: grid; min-width: 0; }
+.pick-text b { font: 700 15px/1.5 var(--f-serif); }
+.pick-box a:hover b { color: var(--blue); }
+@media (max-width: 640px) { .rn-cards { grid-auto-flow: row; } }
+@media (max-width: 560px) { .picks { flex-direction: column; } }
+
 /* English pages write their hand-lettered bits in Caveat rather than the Chinese brush face. */
 html[lang="en"] { --f-hand-zh: var(--font-caveat), var(--f-hand-cjk); }
 .about-hero .intro { max-width: 720px; margin: 26px auto 0; font-size: 15px; line-height: 1.85; color: var(--ink-2); }

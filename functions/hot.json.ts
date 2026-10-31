@@ -1,8 +1,9 @@
 // GET /hot.json: the articles with the most visitors over the last 30 Beijing days, both hosting
 // lines summed (page_daily, migrations/0003), as {"updated": "<ISO time>", "slugs": [...]}. Only the
-// order goes out, never a count. Pages on the overseas line fetch it from here; the mainland line
-// serves a copy that .github/workflows/stats-cn.yml (and every deploy) puts on Aliyun OSS. Every
-// reader asks the same question, so the answer is kept in Cloudflare's cache for an hour.
+// order goes out, never a count; eight slugs, so a page can skip the ones it already shows. Pages on
+// the overseas line fetch it from here; the mainland line serves a copy that
+// .github/workflows/stats-cn.yml (and every deploy) puts on Aliyun OSS. Every reader asks the same
+// question, so the answer is kept in Cloudflare's cache for an hour.
 import { beijingDay } from "../server/bots.ts";
 import { json } from "../server/http.ts";
 import { daysBefore, hotSlugs } from "../server/pages.ts";
@@ -25,7 +26,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env, waitUntil
     )
       .bind(daysBefore(today, DAYS - 1), today)
       .all<{ day: string; slug: string; visitors: number }>();
-    slugs = hotSlugs(results, today, { days: DAYS });
+    slugs = hotSlugs(results, today, { days: DAYS, limit: 8 });
   } catch (e) {
     // Pages keep their static lists when this fails; nothing is cached.
     console.error("hot list failed", e);
