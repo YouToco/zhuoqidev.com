@@ -17,6 +17,13 @@ const THEME =
   'if(t==="dark"||t==="light")document.documentElement.dataset.theme=t})</script>' +
   `<style>:root{${LIGHT}}:root[data-theme="dark"]{${DARK}}` +
   `@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){${DARK}}}</style>`;
+// The frame's height is fixed in the fence, so on a narrow screen a demo whose content wraps would be
+// cut off. The frame reports how tall its body is ({ zqDemoHeight }; the body's min-height is the fence
+// height, so this is never less) and site.ts grows or shrinks the iframe to that, never below the fence.
+// It measures the body, not the document, which is at least as tall as the frame and would never shrink.
+const FIT =
+  '<script>(function(){function s(){parent.postMessage({zqDemoHeight:Math.ceil(document.body.getBoundingClientRect().height)},"*")}' +
+  'addEventListener("load",s);if(window.ResizeObserver)new ResizeObserver(s).observe(document.body)})()</script>';
 
 /**
  * ```html demo height=300 caption="..."  →  a sandboxed live preview.
@@ -37,6 +44,7 @@ export function remarkDemo() {
         `<style>*{box-sizing:border-box}body{margin:0;display:flex;align-items:center;justify-content:center;min-height:${height}px;` +
         "background:var(--card);color:var(--ink);font-family:system-ui,sans-serif}</style></head><body>" +
         node.value +
+        FIT +
         "</body></html>";
       const html =
         `<figure class="demo"><iframe title="${esc(caption || "Live demo")}" sandbox="allow-scripts" ` +

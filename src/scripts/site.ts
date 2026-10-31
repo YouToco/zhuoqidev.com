@@ -21,6 +21,16 @@ const demos = [...document.querySelectorAll<HTMLIFrameElement>(".demo iframe")];
 const tellDemo = (f: HTMLIFrameElement) => f.contentWindow?.postMessage({ zqTheme: current() }, "*");
 for (const f of demos) f.addEventListener("load", () => tellDemo(f));
 const tellDemos = () => demos.forEach(tellDemo);
+// A demo whose content wraps taller than its fence height (a phone, a narrow reading width) reports
+// its real height (src/lib/markdown/remark-demo.ts); grow that frame to fit, never below the fence's.
+addEventListener("message", (e) => {
+  const h = (e.data as { zqDemoHeight?: unknown } | null)?.zqDemoHeight;
+  if (typeof h !== "number" || !Number.isFinite(h)) return;
+  const f = demos.find((d) => d.contentWindow === e.source);
+  if (!f) return;
+  f.dataset.minHeight ??= String(parseFloat(f.style.height) || 0);
+  f.style.height = `${Math.min(Math.max(h, Number(f.dataset.minHeight)), 4000)}px`;
+});
 if (toggle) {
   toggle.hidden = false;
   paintToggle();
