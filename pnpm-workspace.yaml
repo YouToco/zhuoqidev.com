@@ -25,6 +25,9 @@ overrides:
   # miniflare (via wrangler, local Pages dev only) pins undici 7.29.1 exactly, up to wrangler
   # 4.152.0; 7.30.1 fixes GHSA-xjj6-f33q-929c, GHSA-4qv8-2p9j-2685 and GHSA-f72v-6w45-q472.
   miniflare>undici: 7.30.1
+  # eslint 10.14.0 (and @eslint/config-array) still ask for minimatch ^10; no 10.x has the fix for
+  # GHSA-g3hv-75wg-m249, 11.0.1 does. 11 keeps the same API and Node range.
+  "minimatch@<11.0.1": 11.0.3
 
 # Fail when the running Node does not satisfy package.json "engines".
 engineStrict: true
