@@ -5,7 +5,9 @@
 - Before creating or substantially revising an article, read
   `docs/editorial-audience.md` and follow its reader contract and publication
   checklist.
-- The default reader profile is `agent-engineer-source-transition`: an
+- Before writing, pick one primary reader from **Reader personas** below (and
+  at most one secondary) and say which in the PR description. The default,
+  when nothing else fits, is `agent-engineer-source-transition`: an
   engineer who understands basic LLM tool calling and can read Python or
   TypeScript, but is not assumed to know Rust, the target project's source
   tree, or project-specific type/function names.
@@ -36,6 +38,108 @@
   examples, version scope, and visual meaning.
 - Technical images are evidence-bearing content. Validate their labels and
   implied behavior against the article; aesthetics never override accuracy.
+
+## Reader personas
+
+Who actually reads the site, from the 2026-10-27 snapshot of the last 30 days
+(Cloudflare Web Analytics + Aliyun CDN logs, the owner's own visits removed):
+about 550 people, 69% on the mainland line (Beijing, Jiangsu / Shanghai /
+Zhejiang, Guangdong), two thirds on a Windows desktop during working hours,
+70% typing the address or following a shared link, the rest from Bing and
+Google (Baidu almost none, WeChat almost none). Most read one article and
+leave (about 1.1 pages each), so every article must work as someone's first
+and only page on the site. ChatGPT and Perplexity also fetched pages about
+1,800 times on people's behalf. Refresh these numbers when they are a few
+months old; the personas change only when the readers do.
+
+Each persona says who they are, what brings them here, what they need, and
+what makes them give up. Write for the primary one; the secondary one must not
+be lost, but need not be served first.
+
+### A. Agent engineer (`agent-engineer-source-transition`, the default)
+
+- **Who**: an application engineer (Python / TypeScript / Java / Go) who has
+  built or configured an Agent and now wants to know how one works inside.
+  Knows what a prompt, a context window and a tool call are; does not read
+  Rust, does not know the project's source tree.
+- **Arrives** from a search for a specific mechanism ("Codex tool_search",
+  "Claude programmatic tool calling", "agent memory") or a link shared in a
+  group. Reads at a desk, often at work.
+- **Needs** the mental model before the identifiers, one input traced end to
+  end, which details are essential and which replaceable, and a design they
+  can reuse in their own stack. The full contract is
+  `docs/editorial-audience.md`.
+- **Gives up** when the first screen is a class name, a feature flag or a
+  diagram whose labels are source identifiers.
+- **Typical posts**: AI Agent 工程 / Agent Engineering; codex-first-request-tools,
+  claude-programmatic-tool-calling-dynamic-filter, agent-plugins-inside.
+
+### B. Tech lead choosing a tool (`tech-lead-choosing`)
+
+- **Who**: the person who has to pick an inference engine, a workflow engine,
+  a memory system, a cloud or a vendor, and defend the choice to a team or a
+  boss. Technical, short on time, judged on the outcome.
+- **Arrives** from a search such as "vLLM vs SGLang", "Temporal vs Celery",
+  "Cloudflare vs Aliyun cost", often with a deadline.
+- **Needs** the recommendation and the conditions under which it flips in the
+  first screen, a decision table, real costs and limits with the date they
+  were checked, and what was measured versus what was read in docs.
+- **Gives up** when the answer is "it depends" without saying on what, when
+  numbers have no date or source, or when the comparison is a feature list
+  copied from vendor pages.
+- **Typical posts**: 深度调研 / Deep Dives; llm-inference-engine-selection,
+  why-temporal-not-celery, memory-choice-framework,
+  model-gateway-cloudflare-vs-china-cloud, verify-llm-relay-api.
+
+### C. Someone with one practical question (`practical-searcher`)
+
+- **Who**: not necessarily an engineer. Wants to get a ChatGPT plan cheaper,
+  decide whether a Mac can run a model, or understand why a GPU is slower
+  than advertised. The largest single group: the ChatGPT Business promo post
+  gets more readers than any other page, almost all from search.
+- **Arrives** from Google / Bing with the question as the query, sometimes
+  from a deals forum or an AI assistant's citation; often on a phone.
+- **Needs** the answer in the first paragraph in everyday words, then the
+  steps, the risks and what to do if their case differs. Terms are explained
+  where they first appear, not in a glossary at the end; charts instead of
+  number tables.
+- **Gives up** at the first unexplained acronym, a wall of commands, or an
+  answer that only appears after the method.
+- **Typical posts**: 折腾记录 / Tinkering and the beginner editions;
+  chatgpt-business-promo-investigation, mac-for-local-llms,
+  nvidia-tensor-half-speed-explained, agent-plugins-explained.
+
+### D. Hiring manager or interviewer (`hiring-reviewer`)
+
+- **Who**: someone deciding whether to interview or hire the author, opening
+  the site from a CV or a profile link. Skims for a few minutes.
+- **Arrives** on the home page, /about/ or /projects/, then opens one or two
+  articles.
+- **Needs** to see within a minute what the author built or found, at what
+  scale, with what evidence (measurements, merged PRs, production numbers),
+  and how the author reasons about trade-offs and mistakes.
+- **Gives up** on claims without evidence, framework name lists, or articles
+  that read like reworded documentation.
+- **Applies to** every article as a secondary reader: the opening says what
+  was done and what was learned, and corrections are kept visible rather
+  than silently rewritten.
+
+### Machine readers
+
+AI assistants (ChatGPT, Perplexity, Claude) fetch `index.md` and quote parts of
+it to someone who asked a question. Keep each article's first paragraph a
+complete answer on its own, put dates and version scope next to the claims
+they limit, and never leave a key number only inside an image.
+
+### Before publishing: read it as the persona
+
+After the draft builds, have a subagent read the rendered article (or its
+`index.md`) as the primary persona, given only that persona's description
+above, and report: the first sentence where it got lost, every term it could
+not understand from the text, and whether it could answer its own question
+from the first screen. Fix those, then repeat once for the secondary persona.
+Put the persona and the findings that changed the draft in the PR
+description.
 
 ## Site stack (Astro 7 + TypeScript)
 
