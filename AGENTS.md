@@ -73,6 +73,14 @@ be lost, but need not be served first.
   diagram whose labels are source identifiers.
 - **Typical posts**: AI Agent 工程 / Agent Engineering; codex-first-request-tools,
   claude-programmatic-tool-calling-dynamic-filter, agent-plugins-inside.
+- **Knows**: calling an LLM over an HTTP API, prompt, context window, token,
+  tool / function call, JSON, async code, Git, reading Python or TypeScript;
+  the major AI vendors and products by name (OpenAI, Anthropic, ChatGPT,
+  Claude, Codex, Cursor) and MCP as a way to plug external tools into an
+  Agent.
+- **Does not know**: Rust syntax, the project's source tree and its type,
+  function and flag names, wire formats of a specific product (Responses,
+  Codex internals), retrieval algorithms such as BM25 by name.
 
 ### B. Tech lead choosing a tool (`tech-lead-choosing`)
 
@@ -90,6 +98,12 @@ be lost, but need not be served first.
 - **Typical posts**: 深度调研 / Deep Dives; llm-inference-engine-selection,
   why-temporal-not-celery, memory-choice-framework,
   model-gateway-cloudflare-vs-china-cloud, verify-llm-relay-api.
+- **Knows**: what the options in the comparison are for, servers and cloud
+  bills, latency, throughput, availability, team cost, reading a benchmark
+  table.
+- **Does not know**: the internals of each option, the author's test setup,
+  vendor-specific units (a "CU", a "credit") until converted to money or
+  requests, which numbers were measured here and which come from docs.
 
 ### C. Someone with one practical question (`practical-searcher`)
 
@@ -108,6 +122,10 @@ be lost, but need not be served first.
 - **Typical posts**: 折腾记录 / Tinkering and the beginner editions;
   chatgpt-business-promo-investigation, mac-for-local-llms,
   nvidia-tensor-half-speed-explained, agent-plugins-explained.
+- **Knows**: using ChatGPT or a similar app, a browser, paying for a
+  subscription, roughly what a GPU or a Mac is.
+- **Does not know**: API, token, context window, model weights, VRAM,
+  FP16 / FP8, CUDA, command lines, Git, any acronym not in everyday use.
 
 ### D. Hiring manager or interviewer (`hiring-reviewer`)
 
@@ -123,6 +141,9 @@ be lost, but need not be served first.
 - **Applies to** every article as a secondary reader: the opening says what
   was done and what was learned, and corrections are kept visible rather
   than silently rewritten.
+- **Knows**: general software engineering, the names of common AI products.
+- **Does not know**: the author's employer's internals, the projects' history,
+  why a number matters unless the article says so.
 
 ### Machine readers
 
@@ -131,15 +152,54 @@ it to someone who asked a question. Keep each article's first paragraph a
 complete answer on its own, put dates and version scope next to the claims
 they limit, and never leave a key number only inside an image.
 
-### Before publishing: read it as the persona
+### Before publishing: a closed-book review by persona
 
-After the draft builds, have a subagent read the rendered article (or its
-`index.md`) as the primary persona, given only that persona's description
-above, and report: the first sentence where it got lost, every term it could
-not understand from the text, and whether it could answer its own question
-from the first screen. Fix those, then repeat once for the secondary persona.
-Put the persona and the findings that changed the draft in the PR
-description.
+A model that knows the subject fills every gap with its own knowledge and then
+reports that the article is clear. So the reviewer is never asked whether it
+understood; it must produce evidence from the text that can be checked, and
+its own knowledge never counts as evidence.
+
+1. **Reviewer**: a fresh agent (never a fork of the writing session) given only
+   the built `dist/<path>/index.md` and the primary persona's block above,
+   including its Knows / Does not know lists. No drafting notes, sources or
+   conversation. Tell it: "If you can explain a term but the article does not,
+   that is a gap. Quote, do not paraphrase."
+2. **Term audit**: list every technical term, acronym, product or source name
+   in order of first appearance. For each: is it on the persona's Knows list?
+   If not, quote the sentence at or before its first use that explains it in
+   words the persona knows. No such sentence → gap. Terms only inside code,
+   source-verification sections or `<details>` appendices are exempt when the
+   surrounding prose still makes sense without them (the deletion test in
+   `docs/editorial-audience.md`).
+3. **Cite-only answer**: answer the persona's question (what brought them here)
+   as a chain of steps, each step quoting the sentence it rests on. A step that
+   needs a fact the article does not state → gap.
+4. **Read in order**: first give only the text up to the first `##` heading and
+   ask what the reader can conclude and act on; it must already contain the
+   answer (C, B) or the outcome and scope (A). Then, section by section, list
+   what each section assumes the reader already knows and compare it with the
+   Knows list, without letting later sections explain earlier ones.
+5. **Report** every gap with its quote and location. Fix them, rerun steps 2–4
+   once, then run them once for the secondary persona. Put the persona, the
+   number of gaps found and fixed, and any gap left on purpose (with the reason)
+   in the PR description.
+
+For persona C, also run step 3 with a smaller model (Haiku): it stalls where a
+newcomer stalls. It still knows many terms, so it adds to steps 2–4 and does not
+replace them.
+
+**Calibrate the review before trusting it, and again after changing this
+procedure.** Run it for persona A on the first version of the Codex tools
+article (`git show 00f25b8:content/posts/codex-first-request-tools.md`), whose
+first screen leads with `tool_mode`, `code_mode_only`, `additional_tools` and
+Responses Lite, and on the current
+`src/content/posts/codex-first-request-tools/zh.md`. The review must flag
+those first-screen terms in the old version and find far fewer gaps per
+thousand characters in the current one; if it does not, fix the procedure
+before using it on new articles. Baseline from the first run (2026-10-31):
+old version about 45 gaps in 13.6 KB with a first screen led by flags; current
+version about 26 gaps in 51 KB, its first conclusion readable and its second
+one carrying four unexplained terms.
 
 ## Site stack (Astro 7 + TypeScript)
 
