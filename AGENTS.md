@@ -6,8 +6,10 @@
   `docs/editorial-audience.md` and follow its reader contract and publication
   checklist.
 - Before writing, pick one primary reader from **Reader personas** below (and
-  at most one secondary) and say which in the PR description. The default,
-  when nothing else fits, is `agent-engineer-source-transition`: an
+  at most one secondary) and say which in the PR description. The primary is
+  A or B; C is primary only for Tinkering posts and beginner editions, and D
+  is never primary (see **Priority**). The default, when nothing else fits, is
+  `agent-engineer-source-transition`: an
   engineer who understands basic LLM tool calling and can read Python or
   TypeScript, but is not assumed to know Rust, the target project's source
   tree, or project-specific type/function names.
@@ -56,6 +58,30 @@ Each persona says who they are, what brings them here, what they need, and
 what makes them give up. Write for the primary one; the secondary one must not
 be lost, but need not be served first.
 
+### Priority
+
+The site exists to build the author's technical reputation and to back the CV
+(Agent engineering), so personas are ranked by what their reading does for
+that, not by how many of them come (owner's decision, 2026-10-31):
+
+1. **A and B, equal: what articles are written for.** A is the reader of the
+   roles the author applies for, and is usually the interviewer too. B is the
+   reader the author's first-hand vendor, cost and reliability measurements
+   serve, which few others can publish; it is also who decides and pays.
+2. **D: a check on every article, never the target.** Writing for an
+   interviewer turns into self-promotion; an article that convinces A or B
+   convinces D. Every article still passes D's test (what was done, what was
+   measured, where the evidence is, corrections kept visible).
+3. **C: the way in, not the goal.** Keep writing Tinkering posts and beginner
+   editions for search traffic, but each one links, in its body and at its
+   end, to at least one A or B article it leads into. A C article with nowhere
+   to go next is not finished.
+
+Judge the site by what this ranking is for, not by visitor counts: readers
+who go on from an article to /about/ or /projects/ or a second article,
+returning readers, citations by AI assistants, stars on the open-source
+projects, and messages to the contact address.
+
 ### A. Agent engineer (`agent-engineer-source-transition`, the default)
 
 - **Who**: an application engineer (Python / TypeScript / Java / Go) who has
@@ -95,6 +121,9 @@ be lost, but need not be served first.
 - **Gives up** when the answer is "it depends" without saying on what, when
   numbers have no date or source, or when the comparison is a feature list
   copied from vendor pages.
+- **First-hand data**: measurements from the author's day job are this
+  persona's main draw. Never name the employer or its products; ask the
+  owner before writing anything drawn from that work.
 - **Typical posts**: 深度调研 / Deep Dives; llm-inference-engine-selection,
   why-temporal-not-celery, memory-choice-framework,
   model-gateway-cloudflare-vs-china-cloud, verify-llm-relay-api.
@@ -119,6 +148,8 @@ be lost, but need not be served first.
   number tables.
 - **Gives up** at the first unexplained acronym, a wall of commands, or an
   answer that only appears after the method.
+- **Then**: once answered, offer the one A or B article that goes deeper on
+  the same subject (see **Priority**); this is how the site keeps them.
 - **Typical posts**: 折腾记录 / Tinkering and the beginner editions;
   chatgpt-business-promo-investigation, mac-for-local-llms,
   nvidia-tensor-half-speed-explained, agent-plugins-explained.
@@ -138,9 +169,9 @@ be lost, but need not be served first.
   and how the author reasons about trade-offs and mistakes.
 - **Gives up** on claims without evidence, framework name lists, or articles
   that read like reworded documentation.
-- **Applies to** every article as a secondary reader: the opening says what
-  was done and what was learned, and corrections are kept visible rather
-  than silently rewritten.
+- **Applies to** every article as a check, not as the reader it is written
+  for (see **Priority**): the opening says what was done and what was
+  learned, and corrections are kept visible rather than silently rewritten.
 - **Knows**: general software engineering, the names of common AI products.
 - **Does not know**: the author's employer's internals, the projects' history,
   why a number matters unless the article says so.
