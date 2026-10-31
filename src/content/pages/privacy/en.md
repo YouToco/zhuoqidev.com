@@ -10,7 +10,7 @@ There is no sign-up or login, and I do not collect identifying information such 
 
 ## Analytics
 
-The analytics script loads only on the production domain `zhuoqidev.com`, never on local previews or test builds. It records common visit data: the page URL (including the `?q=` search term when you use site search), the referring page, browser and device type, approximate location, the time of the visit, and how fast the page loaded.
+The analytics script loads only on the production domain `zhuoqidev.com`, never on local previews or test builds. It records common visit data: the page URL (including the `?q=` search term when you use site search), the referring page, browser, operating system and device type (desktop or mobile), country, the time of the visit, and how fast the page loaded (per the [Cloudflare Web Analytics docs](https://developers.cloudflare.com/web-analytics/data-metrics/dimensions/)).
 
 | Service | Purpose | Cookies | Privacy policy |
 | --- | --- | --- | --- |
