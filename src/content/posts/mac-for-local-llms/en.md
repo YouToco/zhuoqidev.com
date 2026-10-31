@@ -252,6 +252,8 @@ China prices for reference (apple.com.cn, 2026-10-18): Mac mini M6 16 GB from ¥
 
 In one line: **a Mac mini is a very good development and Agent machine, not a good local-LLM machine.** Its product page puts the two side by side — "create your own AI agents" and running large models on device — and the first holds up when measured, while the second, on the 16 GB base model, is closer to "it runs, the experience is so-so". To fit a truly large model locally, look at the large memory of the Mac Studio tier; to run it fast, it is still NVIDIA.
 
+Beyond the machine you also pick an "inference engine", the program that actually runs the model (llama.cpp and MLX, measured above, are two). Which kind suits one computer and which a whole data centre: [How to Choose an LLM Inference Engine](/en/posts/llm-inference-engine-selection/).
+
 ---
 
 ## Further up: power and borders
@@ -262,6 +264,8 @@ If you keep going — an 8-GPU data-center server, the newest data-center GPU �
 - **Borders**: the Blackwell and Rubin data-center GPUs are barred from sale to China, with no sign of a licence as of October 2026; the full RTX PRO 6000 (96 GB) is also above the control threshold, and China gets the export-edition RTX PRO 6000D (according to teardowns, 84 GB and about 17 % fewer cores).
 
 Beyond that, you rent GPUs or buy tokens.
+
+**Read next**: once the machine is chosen, the next choice is the inference engine: [How to Choose an LLM Inference Engine — A 2026 Map from Local Single-GPU to PD Disaggregation](/en/posts/llm-inference-engine-selection/). The same "numbers the product page leaves out" on an NVIDIA card: [the half-rate tensor core](/en/posts/nvidia-tensor-half-speed-unlock/).
 
 ---
 
