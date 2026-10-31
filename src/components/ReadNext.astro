@@ -12,8 +12,6 @@ interface Props {
 const { lang, post, posts } = Astro.props;
 const L = t[lang];
 const { cards, shown } = readNext(lang, post, posts);
-const label = (c: (typeof cards)[number]) =>
-  c.kind === "series" ? (c.dir === "next" ? L.seriesNextCard : L.seriesPrevCard) : L.featuredCard;
 ---
 
 {cards.length > 0 && (
@@ -25,7 +23,7 @@ const label = (c: (typeof cards)[number]) =>
       {cards.map((c) => (
         <a class:list={["card", "rn-card", c.kind]} href={c.url} data-hot-slot={c.hot ? shown.join(" ") : undefined}>
           <span class="kicker rn-k" data-hot-label={c.hot ? L.hotCard : undefined}>
-            {label(c)}
+            {L.featuredCard}
           </span>
           <b data-t>{c.title}</b>
           <span class="rn-d" data-d>

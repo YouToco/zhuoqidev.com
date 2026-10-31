@@ -71,8 +71,6 @@ export const t = {
     seriesAll: (name: string, n: number) => `系列 · ${name}（共 ${n} 篇）`,
     // Featured and popular articles (src/data/featured.ts, src/components/ReadNext.astro, Picks.astro)
     readNext: "接着读",
-    seriesNextCard: "同系列 · 下一篇",
-    seriesPrevCard: "同系列 · 上一篇",
     featuredCard: "★ 精选",
     hotCard: "最近热门",
     startHere: "★ 先读这几篇",
@@ -464,8 +462,6 @@ export const t = {
     next: "Next →",
     seriesAll: (name: string, n: number) => `Series · ${name} (${n} parts)`,
     readNext: "Read next",
-    seriesNextCard: "Same series · next",
-    seriesPrevCard: "Same series · previous",
     featuredCard: "★ Featured",
     hotCard: "Popular lately",
     startHere: "★ Start with these",
