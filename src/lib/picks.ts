@@ -1,5 +1,4 @@
-// What to read next: the hand-picked articles (src/data/featured.ts), the next one in a series, and
-// the data for the "popular lately" cards that the page fills in from /hot.json (functions/hot.json.ts).
+// What to read next: the hand-picked articles (src/data/featured.ts) and the data for the "popular lately" cards that the page fills in from /hot.json (functions/hot.json.ts).
 import { FEATURED } from "../data/featured";
 import type { Lang } from "../i18n";
 import { type Post, postUrl, shortTitle, slugOf } from "./content";
@@ -37,36 +36,31 @@ export function hotCards(lang: Lang, posts: Post[]): Record<string, { t: string;
 }
 
 /** `hot`: the card the page swaps for a popular article (see HotScript.astro). */
-export type NextCard = Card & { kind: "series" | "featured"; dir?: "next" | "prev"; hot?: true };
+export type NextCard = Card & { kind: "featured"; hot?: true };
 
 /**
- * The "read next" row at the end of an article: (a) the next article in its series (the previous one
- * when it is the last), (b) the first featured article not already on the page, (c) the next featured
- * one, which the page swaps for the first popular article not already shown once /hot.json answers.
- * `shown` lists the slugs the swap must skip (the current article and cards a and b).
+ * The "read next" row at the end of an article: two featured articles and a third that the page
+ * swaps for the first popular article not already on the page once /hot.json answers (until then,
+ * or when it cannot, the third featured one stays). The articles before and after this one in its
+ * series are left out, because the series navigation right below already links them. `shown` lists
+ * the slugs the swap must skip: the current article, its series neighbours and the cards.
  */
 export function readNext(lang: Lang, post: Post, posts: Post[]): { cards: NextCard[]; shown: string[] } {
-  const cards: NextCard[] = [];
   const shown = [slugOf(post)];
   if (post.data.series) {
     const series = posts
       .filter((p) => p.data.series === post.data.series)
       .sort((a, b) => (a.data.seriesOrder ?? 0) - (b.data.seriesOrder ?? 0));
     const i = series.findIndex((p) => p.id === post.id);
-    const next = series[i + 1];
-    const prev = i > 0 ? series[i - 1] : undefined;
-    const pick = next ?? prev;
-    if (pick) {
-      cards.push({ ...cardOf(lang, pick), kind: "series", dir: next ? "next" : "prev" });
-      shown.push(slugOf(pick));
-    }
+    for (const p of [series[i - 1], series[i + 1]]) if (p) shown.push(slugOf(p));
   }
-  const featured = featuredPosts(posts).filter((p) => !shown.includes(slugOf(p)));
-  const [first, second] = featured;
-  if (first) {
-    cards.push({ ...cardOf(lang, first), kind: "featured" });
-    shown.push(slugOf(first));
+  const [first, second, third] = featuredPosts(posts).filter((p) => !shown.includes(slugOf(p)));
+  const cards: NextCard[] = [];
+  for (const p of [first, second]) {
+    if (!p) continue;
+    cards.push({ ...cardOf(lang, p), kind: "featured" });
+    shown.push(slugOf(p));
   }
-  if (second) cards.push({ ...cardOf(lang, second), kind: "featured", hot: true });
+  if (third) cards.push({ ...cardOf(lang, third), kind: "featured", hot: true });
   return { cards, shown };
 }
