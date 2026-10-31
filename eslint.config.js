@@ -60,13 +60,12 @@ export default defineConfig(
   astro.configs.recommended,
   {
     // `<script is:inline>` blocks ship byte for byte, with no bundler or transpiler, and run
-    // before the page draws, so they are written as plain ES5: `var`, and gtag's queue needs the
-    // real `arguments` object. ESLint sees every <script> block as a virtual `X.astro/N_N.ts`
-    // file whether inline or not, so this names the two files whose inline scripts need it.
+    // before the page draws, so they are written as plain ES5 (`var`). ESLint sees every <script>
+    // block as a virtual `X.astro/N_N.ts` file whether inline or not, so this names the two files
+    // whose inline scripts need it.
     files: ["src/components/Analytics.astro/*.ts", "src/layouts/Base.astro/*.ts"],
     rules: {
       "no-var": "off",
-      "prefer-rest-params": "off",
       "@typescript-eslint/no-unused-vars": ["error", { caughtErrors: "none" }],
     },
   },

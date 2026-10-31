@@ -443,9 +443,14 @@ one carrying four unexplained terms.
   `dist/hot.json` before the OSS sync (whose `--delete` would remove it) and drop it before the
   Cloudflare upload. Pages read it from their own origin (`src/components/HotScript.astro`) and keep
   their built cards when it is empty or fails. The featured articles are `src/data/featured.ts`.
+- The only third-party tracker is Cloudflare Web Analytics (no cookies, no local storage), loaded by
+  `Analytics.astro` after first paint together with the site's own count. Google Analytics and Baidu
+  Tongji were removed on 2026-11-01; do not add another tracker without updating both privacy pages.
+  Search-engine verification and push (Google Search Console by DNS TXT, Baidu 搜索资源平台, Bing
+  webmaster, `robots.txt`, `sitemap.xml`) are separate from analytics and stay.
 - The owner's own browser stays out of the site's counts: open any page with `?nocount=1` once (sets
   `zq-nocount` in localStorage; `?nocount=0` clears it) and `Analytics.astro` sends neither the beacon
-  nor `/hit.gif`; the third-party trackers still load. This is for the owner only; readers are not told.
+  nor `/hit.gif`; Cloudflare Web Analytics still loads. This is for the owner only; readers are not told.
 - The published pages call the API on `https://api.zhuoqidev.com` (`api` / `apiBase` in `src/site.ts`):
   a CNAME to `zhuoqidev.pages.dev` on every DNS line plus a custom domain on the Pages project, so
   readers on the mainland line reach it too. Local previews and `*.pages.dev` call their own origin.
