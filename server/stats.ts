@@ -1,6 +1,7 @@
 // Writing the daily counts (schema: migrations/).
 import { beijingDay, type Crawler } from "./bots.ts";
 import { hex, sha256 } from "./http.ts";
+import { slugOf } from "./pages.ts";
 
 export type Place = { country: string; region: string; city: string };
 
@@ -71,6 +72,7 @@ async function saltFor(db: D1Database, day: string): Promise<string> {
         .bind(day, hex(crypto.getRandomValues(new Uint8Array(16)))),
       db.prepare("DELETE FROM daily_salt WHERE day < ?1").bind(day),
       db.prepare("DELETE FROM visitor_seen WHERE day < ?1").bind(day),
+      db.prepare("DELETE FROM page_seen WHERE day < ?1").bind(day),
     ]);
     row = await read();
   }
@@ -90,8 +92,12 @@ export async function dailyHash(db: D1Database, request: Request, day: string, w
 // cannot inflate the counts (or burn the database's daily write allowance) for long.
 const MAX_VIEWS_PER_VISITOR = 300;
 
-/** One page view by a person: +1 view for their place, +1 visitor on their first view today. */
-export async function recordView(db: D1Database, request: Request): Promise<void> {
+/**
+ * One page view by a person: +1 view for their place, +1 visitor on their first view today. When the
+ * page is an article (`path` from the beacon's `?p=`), also +1 view for that article, and +1 visitor
+ * the first time today's hash opens it. Only the article's slug is kept, not the path.
+ */
+export async function recordView(db: D1Database, request: Request, path: string | null = null): Promise<void> {
   const day = beijingDay();
   const hash = await dailyHash(db, request, day, true);
   const seen = await db
@@ -104,11 +110,30 @@ export async function recordView(db: D1Database, request: Request): Promise<void
   const views = seen?.views ?? 1;
   if (views > MAX_VIEWS_PER_VISITOR) return;
   const p = placeOf(request);
-  await db
-    .prepare(
-      `INSERT INTO visit_daily (day, country, region, city, views, visitors) VALUES (?1, ?2, ?3, ?4, 1, ?5)
+  const writes = [
+    db
+      .prepare(
+        `INSERT INTO visit_daily (day, country, region, city, views, visitors) VALUES (?1, ?2, ?3, ?4, 1, ?5)
        ON CONFLICT (day, country, region, city) DO UPDATE SET views = views + 1, visitors = visitors + excluded.visitors`,
-    )
-    .bind(day, p.country, p.region, p.city, views === 1 ? 1 : 0)
-    .run();
+      )
+      .bind(day, p.country, p.region, p.city, views === 1 ? 1 : 0),
+  ];
+  const slug = path === null ? null : slugOf(path);
+  if (slug) {
+    const first = await db
+      .prepare(
+        "INSERT INTO page_seen (day, hash, slug) VALUES (?1, ?2, ?3) ON CONFLICT DO NOTHING RETURNING 1 AS first",
+      )
+      .bind(day, hash, slug)
+      .first<{ first: number }>();
+    writes.push(
+      db
+        .prepare(
+          `INSERT INTO page_daily (day, line, slug, views, visitors) VALUES (?1, 'cf', ?2, 1, ?3)
+         ON CONFLICT (day, line, slug) DO UPDATE SET views = views + 1, visitors = visitors + excluded.visitors`,
+        )
+        .bind(day, slug, first ? 1 : 0),
+    );
+  }
+  await db.batch(writes);
 }

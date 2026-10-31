@@ -8,8 +8,10 @@
 //     counts only when the same IP and browser also fetched something else that day (the page, a
 //     script, a font): crawlers that run scripts from a pool of addresses fetch the page from one IP and
 //     the signal from another, and showed up as one-view "readers" (2026-10-18, see corroborated());
-// then replaces that day's mainland rows in the stats database. Only counts per crawler and per
-// place leave this process; visitor IPs never do.
+//   - articles: the same signals by the article in their Referer (the page that fetched /hit.gif),
+//     for the "popular lately" lists (aggregatePages());
+// then replaces that day's mainland rows in the stats database. Only counts per crawler, per place
+// and per article leave this process; visitor IPs never do.
 //
 //   node scripts/stats-cn.ts --day 2026-10-07 [--dry-run]
 //   node scripts/stats-cn.ts --logs <dir of .gz files> --day 2026-10-07 --dry-run
@@ -23,13 +25,14 @@ import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { gunzipSync } from "node:zlib";
 import { beijingDay, type Crawler, classify, isPageLike } from "../server/bots.ts";
+import { type PageCount, slugOf } from "../server/pages.ts";
 import { openIp2region, type Place } from "./ip2region.ts";
 
 const DOMAINS = ["zhuoqidev.com", "www.zhuoqidev.com"];
 
 // [7/Oct/2026:12:52:11 +0800] ip proxy ms "referer" "GET https://zhuoqidev.com/path" 200 req resp HIT "ua" "type"
 const LINE =
-  /^\[(\d{1,2})\/(\w{3})\/(\d{4}):[^\]]*\+0800\] (\S+) \S+ \S+ "[^"]*" "(\S+) (\S+)[^"]*" \d+ \d+ \d+ \S+ "((?:[^"\\]|\\.)*)"/;
+  /^\[(\d{1,2})\/(\w{3})\/(\d{4}):[^\]]*\+0800\] (\S+) \S+ \S+ "([^"]*)" "(\S+) (\S+)[^"]*" \d+ \d+ \d+ \S+ "((?:[^"\\]|\\.)*)"/;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 /** The page view signal fetched by pages on this line (public/hit.gif). */
@@ -39,13 +42,13 @@ const MAX_VIEWS_PER_VISITOR = 300;
 
 export type Row = Crawler & { hits: number };
 export type VisitRow = Place & { views: number; visitors: number };
-type Request = { ip: string; method: string; path: string; ua: string };
+type Request = { ip: string; method: string; path: string; ua: string; referer: string };
 
 /** The parts of one log line of the given Beijing day, or null for other days and other lines. */
 function parse(line: string, day: string): Request | null {
   const m = LINE.exec(line);
   if (!m) return null;
-  const [, dd, mon, yyyy, ip, method, target, ua] = m;
+  const [, dd, mon, yyyy, ip, referer, method, target, ua] = m;
   if (`${yyyy}-${String(MONTHS.indexOf(mon!) + 1).padStart(2, "0")}-${dd!.padStart(2, "0")}` !== day) return null;
   let path: string;
   try {
@@ -53,7 +56,7 @@ function parse(line: string, day: string): Request | null {
   } catch {
     return null;
   }
-  return { ip: ip!, method: method!, path, ua: ua!.replace(/\\(.)/g, "$1") };
+  return { ip: ip!, method: method!, path, ua: ua!.replace(/\\(.)/g, "$1"), referer: referer! };
 }
 
 /** The crawler page request in one log line, or null for people, assets and other days. */
@@ -108,6 +111,52 @@ export function aggregateVisits(lines: Iterable<string>, day: string, locate: (i
     rows.set(key, row);
   }
   return [...rows.values()].sort((a, b) => b.visitors - a.visitors || b.views - a.views);
+}
+
+/** The article a page view signal was sent from: the Referer must be one of this line's article pages. */
+function articleOf(referer: string): string | null {
+  let url: URL;
+  try {
+    url = new URL(referer);
+  } catch {
+    return null;
+  }
+  return DOMAINS.includes(url.hostname) ? slugOf(url.pathname) : null;
+}
+
+/**
+ * Views and visitors (one per IP and browser) by article, from the Referer of the page view signals
+ * that corroborated() keeps. Both languages count toward the same article.
+ */
+export function aggregatePages(lines: Iterable<string>, day: string): PageCount[] {
+  const other = new Set<string>();
+  const signals = new Map<string, Map<string, number>>();
+  for (const line of lines) {
+    const r = parse(line, day);
+    if (!r || (r.method !== "GET" && r.method !== "HEAD")) continue;
+    const visitor = `${r.ip}|${r.ua}`;
+    if (r.path !== HIT_PATH) {
+      other.add(visitor);
+      continue;
+    }
+    if (r.method !== "GET" || classify(r.ua)) continue;
+    const slug = articleOf(r.referer);
+    if (!slug) continue;
+    const byVisitor = signals.get(slug) ?? new Map<string, number>();
+    byVisitor.set(visitor, (byVisitor.get(visitor) ?? 0) + 1);
+    signals.set(slug, byVisitor);
+  }
+  const rows: PageCount[] = [];
+  for (const [slug, byVisitor] of signals) {
+    const row = { slug, views: 0, visitors: 0 };
+    for (const [visitor, views] of byVisitor) {
+      if (!other.has(visitor)) continue;
+      row.views += Math.min(views, MAX_VIEWS_PER_VISITOR);
+      row.visitors++;
+    }
+    if (row.visitors) rows.push(row);
+  }
+  return rows.sort((a, b) => b.visitors - a.visitors || b.views - a.views || a.slug.localeCompare(b.slug));
 }
 
 export function aggregate(lines: Iterable<string>, day: string): Row[] {
@@ -198,6 +247,9 @@ async function main() {
       byRegion.set(`${r.country} ${r.region}`, (byRegion.get(`${r.country} ${r.region}`) ?? 0) + r.visitors);
     for (const [k, n] of [...byRegion].sort((a, b) => b[1] - a[1])) console.log(`  ${String(n).padStart(5)}  ${k}`);
   } else console.log(`${day}: IP2REGION_DIR not set, visitors not counted`);
+  const pages = aggregatePages(lines(), day);
+  console.log(`${day}: ${pages.length} articles read`);
+  for (const r of pages.slice(0, 10)) console.log(`  ${String(r.visitors).padStart(5)}  ${r.slug}`);
   if (values["dry-run"]) return;
 
   const token = process.env.STATS_ADMIN_TOKEN;
@@ -206,7 +258,7 @@ async function main() {
   const res = await fetch(`${api}/api/admin/ingest`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ day, line: "cn", rows, visits }),
+    body: JSON.stringify({ day, line: "cn", rows, visits, pages }),
   });
   if (!res.ok) throw new Error(`ingest: HTTP ${res.status} ${await res.text()}`);
   console.log(`stored: ${await res.text()}`);
