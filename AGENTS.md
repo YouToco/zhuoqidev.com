@@ -268,6 +268,9 @@ one carrying four unexplained terms.
   copied from `global.css` into `remark-demo.ts`; keep the two in step) and follow the day / night
   switch: the page posts its theme into each frame (`src/scripts/site.ts`). Draw with those
   variables, not fixed colours, so a demo works in both themes.
+  The fence's `height=` is the minimum: a frame whose content wraps taller (a phone, a narrow
+  reading width) reports its height and grows to fit (`remark-demo.ts` → `site.ts`), so size the fence
+  for the desktop layout and check the phone width still reads well.
 - Comics: a ```` ```comic ```` fence holds a script (optional `# title` first, `---` between
   panels, one `> narration` per panel, `[Name] line` bubbles, `[Name!]` highlighted, `cols=N` panels
   per row at most). It is drawn at build time as HTML panels (`src/lib/markdown/comic.ts` parses,
