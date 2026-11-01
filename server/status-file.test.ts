@@ -14,8 +14,8 @@ test("the day is padded YYYY-MM-DD in the reader's clock", () => {
 });
 
 test("file names carry the date and edition the page shows, per language", () => {
-  assert.equal(snapshotName("zh", "2026-11-01", 60, "png"), "AI厂商状态-2026-11-01-第60版.png");
+  assert.equal(snapshotName("zh", "2026-11-01", 60, "jpg"), "AI厂商状态-2026-11-01-第60版.jpg");
   assert.equal(snapshotName("zh", "2026-11-01", 60, "pdf"), "AI厂商状态-2026-11-01-第60版.pdf");
-  assert.equal(snapshotName("en", "2026-11-01", 1440, "png"), "ai-vendor-status-2026-11-01-edition-1440.png");
+  assert.equal(snapshotName("en", "2026-11-01", 1440, "jpg"), "ai-vendor-status-2026-11-01-edition-1440.jpg");
   assert.equal(snapshotName("en", "2026-11-01", 1, "pdf"), "ai-vendor-status-2026-11-01-edition-1.pdf");
 });
