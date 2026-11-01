@@ -2,12 +2,14 @@
 // the page itself never carries it). The newspaper sheet is drawn into a canvas at twice its CSS
 // size in the theme it is shown in, with the page's own fonts embedded (modern-screenshot copies
 // the @font-face rules, including the per-page subsets inlined as data: URLs), then downloaded as
-// a PNG or as a one-page PDF of the same picture (jspdf, loaded only for the PDF).
+// a JPEG or as a one-page PDF of the same picture (jspdf, loaded only for the PDF). JPEG, not PNG:
+// the paper grain makes a lossless desktop picture about 12 MB, a JPEG at this quality about 4 MB.
 import { domToCanvas } from "modern-screenshot";
 
 /** The PDF page is A4 wide and as tall as the picture; PDF pages stop at 200 inches (5080 mm). */
 const PAGE_W = 210;
 const PAGE_MAX = 5080;
+const QUALITY = 0.85;
 
 /** Left out: the save buttons themselves, and <noscript>, whose text the clone would print. */
 const keep = (n: Node) => !(n instanceof Element && (n.hasAttribute("data-save") || n.localName === "noscript"));
@@ -54,7 +56,7 @@ function download(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
 
-export async function saveSheet(sheet: HTMLElement, kind: "png" | "pdf", name: string): Promise<void> {
+export async function saveSheet(sheet: HTMLElement, kind: "jpg" | "pdf", name: string): Promise<void> {
   await document.fonts.ready;
   const canvas = await domToCanvas(sheet, {
     scale: 2,
@@ -62,9 +64,9 @@ export async function saveSheet(sheet: HTMLElement, kind: "png" | "pdf", name: s
     onCloneEachNode: dropCap(sheet),
     timeout: 15_000,
   });
-  if (kind === "png") {
+  if (kind === "jpg") {
     const blob = await new Promise<Blob | null>((r) => {
-      canvas.toBlob(r, "image/png");
+      canvas.toBlob(r, "image/jpeg", QUALITY);
     });
     if (!blob) throw new Error("toBlob");
     download(blob, name);
@@ -78,6 +80,6 @@ export async function saveSheet(sheet: HTMLElement, kind: "png" | "pdf", name: s
     h = PAGE_MAX;
   }
   const pdf = new jsPDF({ unit: "mm", format: [w, h], orientation: h >= w ? "portrait" : "landscape", compress: true });
-  pdf.addImage(canvas, "PNG", 0, 0, w, h, undefined, "FAST");
+  pdf.addImage(canvas.toDataURL("image/jpeg", QUALITY), "JPEG", 0, 0, w, h);
   download(pdf.output("blob"), name);
 }

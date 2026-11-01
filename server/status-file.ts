@@ -8,6 +8,6 @@ export const editionOf = (d: Date): number => d.getHours() * 60 + d.getMinutes()
 export const dayOf = (d: Date): string =>
   [d.getFullYear(), d.getMonth() + 1, d.getDate()].map((n, i) => String(n).padStart(i ? 2 : 4, "0")).join("-");
 
-/** `AI厂商状态-2026-11-01-第60版.png` / `ai-vendor-status-2026-11-01-edition-60.pdf`. */
-export const snapshotName = (lang: "zh" | "en", day: string, edition: number, ext: "png" | "pdf"): string =>
+/** `AI厂商状态-2026-11-01-第60版.jpg` / `ai-vendor-status-2026-11-01-edition-60.pdf`. */
+export const snapshotName = (lang: "zh" | "en", day: string, edition: number, ext: "jpg" | "pdf"): string =>
   lang === "zh" ? `AI厂商状态-${day}-第${edition}版.${ext}` : `ai-vendor-status-${day}-edition-${edition}.${ext}`;

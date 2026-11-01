@@ -752,7 +752,7 @@ function init(root: HTMLElement) {
   const saveMsg = q("[data-save-msg]");
   const saveBtns = [...saveBox.querySelectorAll<HTMLButtonElement>("[data-save-kind]")];
   const save = async (btn: HTMLButtonElement) => {
-    const kind = btn.dataset.saveKind === "pdf" ? "pdf" : "png";
+    const kind = btn.dataset.saveKind === "pdf" ? "pdf" : "jpg";
     const label = btn.querySelector("[data-save-label]")!;
     const idle = label.textContent;
     for (const b of saveBtns) b.disabled = true;
