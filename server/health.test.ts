@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { CDN_CERT_DOMAINS, type CertRow } from "./certs.ts";
 import { health, type HealthData } from "./health.ts";
 import { daysBefore } from "./pages.ts";
 
@@ -25,6 +26,11 @@ const healthy: HealthData = {
   ],
   pages: { cn: "2026-11-19", cf: "2026-11-20" },
   hotRows,
+  certs: CDN_CERT_DOMAINS.map((domain) => ({
+    domain,
+    expires: "2027-01-20T04:00:00Z",
+    checkedAt: "2026-11-20T01:30:00.000Z",
+  })),
 };
 
 const check = (data: HealthData, name: string, today = TODAY) => {
@@ -45,6 +51,7 @@ test("reports a healthy day as ok, with every check named", () => {
       ["cf-crawlers", true],
       ["cf-visitors", true],
       ["page-counts", true],
+      ["cdn-certs", true],
       ["hot", true],
     ],
   );
@@ -112,4 +119,30 @@ test("no overseas visitors over three days fails cf-visitors; one quiet day does
   // Overseas crawlers look at today and yesterday only.
   assert.equal(check({ ...healthy, cfCrawlers: [{ day: "2026-11-18", n: 500 }] }, "cf-crawlers").ok, false);
   assert.equal(check({ ...healthy, cfCrawlers: [{ day: "2026-11-19", n: 1 }] }, "cf-crawlers").ok, true);
+});
+
+test("cdn-certs fails on a certificate close to expiry, a stale reading, a missing domain or no table", () => {
+  const ok = check(healthy, "cdn-certs");
+  assert.match(ok.detail, /^zhuoqidev\.com: 60 days left \(expires 2027-01-20\), read 2026-11-20;/);
+  const withCert = (expires: string, checkedAt = "2026-11-20T01:30:00.000Z") => ({
+    ...healthy,
+    certs: (healthy.certs as CertRow[]).map((c) =>
+      c.domain === "vane.zhuoqidev.com" ? { ...c, expires, checkedAt } : c,
+    ),
+  });
+  // 21 days left passes, 20 fails: cert-renew.yml renews at 30 and runs weekly.
+  assert.equal(check(withCert("2026-12-11T09:00:00Z"), "cdn-certs").ok, true);
+  const close = check(withCert("2026-12-10T09:00:00Z"), "cdn-certs");
+  assert.equal(close.ok, false);
+  assert.match(close.detail, /vane\.zhuoqidev\.com: 20 days left/);
+  assert.equal(health(withCert("2026-12-10T09:00:00Z"), TODAY, AT).ok, false);
+  const stale = check(withCert("2027-01-20T04:00:00Z", "2026-11-17T01:30:00.000Z"), "cdn-certs");
+  assert.equal(stale.ok, false);
+  assert.match(stale.detail, /not read for 3 days/);
+  const missing = check({ ...healthy, certs: (healthy.certs as CertRow[]).slice(1) }, "cdn-certs");
+  assert.equal(missing.ok, false);
+  assert.match(missing.detail, /^zhuoqidev\.com: never reported/);
+  const noTable = check({ ...healthy, certs: { error: "no such table: cdn_cert" } }, "cdn-certs");
+  assert.equal(noTable.ok, false);
+  assert.match(noTable.detail, /migration 0004/);
 });

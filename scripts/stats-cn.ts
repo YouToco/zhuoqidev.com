@@ -27,6 +27,7 @@ import { gunzipSync } from "node:zlib";
 import { beijingDay, type Crawler, classify, isPageLike } from "../server/bots.ts";
 import { type PageCount, slugOf } from "../server/pages.ts";
 import { openIp2region, type Place } from "./ip2region.ts";
+import { withRetries } from "./retry.ts";
 
 const DOMAINS = ["zhuoqidev.com", "www.zhuoqidev.com"];
 
@@ -181,21 +182,23 @@ async function downloadDay(day: string): Promise<Buffer[]> {
   const start = new Date(+end - 86400_000);
   const files: Buffer[] = [];
   for (const domain of DOMAINS) {
-    const out = execFileSync(
-      process.env.ALIYUN_BIN || "aliyun",
-      [
-        "cdn",
-        "DescribeCdnDomainLogs",
-        "--DomainName",
-        domain,
-        "--StartTime",
-        start.toISOString().replace(/\.\d+Z$/, "Z"),
-        "--EndTime",
-        end.toISOString().replace(/\.\d+Z$/, "Z"),
-        "--PageSize",
-        "1000",
-      ],
-      { encoding: "utf8" },
+    const out = await withRetries(`DescribeCdnDomainLogs ${domain}`, () =>
+      execFileSync(
+        process.env.ALIYUN_BIN || "aliyun",
+        [
+          "cdn",
+          "DescribeCdnDomainLogs",
+          "--DomainName",
+          domain,
+          "--StartTime",
+          start.toISOString().replace(/\.\d+Z$/, "Z"),
+          "--EndTime",
+          end.toISOString().replace(/\.\d+Z$/, "Z"),
+          "--PageSize",
+          "1000",
+        ],
+        { encoding: "utf8" },
+      ),
     );
     // The fields of DescribeCdnDomainLogs this script reads.
     type Logs = {
@@ -206,9 +209,13 @@ async function downloadDay(day: string): Promise<Buffer[]> {
     const details = (JSON.parse(out) as Logs).DomainLogDetails?.DomainLogDetail ?? [];
     for (const d of details) {
       for (const log of d.LogInfos?.LogInfoDetail ?? []) {
-        const res = await fetch(`https://${log.LogPath}`);
-        if (!res.ok) throw new Error(`${log.LogName}: HTTP ${res.status}`);
-        files.push(Buffer.from(await res.arrayBuffer()));
+        files.push(
+          await withRetries(log.LogName, async () => {
+            const res = await fetch(`https://${log.LogPath}`);
+            if (!res.ok) throw new Error(`${log.LogName}: HTTP ${res.status}`);
+            return Buffer.from(await res.arrayBuffer());
+          }),
+        );
       }
     }
   }
@@ -255,13 +262,18 @@ async function main() {
   const token = process.env.STATS_ADMIN_TOKEN;
   if (!token) throw new Error("STATS_ADMIN_TOKEN is not set");
   const api = process.env.STATS_API || "https://api.zhuoqidev.com";
-  const res = await fetch(`${api}/api/admin/ingest`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ day, line: "cn", rows, visits, pages }),
+  // An import replaces its day, so sending it again after a timeout is safe.
+  const stored = await withRetries("ingest", async () => {
+    const res = await fetch(`${api}/api/admin/ingest`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ day, line: "cn", rows, visits, pages }),
+    });
+    const body = await res.text();
+    if (!res.ok) throw new Error(`ingest: HTTP ${res.status} ${body}`);
+    return body;
   });
-  if (!res.ok) throw new Error(`ingest: HTTP ${res.status} ${await res.text()}`);
-  console.log(`stored: ${await res.text()}`);
+  console.log(`stored: ${stored}`);
 }
 
 if (import.meta.main) await main();

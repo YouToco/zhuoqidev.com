@@ -33,6 +33,16 @@ with its CDN CNAME.
   configuration only under `RUNNER_TEMP`. No certificate private key is cached
   or committed.
 
+## Noticing when renewal stops
+
+Nothing here sends notifications. Every daily `stats-cn.yml` run reads each
+CDN certificate's expiry from Alibaba Cloud (`scripts/cdn-certs.ts`), and the
+`cdn-certs` check of `GET /api/admin/health` fails when any certificate has
+fewer than 21 days left or was not read for 3 days. A weekly job that renews at
+30 days keeps every certificate above 23 days, so a failing check means this
+workflow stopped running or keeps failing. The domain list in
+`server/certs.ts` must match the matrix above; a test checks that.
+
 ## Required GitHub Actions secrets
 
 - `ALIYUN_ACCESS_KEY_ID`

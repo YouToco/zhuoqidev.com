@@ -2,6 +2,7 @@
 // (functions/api/admin/[[path]].ts). There are no notifications: an agent or the owner asks this,
 // and the daily stats-cn.yml run prints it in its summary. Dependency-free and pure, so it is tested
 // with plain rows; the Function only runs the queries.
+import { certCheck, type CertRow } from "./certs.ts";
 import { daysBefore, HOT_LIST, hotSlugs } from "./pages.ts";
 
 /** Per-article counts (page_daily, migrations/0003) started on this Beijing day. */
@@ -32,6 +33,8 @@ export type HealthData = {
   pages: { cn: string | null; cf: string | null } | { error: string };
   /** page_daily visitors per day and slug over the hot list's window (the /hot.json query). */
   hotRows: { day: string; slug: string; visitors: number }[];
+  /** cdn_cert rows (server/certs.ts), or the error when the table could not be read. */
+  certs: CertRow[] | { error: string };
 };
 
 export type Check = { name: string; ok: boolean; detail: string };
@@ -82,6 +85,7 @@ export function health(data: HealthData, today: string, checkedAt = new Date().t
   });
 
   checks.push(pageCounts(data.pages, today));
+  checks.push(certCheck(data.certs, new Date(checkedAt)));
 
   const hot = hotSlugs(data.hotRows, today, HOT_LIST);
   const hotFrom = daysBefore(today, HOT_LIST.days - 1);
