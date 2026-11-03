@@ -126,6 +126,21 @@ jobs:
             echo "::warning::could not publish /hot.json to the mainland line; it keeps the previous copy"
           fi
 
+      # When each Aliyun CDN certificate expires, for the cdn-certs check of GET /api/admin/health
+      # (server/certs.ts): cert-renew.yml renews them weekly, and this notices if that ever stops. It
+      # runs even when the import failed; the two are unrelated.
+      - name: Report CDN certificate expiry
+        if: always()
+        env:
+          ALIYUN_BIN: ${{ runner.temp }}/aliyun-3.5.1/aliyun
+          STATS_ADMIN_TOKEN: ${{ secrets.STATS_ADMIN_TOKEN }}
+        run: |
+          if [[ -z $STATS_ADMIN_TOKEN ]]; then
+            echo "::notice::STATS_ADMIN_TOKEN is not set, so there is nowhere to send the expiries"
+            exit 0
+          fi
+          node scripts/cdn-certs.ts
+
       # A record any agent can read later, with no notifications: the run summary keeps when the
       # mainland copy of /hot.json last changed on OSS and what GET /api/admin/health answered right
       # after the import (server/health.ts; AGENTS.md "Guestbook and visit counts"). It runs even when

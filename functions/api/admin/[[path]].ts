@@ -6,7 +6,9 @@
 //   DELETE /api/admin/notes/<id>                             delete a note
 //   POST   /api/admin/ingest {day, line: "cn", rows, visits?, pages?}
 //                                                            replace a day of mainland crawler (visit, article) counts
+//   POST   /api/admin/certs {certs: [{domain, expires}]}     replace the Aliyun CDN certificate expiries (server/certs.ts)
 import { beijingDay, CATEGORIES, type Category } from "../../../server/bots.ts";
+import { type CertRow, validCerts } from "../../../server/certs.ts";
 import { health, type HealthData, WINDOWS } from "../../../server/health.ts";
 import { isAdmin, json, readJson } from "../../../server/http.ts";
 import { daysBefore, HOT_LIST, validPages } from "../../../server/pages.ts";
@@ -97,6 +99,14 @@ export const onRequest: PagesFunction<Env, "path"> = async ({ request, env, para
     } catch (e) {
       pages = { error: e instanceof Error ? e.message : String(e) };
     }
+    // cdn_cert comes from migration 0004: same reasoning as page_daily.
+    let certs: HealthData["certs"];
+    try {
+      const { results } = await db.prepare("SELECT domain, expires, checked_at AS checkedAt FROM cdn_cert").all();
+      certs = results as CertRow[];
+    } catch (e) {
+      certs = { error: e instanceof Error ? e.message : String(e) };
+    }
     const cn = cnVisits!.results[0] as { day: string | null; visitors: number | null } | undefined;
     const data: HealthData = {
       cnVisits: { day: cn?.day ?? null, visitors: cn?.visitors ?? null },
@@ -105,6 +115,7 @@ export const onRequest: PagesFunction<Env, "path"> = async ({ request, env, para
       cfVisits: cfVisits!.results as HealthData["cfVisits"],
       pages,
       hotRows,
+      certs,
     };
     return json(health(data, today), 200, { "Cache-Control": "no-store" });
   }
@@ -132,6 +143,24 @@ export const onRequest: PagesFunction<Env, "path"> = async ({ request, env, para
   if (note && m === "DELETE" && !note[2]) {
     const r = await db.prepare("DELETE FROM notes WHERE id = ?1").bind(Number(note[1])).run();
     return json({ changed: r.meta.changes });
+  }
+
+  if (m === "POST" && path === "certs") {
+    const body = (await readJson(request, 1 << 14)) as { certs?: unknown } | null;
+    const certs = validCerts(body?.certs);
+    if (!certs) return json({ error: "bad-request" }, 400);
+    const at = new Date().toISOString();
+    await db.batch(
+      certs.map((c) =>
+        db
+          .prepare(
+            `INSERT INTO cdn_cert (domain, expires, checked_at) VALUES (?1, ?2, ?3)
+             ON CONFLICT (domain) DO UPDATE SET expires = excluded.expires, checked_at = excluded.checked_at`,
+          )
+          .bind(c.domain, c.expires, at),
+      ),
+    );
+    return json({ stored: certs.length });
   }
 
   if (m === "POST" && path === "ingest") {

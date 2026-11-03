@@ -487,7 +487,11 @@ one carrying four unexplained terms.
   visitors in `visit_daily` over 3 days (a few a day, so one quiet day is no alarm); `page-counts` —
   `page_daily` has `cn` rows within 2 days and `cf` rows within 3 (each line in `detail`; "no data yet"
   is fine until a window reaches back to 2026-10-31, when per-article counting started, and an
-  unreadable table says migration 0003 may be missing); `hot` — informational, never fails: how many
+  unreadable table says migration 0003 may be missing); `cdn-certs` — every Aliyun CDN domain in
+  `CDN_CERT_DOMAINS` (`server/certs.ts`, kept equal to `cert-renew.yml`'s matrix by a test) was read
+  within 3 days and has 21+ days left (renewal happens at 30, weekly), so a renewal schedule that
+  stopped or keeps failing shows up here; the expiries come from `scripts/cdn-certs.ts` in every
+  `stats-cn.yml` run, stored by `POST /api/admin/certs` in `cdn_cert` (migration 0004); `hot` — informational, never fails: how many
   slugs `/hot.json` would serve and whether the counts cover its 7 days. `ok` is every other check.
   To read it: `curl -fsS -H "Authorization: Bearer $ADMIN_TOKEN" https://api.zhuoqidev.com/api/admin/health`
   (the `ADMIN_TOKEN` Pages secret, the same value as the `STATS_ADMIN_TOKEN` Actions secret).
