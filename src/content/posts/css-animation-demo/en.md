@@ -1,34 +1,53 @@
 ---
-title: Embedding CSS Animation Demos in Hugo Articles
-description: Use custom shortcodes to run live CSS animations directly in Hugo blog posts — no CodePen account needed.
+title: Live CSS Animation Demos Right Inside a Blog Post
+description: Write a bit of HTML and CSS in Markdown and the article shows a small live window — no CodePen account, it follows the site's day / night switch, and it grows to fit on a phone.
 date: 2026-05-04
 glyph: embedded-demo
-updated: 2026-07-30
-lead: 'Hugo shortcodes make it easy to embed live code demos. Here are three ways:'
+updated: 2026-11-03
+lead: 'To show a moving CSS effect in an article you need neither a GIF nor CodePen: write a code block marked `html demo` in the Markdown, and the build turns it into a small window in the page where the animation really runs in the reader''s browser. The two examples below are written exactly that way.'
 tags:
-- Hugo
 - CSS
 - Animation
+- Markdown
+- Astro
+- Hugo
 - Shortcode
 categories:
 - Tinkering
 ---
 
-The diagram first separates their boundaries: a native shortcode, a CodePen iframe, and a CodeSandbox app serve different complexity levels and execute code in different places.
+> [!NOTE]
+> Rewritten on 2026-11-03 for how the site works now. The first version (2026-05) described the shortcode syntax of Hugo, the framework the site used then; since the move to Astro in 2026-10 that syntax is no longer used here.
 
-![Three ways to embed an interactive demo in a Hugo article](./hugo-embed-paths-bilingual-v1-4k.png "Three embed paths: prefer a native shortcode for simple, versioned effects; CodePen for shareable snippets; and CodeSandbox for a complete interactive application.")
+## How: one code block
 
-## 1. Inline CSS Demo (No External Service)
+In the article's Markdown, write a code block whose language is `html`, followed by `demo` and a height:
 
-A spinning loader animation, right in the article:
+````markdown
+```html demo height=200 caption="Pure CSS spinner"
+<style> … </style>
+<div class="loader"></div>
+```
+````
 
-```html demo height=200 caption="Pure CSS Spinner"
+At build time the site puts that HTML into an isolated small window (an `iframe`, a web page embedded in another). What that gives you:
+
+- **Readers see it moving as soon as the article opens**: the code is already in the page, nothing is loaded from another site.
+- **The code is fenced off**: its styles cannot break the article, and the article's styles cannot change it.
+- **It follows the site's colours**: inside the window you can use the site's colour variables (`var(--ink)` for text, `var(--seal)` for the seal red, `var(--line)` for rules, and so on), so when the reader switches to night mode the demo switches too.
+- **It is not cut off on a phone**: `height` is the minimum; when the content wraps and grows taller on a narrow screen, the window grows with it.
+
+The plain-text copy for AI tools and search engines (add `index.md` to any article's address) keeps the original code block.
+
+## Example 1: a spinner
+
+```html demo height=200 caption="Pure CSS spinner (try night mode)"
 <style>
   .loader {
     width: 48px;
     height: 48px;
-    border: 4px solid #e8e4de;
-    border-top-color: #c44020;
+    border: 4px solid var(--line);
+    border-top-color: var(--seal);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
   }
@@ -39,19 +58,20 @@ A spinning loader animation, right in the article:
 <div class="loader"></div>
 ```
 
-A gradient text animation:
+A grey ring with only its top edge coloured red, turned forever: `animation: spin 0.8s linear infinite` means "one turn every 0.8 seconds, at an even speed, without stopping".
 
-```html demo height=160 caption="CSS Gradient Text"
+## Example 2: shimmering text
+
+```html demo height=160 caption="CSS gradient shimmer text"
 <style>
   .gradient-text {
     font-size: 2rem;
     font-weight: 700;
-    font-family: system-ui, sans-serif;
-    background: linear-gradient(135deg, #c44020, #e8803a, #c44020);
+    background: linear-gradient(135deg, var(--seal), var(--gold), var(--seal));
     background-size: 200% auto;
     -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
     background-clip: text;
+    color: transparent;
     animation: shimmer 2s linear infinite;
   }
   @keyframes shimmer {
@@ -61,22 +81,18 @@ A gradient text animation:
 <div class="gradient-text">ZhuoQi Dev</div>
 ```
 
-## 2. Embed CodePen
+The background is a gradient twice as wide as the text; `background-clip: text` shows it only inside the letters, and moving the background steadily to the right looks like light sweeping across them.
 
-If you already have CodePen creations, embed them with a single shortcode:
+## When to use CodePen or CodeSandbox instead
 
-```
-{{< codepen id="yourPenID" height="400" tab="result" >}}
-```
+| What you want to show | Use |
+| --- | --- |
+| A small piece of HTML + CSS (an animation, a layout, a button effect) that should be edited and archived with the article | an `html demo` code block in the article |
+| Something readers can edit online or fork to play with | a pen on [CodePen](https://codepen.io/), linked from the article |
+| A complete small app with dependencies (a React / Vue component) | a sandbox on [CodeSandbox](https://codesandbox.io/), linked from the article |
 
-## 3. Embed CodeSandbox
-
-For React / Vue components, use CodeSandbox:
-
-```
-{{< codesandbox id="yourSandboxID" height="450" view="preview" >}}
-```
+The code block keeps the code in the same repository as the article, so moving hosts or switching frameworks never loses it; the outside platforms are for letting readers change the code themselves.
 
 ---
 
-These three shortcodes cover most code demo scenarios — no extra tools needed.
+How this site is served both inside and outside China, and what that costs a year, is in [the dual-line deployment write-up](/en/posts/hugo-dual-cdn-blog/).
