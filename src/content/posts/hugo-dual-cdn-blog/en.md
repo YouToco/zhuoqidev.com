@@ -106,7 +106,7 @@ Mainland CDN nodes only serve filed domains. The filing goes through a "hosting 
 If you don't want a server, Alibaba Cloud's **Function Compute resource pack** counts too: an order of ¥100 or more comes with one filing service code (the voucher you enter when filing, proving you are an Alibaba Cloud customer). I bought the cheapest tier, a one-year pack of 1.2 million CU (Function Compute's unit of compute), list price ¥126, paid ¥101. Not one CU has been used. It is an entry ticket.
 
 > [!WARNING]
-> The pack expires on 2027-05-04. I have not yet checked whether the filing stays validly hosted if it is not renewed; that needs confirming before it expires so the filing is not cancelled.
+> The pack expires on 2027-05-04. Alibaba Cloud's documentation does not say directly what happens if it is not renewed (checked 2026-11-03): it only says **an expired product can no longer issue new filing service codes**. Among Alibaba Cloud's [verification criteria](https://help.aliyun.com/document_detail/36997.html) for filed sites, the only one about hosting is that "the IP the filed domain currently resolves to must belong to the filing's access provider". My default line has always pointed at Alibaba Cloud CDN, which meets that. But that is an inference, not Alibaba Cloud's answer; whether to renew the ¥101 will be settled with Alibaba Cloud before it expires, and this note updated.
 
 Alibaba Cloud's own review takes 1–5 working days and the provincial authority 10–20 working days, three to five weeks counting weekends — enough time to build the site in the meantime.
 
@@ -210,13 +210,13 @@ The last fix has a price: Alibaba Cloud CDN no longer caches HTML at the node an
 
 ## Certificates: checked weekly, renewed at 30 days
 
-Cloudflare manages its own certificates; the ones on Alibaba Cloud CDN must be uploaded by you. The site started with Alibaba Cloud's free DigiCert certificate; when it expired in August 2026 the free quota was used up, so it switched to Let's Encrypt (a free, non-profit certificate authority). Its certificates last only 90 days, so renewal has to be automatic:
+Cloudflare manages its own certificates; the ones on Alibaba Cloud CDN must be uploaded by you. The site started with Alibaba Cloud's free DigiCert certificate; when it expired in August 2026 the free quota was used up, so it switched to Let's Encrypt (a free, non-profit certificate authority). Its certificates last 90 days today, [64 days from 2027-02-10 and 45 days from February 2028](https://letsencrypt.org/2026/10/07/64-day-certs), and manual renewal is bound to be forgotten, so renewal has to be automatic:
 
 1. A scheduled job runs every Monday. It reads how many days the certificate on each CDN domain has left and exits if both have more than 30.
 2. Below 30 days, acme.sh (an open-source script for requesting Let's Encrypt certificates) proves the domain is mine with a temporary record in Alibaba Cloud DNS, issues one certificate covering both the bare domain and `www`, and uploads it to both CDN domains.
 3. It reads the certificate fingerprint back from both nodes; success only if both match what was uploaded, HTTPS works, and the temporary record is gone. The private key lives only in that run's temporary directory, never in a cache or the repository.
 
-It has acted for real once: the old certificate expired on 10-31, the scheduled run on 2026-10-05 found 26 days left and issued a new one, which is valid on both domains until 2027-01-03 (read with openssl on 2026-11-03). Every weekly run since has been "renewal not needed", exiting in about ten seconds.
+It has acted for real once: the old certificate expired on 10-31, the scheduled run on 2026-10-05 found 26 days left and issued a new one, which is valid on both domains until 2027-01-03 (read with openssl on 2026-11-03). Every weekly run since has been "renewal not needed", exiting in about ten seconds. Once certificates shrink to 45 days, "check weekly, renew below 30 days" still works; it just renews about every two weeks.
 
 An interlude: in August 2026 a payment problem on the GitHub account stopped jobs from even getting a machine. For a while the certificate job ran on a VPS of my own (a "self-hosted runner" in GitHub's terms), and deploys were run by hand from a Mac. At the end of August everything moved back to GitHub-hosted machines (free for public repositories) and the VPS was retired.
 
