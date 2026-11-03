@@ -6,7 +6,7 @@ description: This blog publishes one build to two places. Readers in mainland Ch
 date: 2026-05-04
 glyph: dual-line
 updated: 2026-11-03
-lead: A personal site that loads fast both inside and outside China does not need a server. **The same static files go to Alibaba Cloud for China and to Cloudflare for readers abroad, and DNS sends each visitor to one of them**, provided the domain has an ICP filing first. That is a registration with China's Ministry of Industry and Information Technology, required before a mainland server or CDN may serve the domain, and it takes two to five weeks. No server is needed for it either; a ¥101 Alibaba Cloud resource pack (a prepaid cloud product, bought only because a filing must be attached to one) carries it. This site has run that way since May 2026 for about **¥207 a year** by the bills, mostly the domain and that resource pack; Cloudflare has cost nothing. Whether the pack must be renewed to keep the filing is still to be confirmed with Alibaba Cloud. Good for blogs and docs read both in China and abroad; skip it if nearly all your readers are abroad and use Cloudflare alone. Setting it up is the easy part. Keeping both sides on the same version is the work, and every step and pitfall is laid out below.
+lead: A personal site that loads fast both inside and outside China does not need a server. **The same static files go to Alibaba Cloud for China and to Cloudflare for readers abroad, and DNS sends each visitor to one of them**, provided the domain has an ICP filing first. That is a registration with China's Ministry of Industry and Information Technology, required before a mainland server or CDN may serve the domain, and it takes a few days to about a month. No server is needed for it either; a ¥101 Alibaba Cloud resource pack (a prepaid cloud product, bought only because a filing must be attached to one) carries it. This site has run that way since May 2026 for about **¥207 a year** by the bills, mostly the domain and that resource pack; Cloudflare has cost nothing. Whether the pack must be renewed to keep the filing is still to be confirmed with Alibaba Cloud. Good for blogs and docs read both in China and abroad; skip it if nearly all your readers are abroad and use Cloudflare alone. Setting it up is the easy part. Keeping both sides on the same version is the work, and every step and pitfall is laid out below.
 tags:
 - Astro
 - Alibaba Cloud
@@ -29,7 +29,7 @@ aliases:
 - **It starts with an ICP filing.** Alibaba Cloud's mainland CDN nodes only serve domains registered with China's Ministry of Industry and Information Technology. You can file without renting a server: a ¥101 Function Compute resource pack serves as the "filing carrier".
 - **Build once, publish twice, then check the commit.** Both sides receive the same build output (the `dist/` folder). After publishing, the pipeline reads a small file holding the commit hash from each side; if they disagree, the deploy fails.
 - **About ¥207 a year.** Domain ¥90, filing resource pack ¥101, CDN traffic pack ¥14, OSS about ¥2; Cloudflare is free.
-- **Good for** fully static sites with readers both in China and abroad (blogs, docs, portfolios); **not for** apps that need a server, or sites whose readers are almost all outside China (Cloudflare alone is enough). The filing takes two to five weeks, and readers in China make do until then.
+- **Good for** fully static sites with readers both in China and abroad (blogs, docs, portfolios); **not for** apps that need a server, or sites whose readers are almost all outside China (Cloudflare alone is enough). The filing takes a few days to about a month, and readers in China make do until then.
 
 ```chart
 {
@@ -117,7 +117,7 @@ If you don't want a server, Alibaba Cloud's **Function Compute resource pack** c
 > [!WARNING]
 > The pack expires on 2027-05-04. Alibaba Cloud's documentation does not say directly what happens if it is not renewed (checked 2026-11-03): it only says **an expired product can no longer issue new filing service codes**. Among Alibaba Cloud's [verification criteria](https://help.aliyun.com/document_detail/36997.html) for filed sites, the only one about the access provider is that "the IP the filed domain currently resolves to must belong to the filing's access provider". My default line has always pointed at Alibaba Cloud CDN, which meets that. But that is an inference, not Alibaba Cloud's answer; whether to renew the ¥101 will be settled with Alibaba Cloud before it expires, and this note updated.
 
-Alibaba Cloud's own review takes 1–5 working days and the provincial authority 10–20 working days, 11–25 working days in all, or two to five weeks counting weekends — enough time to build the site in the meantime.
+Per Alibaba Cloud's [filing process page](https://help.aliyun.com/zh/icp-filing/new-website-process) (checked 2026-11-03), its own review takes 1–2 working days and the provincial authority's usually 1–20 working days, which cannot be hurried: a few days at best, about a month at worst — enough time to build the site in the meantime.
 
 ---
 
@@ -318,7 +318,7 @@ The old edition said ¥212 because it used the traffic pack's list price and an 
 **Skip it:**
 - Readers are almost all outside China: use Cloudflare Pages alone, no filing, no cost.
 - The site needs a server (logins, a database, live data): the whole point of two lines is that both sides only hold files. If you need a server, start with [What does it cost to run an app online each month?](/en/posts/model-gateway-cloudflare-vs-china-cloud/), which works out the bills for servers and the various hosting options.
-- You can't wait for a filing: it takes two to five weeks, and until then readers in China have to make do with Cloudflare.
+- You can't wait for a filing: it takes a few days to about a month, and until then readers in China have to make do with Cloudflare.
 - A company or team site: the architecture is the same, but the filing goes through the company as the applicant with more paperwork, and a private repository pays for GitHub Actions minutes beyond the free allowance. I have not been through either myself.
 
 > One domain, two lines: **the money goes to the tickets (domain + filing), the care goes to consistency.** As long as every deploy checks the same commit on both sides, two lines are as easy to live with as one.
