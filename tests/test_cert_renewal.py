@@ -61,29 +61,49 @@ class CertificateScriptTests(unittest.TestCase):
             with self.subTest(workflow=name):
                 self.assertEqual({version}, set(re.findall(r"aliyun-(\d+\.\d+\.\d+)/aliyun", text)))
 
-    def test_renewal_is_gated_by_both_remote_expiries(self) -> None:
+    def test_matrix_covers_every_domestic_cdn_domain(self) -> None:
+        workflow = RENEW_WORKFLOW.read_text(encoding="utf-8")
+
+        self.assertIn("fail-fast: false", workflow)
+        self.assertIn("max-parallel: 1", workflow)
+        self.assertIn("domains: zhuoqidev.com www.zhuoqidev.com", workflow)
+        self.assertIn(
+            "edges: zhuoqidev.com.queniuaa.com www.zhuoqidev.com.w.kunlunaq.com",
+            workflow,
+        )
+        for name in ("argus", "vane"):
+            with self.subTest(domain=name):
+                self.assertIn(f"domains: {name}.zhuoqidev.com\n", workflow)
+                self.assertIn(f"edges: {name}.zhuoqidev.com.w.kunlunaq.com\n", workflow)
+        self.assertIn("CERT_DOMAINS: ${{ matrix.domains }}", workflow)
+        self.assertIn("CERT_EDGES: ${{ matrix.edges }}", workflow)
+
+    def test_domains_and_edges_are_validated(self) -> None:
+        script = RENEW_SCRIPT.read_text(encoding="utf-8")
+
+        self.assertIn("CERT_DOMAINS and CERT_EDGES must list the same number of names", script)
+        self.assertIn(r"^([a-z0-9-]+\.)?zhuoqidev\.com$", script)
+        self.assertIn('[[ ${edges[i]} == "${domains[i]}".* ]]', script)
+
+    def test_renewal_is_gated_by_every_remote_expiry(self) -> None:
         script = RENEW_SCRIPT.read_text(encoding="utf-8")
 
         self.assertIn("renew_threshold_days=${CERT_RENEW_THRESHOLD_DAYS:-30}", script)
-        self.assertIn('primary_days=$(remote_certificate_days "$primary_domain")', script)
-        self.assertIn('san_days=$(remote_certificate_days "$san_domain")', script)
-        self.assertIn(
-            "primary_days > renew_threshold_days && san_days > renew_threshold_days",
-            script,
-        )
+        self.assertIn('days=$(remote_certificate_days "$domain")', script)
+        self.assertIn("((days <= renew_threshold_days))", script)
         gate = script.index("certificate renewal is not needed")
         issuance = script.index("--issue")
         self.assertLess(gate, issuance)
 
-    def test_issuance_and_publication_cover_both_domains(self) -> None:
+    def test_issuance_and_publication_cover_every_domain(self) -> None:
         script = RENEW_SCRIPT.read_text(encoding="utf-8")
 
         self.assertIn(f"acme_commit={ACME_COMMIT}", script)
         self.assertIn("--dns dns_ali", script)
-        self.assertIn('--domain "$primary_domain"', script)
-        self.assertIn('--domain "$san_domain"', script)
-        self.assertIn('publish_domain "$primary_domain" root', script)
-        self.assertIn('publish_domain "$san_domain" www', script)
+        self.assertIn('domain_args+=(--domain "$domain")', script)
+        self.assertIn('"${domain_args[@]}"', script)
+        self.assertIn('-checkhost "$domain"', script)
+        self.assertIn('publish_domain "$domain"', script)
         self.assertEqual(script.count("SetCdnDomainSSLCertificate"), 1)
 
     def test_private_key_is_ephemeral_and_not_logged(self) -> None:
@@ -101,13 +121,14 @@ class CertificateScriptTests(unittest.TestCase):
         script = RENEW_SCRIPT.read_text(encoding="utf-8")
 
         self.assertIn('edge_fingerprint == "$local_fingerprint"', script)
-        self.assertIn('verify_edge "$primary_domain" "$primary_edge"', script)
-        self.assertIn('verify_edge "$san_domain" "$san_edge"', script)
-        self.assertIn('verify_https "$primary_domain" "$primary_edge"', script)
-        self.assertIn('verify_https "$san_domain" "$san_edge"', script)
+        self.assertIn('verify_edge "${domains[i]}" "${edges[i]}"', script)
+        self.assertIn('verify_https "${domains[i]}" "${edges[i]}"', script)
         self.assertIn("--SearchMode COMBINATION", script)
-        self.assertIn("assert_dns_challenge_removed _acme-challenge", script)
-        self.assertIn("assert_dns_challenge_removed _acme-challenge.www", script)
+        self.assertIn("assert_dns_challenge_removed _acme-challenge\n", script)
+        self.assertIn(
+            'assert_dns_challenge_removed "_acme-challenge.${domains[i]%.zhuoqidev.com}"',
+            script,
+        )
 
 
 if __name__ == "__main__":

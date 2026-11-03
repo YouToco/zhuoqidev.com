@@ -1,20 +1,34 @@
 # Alibaba Cloud CDN certificate renewal
 
-The repository renews the domestic Alibaba Cloud CDN certificate for
-`zhuoqidev.com` and `www.zhuoqidev.com` through
-`.github/workflows/cert-renew.yml`.
+The repository renews every domestic Alibaba Cloud CDN certificate under
+`zhuoqidev.com` through `.github/workflows/cert-renew.yml`. Each matrix entry
+is one certificate:
+
+| Entry | DNS names | CDN edges |
+| --- | --- | --- |
+| `zhuoqidev.com` | `zhuoqidev.com`, `www.zhuoqidev.com` | `zhuoqidev.com.queniuaa.com`, `www.zhuoqidev.com.w.kunlunaq.com` |
+| `argus.zhuoqidev.com` | `argus.zhuoqidev.com` | `argus.zhuoqidev.com.w.kunlunaq.com` |
+| `vane.zhuoqidev.com` | `vane.zhuoqidev.com` | `vane.zhuoqidev.com.w.kunlunaq.com` |
+
+Argus and Vane are separate projects. Their certificates are renewed here
+because this repository stays active: GitHub disables scheduled workflows in a
+public repository after 60 days without commits, and both of those
+repositories are otherwise idle. To add another subdomain, add a matrix entry
+with its CDN CNAME.
 
 ## Behavior
 
 - Runs every Monday at 03:17 UTC and can also be started manually.
 - Runs on the GitHub-hosted `ubuntu-26.04` runner, pinned like the build workflows.
-- Reads the certificate currently bound to both CDN domains.
-- Exits without mutation when both certificates have more than 30 days left.
-- Otherwise issues one Let's Encrypt ECC certificate containing both DNS names
-  through AliDNS DNS-01 and uploads it to both CDN domains.
-- Succeeds only after both CDN CNAMEs present the exact uploaded SHA-256
-  fingerprint, HTTPS requests succeed, and temporary DNS challenge records are
-  absent.
+- Runs the entries one at a time; one failing entry does not cancel the others.
+- Reads the certificate currently bound to each CDN domain of the entry.
+- Exits without mutation when every one has more than 30 days left.
+- Otherwise issues one Let's Encrypt ECC certificate containing the entry's DNS
+  names through AliDNS DNS-01 and uploads it to each of its CDN domains, named
+  `zhuoqidev-le-<date>-<root|www|argus|vane>`.
+- Succeeds only after every CDN CNAME of the entry presents the exact uploaded
+  SHA-256 fingerprint, HTTPS requests succeed, and temporary DNS challenge
+  records are absent.
 - Keeps the ACME account, certificate, private key, and Alibaba Cloud CLI
   configuration only under `RUNNER_TEMP`. No certificate private key is cached
   or committed.
@@ -26,7 +40,7 @@ The repository renews the domestic Alibaba Cloud CDN certificate for
 - `ACME_ACCOUNT_EMAIL`
 
 The Alibaba Cloud RAM identity needs read access to CDN certificate state and
-write access for the two CDN domain certificates, plus permission to create and
+write access for the CDN domain certificates listed above, plus permission to create and
 delete AliDNS TXT records under `zhuoqidev.com`.
 
 ## Manual verification
@@ -42,5 +56,5 @@ always applied. When the certificate is still healthy, the expected log ends
 with `certificate renewal is not needed`.
 
 After an actual renewal, verify the workflow log contains the same SHA-256
-fingerprint for both CDN edges. Do not repeatedly dispatch a failed issuance;
+fingerprint for every CDN edge of that entry. Do not repeatedly dispatch a failed issuance;
 first inspect whether one CDN domain already accepted the new certificate.

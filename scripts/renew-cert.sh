@@ -14,7 +14,7 @@ require_env() {
 
 require_env \
   ALIYUN_BIN ALIYUN_ACCESS_KEY_ID ALIYUN_ACCESS_KEY_SECRET \
-  ACME_ACCOUNT_EMAIL RUNNER_TEMP
+  ACME_ACCOUNT_EMAIL RUNNER_TEMP CERT_DOMAINS CERT_EDGES
 [[ -x $ALIYUN_BIN ]] || {
   echo "pinned Alibaba Cloud CLI is missing: $ALIYUN_BIN" >&2
   exit 1
@@ -24,11 +24,36 @@ renew_threshold_days=${CERT_RENEW_THRESHOLD_DAYS:-30}
 minimum_new_days=${CERT_MIN_NEW_DAYS:-30}
 [[ $renew_threshold_days =~ ^[0-9]+$ && $minimum_new_days =~ ^[0-9]+$ ]]
 
-primary_domain=zhuoqidev.com
-san_domain=www.zhuoqidev.com
-primary_edge=zhuoqidev.com.queniuaa.com
-san_edge=www.zhuoqidev.com.w.kunlunaq.com
+# One certificate per run: CERT_DOMAINS lists its DNS names (the first is the
+# ACME primary), CERT_EDGES the matching Alibaba Cloud CDN CNAME for each name.
+read -r -a domains <<<"$CERT_DOMAINS"
+read -r -a edges <<<"$CERT_EDGES"
+((${#domains[@]} > 0 && ${#domains[@]} == ${#edges[@]})) || {
+  echo "CERT_DOMAINS and CERT_EDGES must list the same number of names" >&2
+  exit 1
+}
+for i in "${!domains[@]}"; do
+  [[ ${domains[i]} =~ ^([a-z0-9-]+\.)?zhuoqidev\.com$ ]] || {
+    echo "unexpected certificate domain: ${domains[i]}" >&2
+    exit 1
+  }
+  [[ ${edges[i]} == "${domains[i]}".* ]] || {
+    echo "CDN edge ${edges[i]} does not belong to ${domains[i]}" >&2
+    exit 1
+  }
+done
+primary_domain=${domains[0]}
 acme_commit=3661fd86b6304115e42f43910e6dd452ab9866d6
+
+# zhuoqidev.com -> root, www.zhuoqidev.com -> www, vane.zhuoqidev.com -> vane.
+domain_label() {
+  local domain=$1
+  if [[ $domain == zhuoqidev.com ]]; then
+    printf 'root'
+  else
+    printf '%s' "${domain%%.*}"
+  fi
+}
 
 work_dir=$(mktemp -d "$RUNNER_TEMP/zhuoqidev-cert.XXXXXX")
 aliyun_config=$work_dir/aliyun-config.json
@@ -83,12 +108,17 @@ print(remaining)
 ' "$domain"
 }
 
-primary_days=$(remote_certificate_days "$primary_domain")
-san_days=$(remote_certificate_days "$san_domain")
-echo "$primary_domain CDN certificate has $primary_days days remaining"
-echo "$san_domain CDN certificate has $san_days days remaining"
+# Renew when any name in the set is at or under the threshold.
+renewal_needed=false
+for domain in "${domains[@]}"; do
+  days=$(remote_certificate_days "$domain")
+  echo "$domain CDN certificate has $days days remaining"
+  if ((days <= renew_threshold_days)); then
+    renewal_needed=true
+  fi
+done
 
-if ((primary_days > renew_threshold_days && san_days > renew_threshold_days)); then
+if [[ $renewal_needed != true ]]; then
   echo "certificate renewal is not needed"
   exit 0
 fi
@@ -118,6 +148,11 @@ git -C "$work_dir/acme-source" checkout --quiet --detach FETCH_HEAD
     --no-profile
 )
 
+domain_args=()
+for domain in "${domains[@]}"; do
+  domain_args+=(--domain "$domain")
+done
+
 Ali_Key=$ALIYUN_ACCESS_KEY_ID \
 Ali_Secret=$ALIYUN_ACCESS_KEY_SECRET \
   "$acme_home/acme.sh" \
@@ -125,8 +160,7 @@ Ali_Secret=$ALIYUN_ACCESS_KEY_SECRET \
     --home "$acme_home" \
     --config-home "$acme_config" \
     --cert-home "$acme_certs" \
-    --domain "$primary_domain" \
-    --domain "$san_domain" \
+    "${domain_args[@]}" \
     --server letsencrypt \
     --dns dns_ali \
     --keylength ec-256
@@ -134,8 +168,9 @@ Ali_Secret=$ALIYUN_ACCESS_KEY_SECRET \
 fullchain=$acme_certs/${primary_domain}_ecc/fullchain.cer
 private_key=$acme_certs/${primary_domain}_ecc/${primary_domain}.key
 [[ -s $fullchain && -s $private_key ]]
-openssl x509 -in "$fullchain" -noout -checkhost "$primary_domain" >/dev/null
-openssl x509 -in "$fullchain" -noout -checkhost "$san_domain" >/dev/null
+for domain in "${domains[@]}"; do
+  openssl x509 -in "$fullchain" -noout -checkhost "$domain" >/dev/null
+done
 openssl x509 -in "$fullchain" -noout \
   -checkend "$((minimum_new_days * 86400))" >/dev/null
 
@@ -171,20 +206,20 @@ echo "new certificate fingerprint=$local_fingerprint days=$local_days"
 
 publish_domain() {
   local domain=$1
-  local suffix=$2
   "$ALIYUN_BIN" cdn SetCdnDomainSSLCertificate \
     --DomainName "$domain" \
     --SSLProtocol on \
     --CertType upload \
-    --CertName "zhuoqidev-le-$(date -u +%Y%m%d)-$suffix" \
+    --CertName "zhuoqidev-le-$(date -u +%Y%m%d)-$(domain_label "$domain")" \
     --SSLPub "$(<"$fullchain")" \
     --SSLPri "$(<"$private_key")" \
     --config-path "$aliyun_config" \
     --profile default >/dev/null
 }
 
-publish_domain "$primary_domain" root
-publish_domain "$san_domain" www
+for domain in "${domains[@]}"; do
+  publish_domain "$domain"
+done
 
 verify_edge() {
   local domain=$1
@@ -256,11 +291,14 @@ assert_dns_challenge_removed() {
   fi
 }
 
-verify_edge "$primary_domain" "$primary_edge"
-verify_edge "$san_domain" "$san_edge"
-verify_https "$primary_domain" "$primary_edge"
-verify_https "$san_domain" "$san_edge"
-assert_dns_challenge_removed _acme-challenge
-assert_dns_challenge_removed _acme-challenge.www
+for i in "${!domains[@]}"; do
+  verify_edge "${domains[i]}" "${edges[i]}"
+  verify_https "${domains[i]}" "${edges[i]}"
+  if [[ ${domains[i]} == zhuoqidev.com ]]; then
+    assert_dns_challenge_removed _acme-challenge
+  else
+    assert_dns_challenge_removed "_acme-challenge.${domains[i]%.zhuoqidev.com}"
+  fi
+done
 
-echo "both Alibaba Cloud CDN edges present the exact uploaded certificate"
+echo "every Alibaba Cloud CDN edge presents the exact uploaded certificate"
