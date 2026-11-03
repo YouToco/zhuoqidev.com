@@ -15,9 +15,29 @@ concurrency:
 
 jobs:
   renew:
+    name: Renew ${{ matrix.name }}
     runs-on: ubuntu-26.04
     timeout-minutes: 30
     environment: production-certificate
+    strategy:
+      # One failing certificate must not cancel the others; one at a time keeps
+      # the AliDNS challenge records of different runs apart.
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        include:
+          - name: zhuoqidev.com
+            domains: zhuoqidev.com www.zhuoqidev.com
+            edges: zhuoqidev.com.queniuaa.com www.zhuoqidev.com.w.kunlunaq.com
+          # argus and vane are separate projects, renewed here because this
+          # repository stays active and GitHub disables schedules in public
+          # repositories after 60 days without commits.
+          - name: argus.zhuoqidev.com
+            domains: argus.zhuoqidev.com
+            edges: argus.zhuoqidev.com.w.kunlunaq.com
+          - name: vane.zhuoqidev.com
+            domains: vane.zhuoqidev.com
+            edges: vane.zhuoqidev.com.w.kunlunaq.com
 
     steps:
       - name: Check out trusted default-branch code
@@ -36,4 +56,6 @@ jobs:
           ACME_ACCOUNT_EMAIL: ${{ secrets.ACME_ACCOUNT_EMAIL }}
           CERT_RENEW_THRESHOLD_DAYS: "30"
           CERT_MIN_NEW_DAYS: "30"
+          CERT_DOMAINS: ${{ matrix.domains }}
+          CERT_EDGES: ${{ matrix.edges }}
         run: bash scripts/renew-cert.sh
