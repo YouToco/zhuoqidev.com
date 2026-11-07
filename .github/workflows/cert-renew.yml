@@ -29,15 +29,12 @@ jobs:
           - name: zhuoqidev.com
             domains: zhuoqidev.com www.zhuoqidev.com
             edges: zhuoqidev.com.queniuaa.com www.zhuoqidev.com.w.kunlunaq.com
-          # argus and vane are separate projects, renewed here because this
-          # repository stays active and GitHub disables schedules in public
-          # repositories after 60 days without commits.
+          # argus is a separate project, renewed here because this repository
+          # stays active and GitHub disables schedules in public repositories
+          # after 60 days without commits.
           - name: argus.zhuoqidev.com
             domains: argus.zhuoqidev.com
             edges: argus.zhuoqidev.com.w.kunlunaq.com
-          - name: vane.zhuoqidev.com
-            domains: vane.zhuoqidev.com
-            edges: vane.zhuoqidev.com.w.kunlunaq.com
 
     steps:
       - name: Check out trusted default-branch code

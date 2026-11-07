@@ -71,10 +71,8 @@ class CertificateScriptTests(unittest.TestCase):
             "edges: zhuoqidev.com.queniuaa.com www.zhuoqidev.com.w.kunlunaq.com",
             workflow,
         )
-        for name in ("argus", "vane"):
-            with self.subTest(domain=name):
-                self.assertIn(f"domains: {name}.zhuoqidev.com\n", workflow)
-                self.assertIn(f"edges: {name}.zhuoqidev.com.w.kunlunaq.com\n", workflow)
+        self.assertIn("domains: argus.zhuoqidev.com\n", workflow)
+        self.assertIn("edges: argus.zhuoqidev.com.w.kunlunaq.com\n", workflow)
         self.assertIn("CERT_DOMAINS: ${{ matrix.domains }}", workflow)
         self.assertIn("CERT_EDGES: ${{ matrix.edges }}", workflow)
 

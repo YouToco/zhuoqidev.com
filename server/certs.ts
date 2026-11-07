@@ -6,12 +6,7 @@
 import type { Check } from "./health.ts";
 
 /** Every Aliyun CDN domain with an uploaded certificate, in cert-renew.yml's order (a test keeps them equal). */
-export const CDN_CERT_DOMAINS = [
-  "zhuoqidev.com",
-  "www.zhuoqidev.com",
-  "argus.zhuoqidev.com",
-  "vane.zhuoqidev.com",
-] as const;
+export const CDN_CERT_DOMAINS = ["zhuoqidev.com", "www.zhuoqidev.com", "argus.zhuoqidev.com"] as const;
 
 /** cert-renew.yml renews at 30 days left and runs weekly, so a renewed certificate never gets under 23. */
 export const CERT_MIN_DAYS = 21;
