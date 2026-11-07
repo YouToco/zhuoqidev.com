@@ -10,7 +10,7 @@ test("the domains checked are exactly the ones cert-renew.yml renews", () => {
 });
 
 test("accepts expiry reports for known domains only, once each", () => {
-  const report = { domain: "vane.zhuoqidev.com", expires: "2027-02-01T04:49:45Z" };
+  const report = { domain: "argus.zhuoqidev.com", expires: "2027-02-01T04:49:45Z" };
   assert.deepEqual(validCerts([report]), [report]);
   assert.deepEqual(validCerts([{ ...report, extra: 1 }]), [report]);
   assert.equal(validCerts([]), null);

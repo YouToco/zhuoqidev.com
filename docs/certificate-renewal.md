@@ -8,13 +8,15 @@ is one certificate:
 | --- | --- | --- |
 | `zhuoqidev.com` | `zhuoqidev.com`, `www.zhuoqidev.com` | `zhuoqidev.com.queniuaa.com`, `www.zhuoqidev.com.w.kunlunaq.com` |
 | `argus.zhuoqidev.com` | `argus.zhuoqidev.com` | `argus.zhuoqidev.com.w.kunlunaq.com` |
-| `vane.zhuoqidev.com` | `vane.zhuoqidev.com` | `vane.zhuoqidev.com.w.kunlunaq.com` |
 
-Argus and Vane are separate projects. Their certificates are renewed here
-because this repository stays active: GitHub disables scheduled workflows in a
-public repository after 60 days without commits, and both of those
-repositories are otherwise idle. To add another subdomain, add a matrix entry
-with its CDN CNAME.
+Argus is a separate project. Its certificate is renewed here because this
+repository stays active: GitHub disables scheduled workflows in a public
+repository after 60 days without commits, and the Argus repository is
+otherwise idle. To add another subdomain, add a matrix entry with its CDN
+CNAME and the same name to `CDN_CERT_DOMAINS` in `server/certs.ts`.
+
+`vane.zhuoqidev.com` was removed on 2026-11-07, when the Vane project went
+offline and its CDN domain was deleted.
 
 ## Behavior
 
@@ -25,7 +27,7 @@ with its CDN CNAME.
 - Exits without mutation when every one has more than 30 days left.
 - Otherwise issues one Let's Encrypt ECC certificate containing the entry's DNS
   names through AliDNS DNS-01 and uploads it to each of its CDN domains, named
-  `zhuoqidev-le-<date>-<root|www|argus|vane>`.
+  `zhuoqidev-le-<date>-<root|www|argus>`.
 - Succeeds only after every CDN CNAME of the entry presents the exact uploaded
   SHA-256 fingerprint, HTTPS requests succeed, and temporary DNS challenge
   records are absent.

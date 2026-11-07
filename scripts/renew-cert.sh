@@ -45,7 +45,7 @@ done
 primary_domain=${domains[0]}
 acme_commit=3661fd86b6304115e42f43910e6dd452ab9866d6
 
-# zhuoqidev.com -> root, www.zhuoqidev.com -> www, vane.zhuoqidev.com -> vane.
+# zhuoqidev.com -> root, www.zhuoqidev.com -> www, argus.zhuoqidev.com -> argus.
 domain_label() {
   local domain=$1
   if [[ $domain == zhuoqidev.com ]]; then

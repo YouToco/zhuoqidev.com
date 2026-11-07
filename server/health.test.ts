@@ -127,14 +127,14 @@ test("cdn-certs fails on a certificate close to expiry, a stale reading, a missi
   const withCert = (expires: string, checkedAt = "2026-11-20T01:30:00.000Z") => ({
     ...healthy,
     certs: (healthy.certs as CertRow[]).map((c) =>
-      c.domain === "vane.zhuoqidev.com" ? { ...c, expires, checkedAt } : c,
+      c.domain === "argus.zhuoqidev.com" ? { ...c, expires, checkedAt } : c,
     ),
   });
   // 21 days left passes, 20 fails: cert-renew.yml renews at 30 and runs weekly.
   assert.equal(check(withCert("2026-12-11T09:00:00Z"), "cdn-certs").ok, true);
   const close = check(withCert("2026-12-10T09:00:00Z"), "cdn-certs");
   assert.equal(close.ok, false);
-  assert.match(close.detail, /vane\.zhuoqidev\.com: 20 days left/);
+  assert.match(close.detail, /argus\.zhuoqidev\.com: 20 days left/);
   assert.equal(health(withCert("2026-12-10T09:00:00Z"), TODAY, AT).ok, false);
   const stale = check(withCert("2027-01-20T04:00:00Z", "2026-11-17T01:30:00.000Z"), "cdn-certs");
   assert.equal(stale.ok, false);
