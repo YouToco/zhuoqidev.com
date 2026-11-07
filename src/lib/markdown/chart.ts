@@ -294,9 +294,10 @@ function renderDumbbell(spec: DumbbellSpec, lang: Lang) {
       const delta = change(r.from, r.to, lang);
       return (
         `<span class="cb-label">${esc(r.label)}${r.sub ? `<small>${esc(r.sub)}</small>` : ""}</span>` +
-        `<span class="cd-track" style="--a:${share(lo, max)};--b:${share(hi, max)}" aria-hidden="true">` +
+        // --q and "down" let the new value slide out from the old one when the chart comes into view.
+        `<span class="cd-track${r.to < r.from ? " down" : ""}" style="--a:${share(lo, max)};--b:${share(hi, max)}" aria-hidden="true">` +
         `<span class="cd-seg"></span><i class="cd-dot c-gray" style="--p:${share(r.from, max)}"></i>` +
-        `<i class="cd-dot c-seal" style="--p:${share(r.to, max)}"></i></span>` +
+        `<i class="cd-dot c-seal" style="--p:${share(r.to, max)};--q:${share(r.from, max)}"></i></span>` +
         `<span class="cd-val">${fmtValue(r.from, f)} → ${fmtValue(r.to, f)}` +
         (delta ? ` <b>${delta}</b>` : "") +
         "</span>"
