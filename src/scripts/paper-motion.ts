@@ -88,10 +88,17 @@ if (!matchMedia("(prefers-reduced-motion: reduce)").matches && "IntersectionObse
       el.classList.add("pm");
       io.observe(el);
     }
+    // The homepage sticky note (kept blank until now, see Base.astro) writes itself, on a phone
+    // once it comes into view. If a slow load let the failsafe show it already, it stays as it is.
+    const root = document.documentElement;
+    clearTimeout(Number(root.dataset.inkFailsafe));
+    const note = root.classList.contains("ink-wait") ? document.querySelector(".board .sticky") : null;
+    if (note && note.getBoundingClientRect().top >= innerHeight) io.observe(note);
+    else if (note) go(note);
   };
   if (document.readyState === "complete") arm();
   else addEventListener("load", () => setTimeout(arm), { once: true });
-  // A printout shows every chart finished.
+  // A printout shows every chart and note finished.
   addEventListener("beforeprint", () => {
     for (const [el, list] of pending) {
       io.unobserve(el);
@@ -99,5 +106,7 @@ if (!matchMedia("(prefers-reduced-motion: reduce)").matches && "IntersectionObse
       for (const c of list) show(c, 1);
     }
     pending.clear();
+    document.documentElement.classList.remove("ink-wait");
+    for (const a of document.querySelector(".board .sticky")?.getAnimations({ subtree: true }) ?? []) a.finish();
   });
 }

@@ -1,6 +1,7 @@
 ---
 import { getProjects, getPosts, postUrl, shortTitle, slugOf, splitTitle, terms, ymd } from "../../lib/content";
 import { board, layout } from "../../data/board";
+import { inkPieces } from "../../lib/ink";
 import { type Lang, langParams, t, url } from "../../i18n";
 import Polaroid from "../../components/Polaroid.astro";
 import Base from "../../layouts/Base.astro";
@@ -23,6 +24,7 @@ const series = terms(posts, "series")
   .slice(0, 2);
 const notes = B.notes.map((n) => ({ ...n, post: bySlug.get(n.slug)! }));
 const stickyPost = bySlug.get(B.sticky.slug)!;
+const ink = inkPieces(B.sticky.quote);
 const years = [...new Set(posts.map((p) => p.data.date.getUTCFullYear()))];
 const md = (d: Date) => ymd(d).slice(5);
 const icons = [
@@ -177,7 +179,13 @@ const jsonLd = {
 
           <figure class="pin sticky" id="sticky" data-drag style={layout.sticky}>
             <blockquote>
-              <q>{B.sticky.quote}</q>
+              <q>
+                {ink.map((c) => (
+                  <span class="ink" style={c.style}>
+                    {c.text}
+                  </span>
+                ))}
+              </q>
             </blockquote>
             <figcaption>
               {B.sticky.from} <a href={postUrl(lang, B.sticky.slug)}>{shortTitle(stickyPost)}</a>

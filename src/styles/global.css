@@ -2019,7 +2019,8 @@ html.booting .board .pin { animation-play-state: paused; }
 @keyframes drift { to { translate: 0 -90px; } }
 
 /* Paper motion: things that draw themselves once. The marker strokes in a TL;DR and the headline
-   swipe across, and the homepage doodle writes itself, all on load and in CSS alone. Chart data
+   swipe across and the homepage doodle writes itself, all on load and in CSS alone; the sticky note
+   writes itself right after load. Chart data
    grows from zero and the about page stamps come down the first time they scroll into view: the
    script (src/scripts/paper-motion.ts) adds .pm only to what is still below the fold, so without it,
    or for anything already in sight, the page rests in its final state. */
@@ -2033,7 +2034,12 @@ html.booting .board .pin { animation-play-state: paused; }
   .board .doodle text { animation: pm-write .7s steps(10, end) both; animation-delay: calc(var(--d, 0s) + .45s); }
   .board .doodle path { stroke-dasharray: 1; animation: pm-draw .45s cubic-bezier(.5, 0, .3, 1) both; animation-delay: calc(var(--d, 0s) + 1.1s); }
   .board .doodle path + path { animation-duration: .16s; animation-delay: calc(var(--d, 0s) + 1.55s); }
-  html.booting :is(.hero h1 .mark, .board .doodle text, .board .doodle path) { animation-play-state: paused; }
+  /* The sticky note: blank (one clip for the whole quote) until the page has loaded, then the pen
+     moves over each character left to right, one after another, line by line. Starting dozens of
+     per-character animations at first paint cost the phone homepage 2 Lighthouse points. */
+  html.ink-wait .board .sticky:not(.pm-go) q { clip-path: inset(0 100% 0 0); }
+  .board .sticky.pm-go .ink { animation: pm-pen var(--w) linear both; animation-delay: calc(.25s + var(--t)); }
+  html.booting :is(.hero h1 .mark, .board .doodle text, .board .doodle path, .board .sticky .ink) { animation-play-state: paused; }
 
   .chart.pm :is(.cb-bar, .cs-bar, .cm-fill) { animation: pm-grow 1s var(--spring-soft) both; animation-delay: calc(var(--i, 0) * 70ms + .1s); }
   .chart.pm .cl-plot svg { animation: pm-wipe 1.3s cubic-bezier(.45, 0, .25, 1) .1s both; }
@@ -2047,6 +2053,7 @@ html.booting .board .pin { animation-play-state: paused; }
 }
 @keyframes pm-swipe { from { background-size: 0% 100%; } }
 @keyframes pm-write { from { clip-path: inset(-40% 100% -40% 0); } to { clip-path: inset(-40% -5% -40% 0); } }
+@keyframes pm-pen { from { clip-path: inset(-30% 100% -30% 0); } to { clip-path: inset(-30% -15% -30% 0); } }
 @keyframes pm-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 @keyframes pm-grow { from { --grow: 0; } }
 @keyframes pm-wipe { from { clip-path: inset(-10% 100% -10% 0); } to { clip-path: inset(-10% -1% -10% 0); } }
