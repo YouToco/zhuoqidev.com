@@ -67,24 +67,30 @@ if (!matchMedia("(prefers-reduced-motion: reduce)").matches && "IntersectionObse
     },
     { rootMargin: "0px 0px -15% 0px" },
   );
-  const targets = document.querySelectorAll<HTMLElement>(".prose .chart, .proj:has(.pstamp), .proj.certs");
-  for (const el of targets) {
-    if (el.getBoundingClientRect().top < innerHeight) continue;
-    // Rows stagger within their own list (each tab of a tabbed chart starts again from 0).
-    for (const list of el.querySelectorAll(".cb, .cd")) {
-      list
-        .querySelectorAll<HTMLElement>(":scope > .cb-track, :scope > .cd-track, :scope > .cm-track")
-        .forEach((row, i) => {
-          row.style.setProperty("--i", String(i));
-        });
+  // Everything armed is below the fold, so it waits for the page to load: measuring and restyling
+  // the charts earlier pushed back the first paint of the TL;DR note (the phone LCP on posts).
+  const arm = () => {
+    const targets = document.querySelectorAll<HTMLElement>(".prose .chart, .proj:has(.pstamp), .proj.certs");
+    for (const el of targets) {
+      if (el.getBoundingClientRect().top < innerHeight) continue;
+      // Rows stagger within their own list (each tab of a tabbed chart starts again from 0).
+      for (const list of el.querySelectorAll(".cb, .cd")) {
+        list
+          .querySelectorAll<HTMLElement>(":scope > .cb-track, :scope > .cd-track, :scope > .cm-track")
+          .forEach((row, i) => {
+            row.style.setProperty("--i", String(i));
+          });
+      }
+      el.querySelectorAll<HTMLElement>(".stamp-round").forEach((s, i) => s.style.setProperty("--i", String(i)));
+      const list = counters(el);
+      for (const c of list) show(c, 0);
+      pending.set(el, list);
+      el.classList.add("pm");
+      io.observe(el);
     }
-    el.querySelectorAll<HTMLElement>(".stamp-round").forEach((s, i) => s.style.setProperty("--i", String(i)));
-    const list = counters(el);
-    for (const c of list) show(c, 0);
-    pending.set(el, list);
-    el.classList.add("pm");
-    io.observe(el);
-  }
+  };
+  if (document.readyState === "complete") arm();
+  else addEventListener("load", () => setTimeout(arm), { once: true });
   // A printout shows every chart finished.
   addEventListener("beforeprint", () => {
     for (const [el, list] of pending) {
