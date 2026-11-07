@@ -3,7 +3,8 @@ import type { Lang } from "../i18n";
 // About page content for both languages. Reviewed 2026-10-07: the title stays as on the résumé,
 // the current job is described without naming the employer, and Vane is marked as paused.
 
-type Project = { title: string; role: string; summary: string; tags: string[]; href?: string };
+/** stamp: a status pressed onto the card corner (the role line already says it in words). */
+type Project = { title: string; role: string; summary: string; tags: string[]; href?: string; stamp?: { text: string; sub?: string; tone?: "blue" } };
 type Group = { title: string; items: string };
 type Column = { head: string; groups: Group[] };
 
@@ -60,8 +61,8 @@ export const about: Record<
     ],
     projectsHead: "项目与职责",
     projects: [
-      { title: "模型 API 聚合平台", role: "研发 · 现职", summary: "多上游线路接入与负载均衡、媒体模型按秒 / 按分辨率计费、供应商一致性验证。", tags: ["TypeScript", "Cloudflare Workers", "D1"] },
-      { title: "见微 Vane", role: "独立开发 · 已暂停（2026-07 至 09）", summary: "用 Go / PostgreSQL / Temporal 与 React / TypeScript 从零做到生产部署：工作流、飞书 Agent、画像反馈闭环。", tags: ["Go", "Temporal", "React"], href: "/projects/vane/" },
+      { title: "模型 API 聚合平台", role: "研发 · 现职", stamp: { text: "现职" }, summary: "多上游线路接入与负载均衡、媒体模型按秒 / 按分辨率计费、供应商一致性验证。", tags: ["TypeScript", "Cloudflare Workers", "D1"] },
+      { title: "见微 Vane", role: "独立开发 · 已暂停（2026-07 至 09）", stamp: { text: "已暂停", sub: "2026-07 至 09", tone: "blue" }, summary: "用 Go / PostgreSQL / Temporal 与 React / TypeScript 从零做到生产部署：工作流、飞书 Agent、画像反馈闭环。", tags: ["Go", "Temporal", "React"], href: "/projects/vane/" },
       { title: "Argus", role: "开源 · 长视频理解", summary: "纯前端的长视频理解 agent harness：视频不出浏览器，多 provider LLM，抽帧 / 记忆 / 子 Agent 工具。", tags: ["TypeScript", "Vite", "React"], href: "/projects/argus/" },
       { title: "AISEO", role: "技术负责人 · AI 应用", summary: "使用 Python / FastAPI / Temporal 构建多阶段 Agent 内容流水线，覆盖 RAG、多模型路由、Token 成本与多 CMS 发布。", tags: ["Python", "FastAPI", "Temporal"] },
       { title: "Help Center", role: "技术负责人 · 知识平台", summary: "使用 Java / Quarkus / React 开发多站点知识平台，接入 RAG 检索、向量存储与本地 Embedding。", tags: ["Java 21", "Quarkus 3", "React"] },
@@ -117,8 +118,8 @@ export const about: Record<
     ],
     projectsHead: "Projects & Responsibilities",
     projects: [
-      { title: "Model API Aggregation Platform", role: "Engineer · Current role", summary: "Multi-upstream routing and load balancing, per-second / per-resolution billing for media models, and provider consistency verification.", tags: ["TypeScript", "Cloudflare Workers", "D1"] },
-      { title: "Vane", role: "Independent · Paused (2026-07 to 09)", summary: "Built from scratch to production with Go / PostgreSQL / Temporal and React / TypeScript: workflows, a Feishu Agent, and a profile feedback loop.", tags: ["Go", "Temporal", "React"], href: "/projects/vane/" },
+      { title: "Model API Aggregation Platform", role: "Engineer · Current role", stamp: { text: "Current" }, summary: "Multi-upstream routing and load balancing, per-second / per-resolution billing for media models, and provider consistency verification.", tags: ["TypeScript", "Cloudflare Workers", "D1"] },
+      { title: "Vane", role: "Independent · Paused (2026-07 to 09)", stamp: { text: "Paused", sub: "2026-07 to 09", tone: "blue" }, summary: "Built from scratch to production with Go / PostgreSQL / Temporal and React / TypeScript: workflows, a Feishu Agent, and a profile feedback loop.", tags: ["Go", "Temporal", "React"], href: "/projects/vane/" },
       { title: "Argus", role: "Open source · Long-video understanding", summary: "A frontend-only long-video understanding agent harness: video never leaves the browser, multi-provider LLMs, frame / memory / sub-agent tools.", tags: ["TypeScript", "Vite", "React"], href: "/projects/argus/" },
       { title: "AISEO", role: "Technical Lead · AI Application", summary: "Built a multi-stage Agent content pipeline with Python / FastAPI / Temporal, covering RAG, multi-model routing, token costs, and multi-CMS publishing.", tags: ["Python", "FastAPI", "Temporal"] },
       { title: "Help Center", role: "Technical Lead · Knowledge Platform", summary: "Developed a multi-site knowledge platform with Java / Quarkus / React, integrating RAG retrieval, vector storage, and local embeddings.", tags: ["Java 21", "Quarkus 3", "React"] },

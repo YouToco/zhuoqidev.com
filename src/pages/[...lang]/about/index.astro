@@ -75,6 +75,12 @@ const jsonLd = {
           <Tag class="proj card" href={p.href && url(lang, p.href)}>
             {i === 3 && <span class="tape" />}
             <span class="big-n" aria-hidden="true" data-n={String(i + 1).padStart(2, "0")} />
+            {p.stamp && (
+              <span class:list={["pstamp", p.stamp.tone]} aria-hidden="true">
+                {p.stamp.text}
+                {p.stamp.sub && <small>{p.stamp.sub}</small>}
+              </span>
+            )}
             <span class="idx">proj_{String(i + 1).padStart(2, "0")}</span>
             <h3>{p.title}</h3>
             <span class="role">{p.role}</span>
