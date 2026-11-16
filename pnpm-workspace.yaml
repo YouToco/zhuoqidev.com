@@ -37,6 +37,12 @@ overrides:
   # eslint 10.14.0 (and @eslint/config-array) still ask for minimatch ^10; no 10.x has the fix for
   # GHSA-g3hv-75wg-m249, 11.0.1 does. 11 keeps the same API and Node range.
   "minimatch@<11.0.1": 11.0.3
+  # astro 7.4.7+ brings WebAssembly builds of rolldown and the Astro compiler (used only where no
+  # native binary exists) that accept @emnapi 2.0 betas. pnpm then resolves @astrojs/check's
+  # astro2tsx peer to @emnapi/runtime 2.0.0-beta.2 next to @emnapi/core 1.11.3, and `astro check`
+  # crashes ("this.bridge.setLastError is not a function"). Keep both on the stable 1.x line.
+  "@emnapi/core": 1.11.3
+  "@emnapi/runtime": 1.11.3
 
 # Fail when the running Node does not satisfy package.json "engines".
 engineStrict: true
